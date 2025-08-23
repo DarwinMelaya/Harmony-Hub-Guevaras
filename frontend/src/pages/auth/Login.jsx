@@ -1,6 +1,7 @@
 import { FcGoogle } from "react-icons/fc";
 import { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -157,15 +158,14 @@ const Login = () => {
           <div className="text-center mt-6">
             <p className="text-gray-300">
               Don't have an account?{" "}
-              <a
-                href="#"
+              <Link
+                to="/signup"
                 className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
               >
                 Sign up
-              </a>
+              </Link>
             </p>
           </div>
-          {/* Darwin */}
         </div>
       </div>
     </div>
