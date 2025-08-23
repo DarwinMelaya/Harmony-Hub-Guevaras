@@ -2,6 +2,6 @@
 export { default as Login } from "./auth/Login";
 export { default as Signup } from "./auth/Signup";
 // Pages
-export { default as Home } from "./home/Home";
+export { default as Home } from "./home/HomePage";
 // Admin Pages
 export { default as AdminDashboard } from "./admin/AdminDashboard";
