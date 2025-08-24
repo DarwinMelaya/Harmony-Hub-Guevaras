@@ -16,6 +16,8 @@ mongoose
   .catch((err) => console.log(err));
 
 // Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     secret: "yourSecret",
@@ -29,6 +31,7 @@ app.use(passport.session());
 
 // Routes
 app.use("/auth", require("./routes/auth"));
+app.use("/api/users", require("./routes/users"));
 
 // Start server
 const PORT = process.env.PORT || 5000;
