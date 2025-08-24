@@ -88,7 +88,7 @@ const AdminSidebar = () => {
     // Clear localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    
+
     // Redirect to login page
     navigate("/login");
   };
@@ -111,7 +111,7 @@ const AdminSidebar = () => {
           scrollbarColor: "#4B5563 #1F2937",
         }}
       >
-        <style jsx>{`
+        <style>{`
           nav::-webkit-scrollbar {
             width: 6px;
           }

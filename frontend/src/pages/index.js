@@ -6,3 +6,4 @@ export { default as Home } from "./home/HomePage";
 // Admin Pages
 export { default as AdminDashboard } from "./admin/AdminDashboard";
 export { default as Inventory } from "./admin/Inventory";
+export { default as User } from "./admin/User";
