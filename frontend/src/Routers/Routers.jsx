@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Login, Home, Signup, AdminDashboard } from "../pages";
 import ClientDashboard from "../pages/ClientDashboard";
-import ProtectedRoute from "../components/ProtectedRoute";
-import GoogleOAuthCallback from "../components/GoogleOAuthCallback";
+import ProtectedRoute from "../components/Security/ProtectedRoute";
+import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
 
 export const Routers = () => {
   return (
