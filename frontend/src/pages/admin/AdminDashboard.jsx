@@ -1,15 +1,57 @@
 import Layout from "../../components/Layout/Layout";
+import { useState, useEffect } from "react";
+import { User, ChevronDown } from "lucide-react";
 
 const AdminDashboard = () => {
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    // Get user data from localStorage
+    const user = localStorage.getItem("user");
+    if (user) {
+      setUserData(JSON.parse(user));
+    }
+  }, []);
+
   return (
     <Layout>
       <div className="bg-[#30343c] min-h-screen w-full text-white p-8">
         <div className="max-w-6xl mx-auto">
+          {/* Header with user profile */}
           <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <div className="bg-green-600 text-white px-3 py-1 rounded-full text-sm">
-              Admin Access
+            <div>
+              {userData && (
+                <div className="mt-2">
+                  <p className="text-gray-300">
+                    Welcome,{" "}
+                    <span className="text-blue-400 font-semibold">
+                      {userData.fullName || userData.username}
+                    </span>
+                  </p>
+                  <p className="text-gray-400 text-sm">{userData.email}</p>
+                </div>
+              )}
             </div>
+
+            {/* User Profile Section */}
+            {userData && (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3 bg-gray-800 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                    <User size={16} className="text-gray-300" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-gray-300 font-medium text-sm">
+                      {userData.fullName || userData.username}
+                    </span>
+                    <span className="text-gray-500 text-xs capitalize">
+                      {userData.role}
+                    </span>
+                  </div>
+                  <ChevronDown size={16} className="text-gray-400" />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
