@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const passport = require("passport");
+const cors = require("cors");
 require("dotenv").config();
 
 // Import passport configuration
@@ -16,6 +17,12 @@ mongoose
   .catch((err) => console.log(err));
 
 // Middleware
+app.use(
+  cors({
+    origin: "http://localhost:5173", // Frontend URL
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(

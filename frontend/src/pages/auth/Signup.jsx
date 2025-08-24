@@ -1,22 +1,24 @@
 import { FcGoogle } from "react-icons/fc";
 import { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Signup = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     email: "",
-    phone: "",
+    phoneNumber: "",
     location: "",
     username: "",
     password: "",
     confirmPassword: "",
   });
   const [focusedFields, setFocusedFields] = useState({
-    name: false,
+    fullName: false,
     email: false,
-    phone: false,
+    phoneNumber: false,
     location: false,
     username: false,
     password: false,
@@ -25,9 +27,18 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const API_BASE_URL = "http://localhost:5000/api";
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   const handleFocus = (field) => {
@@ -38,15 +49,104 @@ const Signup = () => {
     setFocusedFields((prev) => ({ ...prev, [field]: false }));
   };
 
-  const handleGoogleSignup = () => {
-    // Handle Google signup logic here
-    console.log("Google signup clicked");
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Email is invalid";
+    }
+
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    } else if (formData.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    if (!agreeToTerms) {
+      newErrors.terms = "You must agree to the terms and conditions";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleGoogleSignup = () => {
+    // Redirect to Google OAuth
+    window.location.href = "http://localhost:5000/auth/google";
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle signup logic here
-    console.log("Signup form submitted:", formData);
+    setLoading(true);
+    setErrors({});
+    setSuccessMessage("");
+
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const userData = {
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        location: formData.location,
+        username: formData.username,
+        password: formData.password,
+        role: "client", // Automatically set to client
+      };
+
+      const response = await axios.post(
+        `${API_BASE_URL}/users/register`,
+        userData
+      );
+
+      if (response.data.success) {
+        setSuccessMessage(
+          "Account created successfully! Redirecting to login..."
+        );
+
+        // Store token in localStorage
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+
+        // Redirect to login page after 2 seconds
+        setTimeout(() => {
+          navigate("/login");
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      if (error.response?.data?.message) {
+        setErrors({ general: error.response.data.message });
+      } else if (error.response?.status === 400) {
+        setErrors({
+          general: "User with this email or username already exists",
+        });
+      } else {
+        setErrors({ general: "Registration failed. Please try again." });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,30 +180,49 @@ const Signup = () => {
             </p>
           </div>
 
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-center">
+              {successMessage}
+            </div>
+          )}
+
+          {/* Error Message */}
+          {errors.general && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-center">
+              {errors.general}
+            </div>
+          )}
+
           {/* Signup Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name Field */}
             <div className="relative">
               <input
                 type="text"
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                onFocus={() => handleFocus("name")}
-                onBlur={() => handleBlur("name")}
-                className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
+                id="fullName"
+                value={formData.fullName}
+                onChange={(e) => handleInputChange("fullName", e.target.value)}
+                onFocus={() => handleFocus("fullName")}
+                onBlur={() => handleBlur("fullName")}
+                className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                  errors.fullName ? "border-red-500" : "border-gray-600"
+                }`}
                 placeholder="Enter your full name"
               />
               <label
-                htmlFor="name"
+                htmlFor="fullName"
                 className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.name || formData.name
+                  focusedFields.fullName || formData.fullName
                     ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
                     : "text-gray-400 text-sm top-4"
                 }`}
               >
                 Full Name
               </label>
+              {errors.fullName && (
+                <p className="text-red-400 text-xs mt-1">{errors.fullName}</p>
+              )}
             </div>
 
             {/* Email Field */}
@@ -115,7 +234,9 @@ const Signup = () => {
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 onFocus={() => handleFocus("email")}
                 onBlur={() => handleBlur("email")}
-                className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
+                className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                  errors.email ? "border-red-500" : "border-gray-600"
+                }`}
                 placeholder="Enter your email"
               />
               <label
@@ -128,24 +249,29 @@ const Signup = () => {
               >
                 Email Address
               </label>
+              {errors.email && (
+                <p className="text-red-400 text-xs mt-1">{errors.email}</p>
+              )}
             </div>
 
             {/* Phone Number Field */}
             <div className="relative">
               <input
                 type="tel"
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-                onFocus={() => handleFocus("phone")}
-                onBlur={() => handleBlur("phone")}
+                id="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={(e) =>
+                  handleInputChange("phoneNumber", e.target.value)
+                }
+                onFocus={() => handleFocus("phoneNumber")}
+                onBlur={() => handleBlur("phoneNumber")}
                 className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
                 placeholder="Enter your phone number"
               />
               <label
-                htmlFor="phone"
+                htmlFor="phoneNumber"
                 className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.phone || formData.phone
+                  focusedFields.phoneNumber || formData.phoneNumber
                     ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
                     : "text-gray-400 text-sm top-4"
                 }`}
@@ -187,7 +313,9 @@ const Signup = () => {
                 onChange={(e) => handleInputChange("username", e.target.value)}
                 onFocus={() => handleFocus("username")}
                 onBlur={() => handleBlur("username")}
-                className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
+                className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                  errors.username ? "border-red-500" : "border-gray-600"
+                }`}
                 placeholder="Choose a username"
               />
               <label
@@ -200,6 +328,9 @@ const Signup = () => {
               >
                 Username
               </label>
+              {errors.username && (
+                <p className="text-red-400 text-xs mt-1">{errors.username}</p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -211,7 +342,9 @@ const Signup = () => {
                 onChange={(e) => handleInputChange("password", e.target.value)}
                 onFocus={() => handleFocus("password")}
                 onBlur={() => handleBlur("password")}
-                className="w-full px-4 py-4 pr-12 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
+                className={`w-full px-4 py-4 pr-12 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                  errors.password ? "border-red-500" : "border-gray-600"
+                }`}
                 placeholder="Create a password"
               />
               <label
@@ -235,6 +368,9 @@ const Signup = () => {
                   <FaEye className="w-5 h-5" />
                 )}
               </button>
+              {errors.password && (
+                <p className="text-red-400 text-xs mt-1">{errors.password}</p>
+              )}
             </div>
 
             {/* Confirm Password Field */}
@@ -248,7 +384,9 @@ const Signup = () => {
                 }
                 onFocus={() => handleFocus("confirmPassword")}
                 onBlur={() => handleBlur("confirmPassword")}
-                className="w-full px-4 py-4 pr-12 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
+                className={`w-full px-4 py-4 pr-12 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                  errors.confirmPassword ? "border-red-500" : "border-gray-600"
+                }`}
                 placeholder="Confirm your password"
               />
               <label
@@ -272,6 +410,11 @@ const Signup = () => {
                   <FaEye className="w-5 h-5" />
                 )}
               </button>
+              {errors.confirmPassword && (
+                <p className="text-red-400 text-xs mt-1">
+                  {errors.confirmPassword}
+                </p>
+              )}
             </div>
 
             {/* Terms & Conditions */}
@@ -303,12 +446,16 @@ const Signup = () => {
                 </a>
               </label>
             </div>
+            {errors.terms && (
+              <p className="text-red-400 text-xs mt-1">{errors.terms}</p>
+            )}
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Create Account
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 

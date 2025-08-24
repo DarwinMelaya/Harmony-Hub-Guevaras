@@ -12,7 +12,13 @@ const UserSchema = new mongoose.Schema({
   phoneNumber: { type: String },
   location: { type: String },
   username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: {
+    type: String,
+    required: function () {
+      // Password is only required if user is not using Google OAuth
+      return !this.googleId;
+    },
+  },
 
   // Role-based fields
   role: {
@@ -34,9 +40,9 @@ const UserSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Hash password before saving
+// Hash password before saving (only if password exists and is modified)
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password") || !this.password) return next();
 
   try {
     const salt = await bcrypt.genSalt(10);
@@ -47,8 +53,11 @@ UserSchema.pre("save", async function (next) {
   }
 });
 
-// Method to compare password
+// Method to compare password (handle cases where password might not exist)
 UserSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) {
+    return false; // If no password exists (Google OAuth user), return false
+  }
   return bcrypt.compare(candidatePassword, this.password);
 };
 
