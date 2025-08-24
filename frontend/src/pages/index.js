@@ -5,3 +5,4 @@ export { default as Signup } from "./auth/Signup";
 export { default as Home } from "./home/HomePage";
 // Admin Pages
 export { default as AdminDashboard } from "./admin/AdminDashboard";
+export { default as Inventory } from "./admin/Inventory";

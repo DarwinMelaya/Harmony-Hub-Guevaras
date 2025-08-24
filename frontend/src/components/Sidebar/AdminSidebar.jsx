@@ -9,6 +9,7 @@ import {
   HelpCircle,
   Settings,
   LogOut,
+  Package,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -22,6 +23,12 @@ const AdminSidebar = () => {
       text: "Dashboard",
       path: "/admin-dashboard",
       isActive: location.pathname === "/admin-dashboard",
+    },
+    {
+      icon: Package,
+      text: "Inventory",
+      path: "/admin-inventory",
+      isActive: location.pathname === "/admin-inventory",
     },
     {
       icon: BarChart3,

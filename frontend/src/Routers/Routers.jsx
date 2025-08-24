@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Login, Home, Signup, AdminDashboard } from "../pages";
+import { Login, Home, Signup, AdminDashboard, Inventory } from "../pages";
 import ClientDashboard from "../pages/ClientDashboard";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -20,6 +20,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole="admin">
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-inventory"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <Inventory />
             </ProtectedRoute>
           }
         />
