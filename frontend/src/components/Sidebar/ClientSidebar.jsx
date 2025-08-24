@@ -1,18 +1,13 @@
 import {
   LayoutDashboard,
-  BarChart3,
-  FileText,
-  Image,
   Calendar,
-  HandCoins,
-  MessageCircle,
-  HelpCircle,
+  User,
   Settings,
   LogOut,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const AdminSidebar = () => {
+const ClientSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,56 +15,26 @@ const AdminSidebar = () => {
     {
       icon: LayoutDashboard,
       text: "Dashboard",
-      path: "/admin-dashboard",
-      isActive: location.pathname === "/admin-dashboard",
-    },
-    {
-      icon: BarChart3,
-      text: "User",
-      path: "/admin-user",
-      isActive: location.pathname === "/admin-user",
-    },
-    {
-      icon: FileText,
-      text: "Musician Artist",
-      path: "/admin-musician",
-      isActive: location.pathname === "/admin-musician",
-    },
-    {
-      icon: Image,
-      text: "Booking Details",
-      path: "/admin-booking",
-      isActive: location.pathname === "/admin-booking",
+      path: "/dashboard",
+      isActive: location.pathname === "/dashboard",
     },
     {
       icon: Calendar,
-      text: "Schedule",
-      path: "/admin-schedule",
-      isActive: location.pathname === "/admin-schedule",
+      text: "My Bookings",
+      path: "/my-bookings",
+      isActive: location.pathname === "/my-bookings",
     },
     {
-      icon: HandCoins,
-      text: "Refund",
-      path: "/admin-refund",
-      isActive: location.pathname === "/admin-refund",
-    },
-    {
-      icon: MessageCircle,
-      text: "Message",
-      path: "/admin-message",
-      isActive: location.pathname === "/admin-message",
-    },
-    {
-      icon: HelpCircle,
-      text: "Help",
-      path: "/admin-help",
-      isActive: location.pathname === "/admin-help",
+      icon: User,
+      text: "Profile",
+      path: "/profile",
+      isActive: location.pathname === "/profile",
     },
     {
       icon: Settings,
-      text: "Setting",
-      path: "/admin-setting",
-      isActive: location.pathname === "/admin-setting",
+      text: "Settings",
+      path: "/settings",
+      isActive: location.pathname === "/settings",
     },
   ];
 
@@ -81,7 +46,7 @@ const AdminSidebar = () => {
     // Clear localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    
+
     // Redirect to login page
     navigate("/login");
   };
@@ -94,6 +59,7 @@ const AdminSidebar = () => {
           <span className="text-white">HARMONY</span>
           <span className="text-red-500"> HUB</span>
         </h1>
+        <p className="text-gray-400 text-sm mt-1">Client Portal</p>
       </div>
 
       {/* Navigation Items - Scrollable */}
@@ -171,4 +137,4 @@ const AdminSidebar = () => {
   );
 };
 
-export default AdminSidebar;
+export default ClientSidebar;

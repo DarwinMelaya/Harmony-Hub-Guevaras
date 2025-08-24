@@ -1,5 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Login, Home, Signup, AdminDashboard } from "../pages";
+import ClientDashboard from "../pages/ClientDashboard";
+import ProtectedRoute from "../components/ProtectedRoute";
+import GoogleOAuthCallback from "../components/GoogleOAuthCallback";
 
 export const Routers = () => {
   return (
@@ -9,8 +12,26 @@ export const Routers = () => {
         {/* Auth Pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        {/* Admin Pages */}
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        {/* Google OAuth Callback */}
+        <Route path="/google-callback" element={<GoogleOAuthCallback />} />
+        {/* Protected Admin Pages */}
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Protected Client Pages */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <ClientDashboard />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );

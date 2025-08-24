@@ -1,22 +1,98 @@
 import { FcGoogle } from "react-icons/fc";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 
 const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const API_BASE_URL = "http://localhost:5000/api";
+
+  // Check for OAuth errors in URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const oauthError = urlParams.get("error");
+
+    if (oauthError) {
+      switch (oauthError) {
+        case "google_auth_failed":
+          setError("Google authentication failed. Please try again.");
+          break;
+        case "no_user_found":
+          setError("No user found. Please try signing up first.");
+          break;
+        case "oauth_failed":
+          setError("OAuth authentication failed. Please try again.");
+          break;
+        default:
+          setError("Authentication failed. Please try again.");
+      }
+    }
+  }, [location]);
 
   const handleGoogleLogin = () => {
-    // Handle Google login logic here
-    console.log("Google login clicked");
+    // Redirect to Google OAuth
+    window.location.href = "http://localhost:5000/auth/google";
   };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/users/login`, {
+        email,
+        password,
+      });
+
+      if (response.data.success) {
+        // Store token and user data
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+
+        // Redirect based on user role
+        const userRole = response.data.data.role;
+        switch (userRole) {
+          case "admin":
+            navigate("/admin-dashboard");
+            break;
+          case "client":
+            navigate("/dashboard");
+            break;
+          case "staff":
+            navigate("/staff-dashboard");
+            break;
+          case "artist":
+            navigate("/artist-dashboard");
+            break;
+          default:
+            navigate("/dashboard");
+        }
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Login failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,8 +126,15 @@ const Login = () => {
             </p>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-center">
+              {error}
+            </div>
+          )}
+
           {/* Login Form */}
-          <form className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="relative">
               <input
                 type="email"
@@ -62,6 +145,7 @@ const Login = () => {
                 onBlur={() => setEmailFocused(false)}
                 className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
                 placeholder="Enter your email"
+                required
               />
               <label
                 htmlFor="email"
@@ -85,6 +169,7 @@ const Login = () => {
                 onBlur={() => setPasswordFocused(false)}
                 className="w-full px-4 py-4 pr-12 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
                 placeholder="Enter your password"
+                required
               />
               <label
                 htmlFor="password"
@@ -127,9 +212,10 @@ const Login = () => {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
             </button>
           </form>
 

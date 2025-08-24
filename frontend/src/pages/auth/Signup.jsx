@@ -127,9 +127,25 @@ const Signup = () => {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.data));
 
-        // Redirect to login page after 2 seconds
+        // Redirect based on user role
+        const userRole = response.data.data.role;
         setTimeout(() => {
-          navigate("/login");
+          switch (userRole) {
+            case "admin":
+              navigate("/admin-dashboard");
+              break;
+            case "client":
+              navigate("/dashboard");
+              break;
+            case "staff":
+              navigate("/staff-dashboard");
+              break;
+            case "artist":
+              navigate("/artist-dashboard");
+              break;
+            default:
+              navigate("/dashboard");
+          }
         }, 2000);
       }
     } catch (error) {
