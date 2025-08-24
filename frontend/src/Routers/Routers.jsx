@@ -1,5 +1,13 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Login, Home, Signup, AdminDashboard, Inventory, User } from "../pages";
+import {
+  Login,
+  Home,
+  Signup,
+  AdminDashboard,
+  Inventory,
+  User,
+  Musician,
+} from "../pages";
 import ClientDashboard from "../pages/ClientDashboard";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -36,6 +44,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole="admin">
               <User />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-musician"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <Musician />
             </ProtectedRoute>
           }
         />

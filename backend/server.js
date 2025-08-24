@@ -39,6 +39,7 @@ app.use(passport.session());
 // Routes
 app.use("/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
+app.use("/api/band-artists", require("./routes/bandArtists"));
 
 // Start server
 const PORT = process.env.PORT || 5000;
