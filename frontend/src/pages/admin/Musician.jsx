@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import Layout from "../../components/Layout/Layout";
+import AddMusician from "../../components/Modals/Admin/AddMusician";
+import EditMusician from "../../components/Modals/Admin/EditMusician";
 import {
   Music,
   Search,
@@ -9,7 +11,6 @@ import {
   Trash2,
   Eye,
   Plus,
-  DollarSign,
   Mic,
   Calendar,
   User,
@@ -28,14 +29,6 @@ const Musician = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedMusician, setSelectedMusician] = useState(null);
-
-  // Form states for add/edit
-  const [formData, setFormData] = useState({
-    name: "",
-    genre: "",
-    booking_fee: "",
-    isActive: true, // Add status field
-  });
 
   // Fetch musicians from backend
   const fetchMusicians = async () => {
@@ -68,76 +61,6 @@ const Musician = () => {
   useEffect(() => {
     fetchMusicians();
   }, []);
-
-  // Add new musician
-  const addMusician = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/band-artists", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          genre: formData.genre,
-          booking_fee: parseFloat(formData.booking_fee),
-          isActive: formData.isActive, // Include status
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add musician");
-      }
-
-      setShowAddModal(false);
-      setFormData({ name: "", genre: "", booking_fee: "", isActive: true });
-      fetchMusicians();
-    } catch (err) {
-      setError(err.message);
-      console.error("Error adding musician:", err);
-    }
-  };
-
-  // Update musician
-  const updateMusician = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `http://localhost:5000/api/band-artists/${selectedMusician._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: formData.name,
-            genre: formData.genre,
-            booking_fee: parseFloat(formData.booking_fee),
-            isActive: formData.isActive, // Include status
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update musician");
-      }
-
-      setShowEditModal(false);
-      setSelectedMusician(null);
-      setFormData({ name: "", genre: "", booking_fee: "", isActive: true });
-      fetchMusicians();
-    } catch (err) {
-      setError(err.message);
-      console.error("Error updating musician:", err);
-    }
-  };
 
   // Delete musician
   const deleteMusician = async (id) => {
@@ -198,13 +121,12 @@ const Musician = () => {
   // Open edit modal
   const openEditModal = (musician) => {
     setSelectedMusician(musician);
-    setFormData({
-      name: musician.name,
-      genre: musician.genre,
-      booking_fee: musician.booking_fee.toString(),
-      isActive: musician.isActive, // Include status
-    });
     setShowEditModal(true);
+  };
+
+  // Handle modal success
+  const handleModalSuccess = () => {
+    fetchMusicians();
   };
 
   // Filter musicians based on search and filters
@@ -235,11 +157,11 @@ const Musician = () => {
     });
   };
 
-  // Format currency
+  // Format currency (Peso)
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-PH", {
       style: "currency",
-      currency: "USD",
+      currency: "PHP",
     }).format(amount);
   };
 
@@ -271,7 +193,7 @@ const Musician = () => {
               </div>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg border border-blue-500 flex items-center gap-2 transition-colors"
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Musician
@@ -398,7 +320,7 @@ const Musician = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center text-sm text-white">
-                            <DollarSign className="w-4 h-4 mr-1 text-green-400" />
+                            <span className="text-green-400 mr-1">₱</span>
                             {formatCurrency(musician.booking_fee)}
                           </div>
                         </td>
@@ -464,210 +386,22 @@ const Musician = () => {
           )}
         </div>
 
-        {/* Add Musician Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-400" />
-                Add New Musician
-              </h2>
-              <form onSubmit={addMusician} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="Enter musician/band name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Genre
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.genre}
-                    onChange={(e) =>
-                      setFormData({ ...formData, genre: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="e.g., Rock, Jazz, Pop"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Booking Fee ($)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.booking_fee}
-                    onChange={(e) =>
-                      setFormData({ ...formData, booking_fee: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.isActive ? "available" : "not-available"}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        isActive: e.target.value === "available",
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                  >
-                    <option value="available">Available</option>
-                    <option value="not-available">Not Available</option>
-                  </select>
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Add Musician
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddModal(false);
-                      setFormData({
-                        name: "",
-                        genre: "",
-                        booking_fee: "",
-                        isActive: true,
-                      });
-                    }}
-                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        {/* Modal Components */}
+        <AddMusician
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={handleModalSuccess}
+        />
 
-        {/* Edit Musician Modal */}
-        {showEditModal && selectedMusician && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Edit className="w-5 h-5 text-blue-400" />
-                Edit Musician
-              </h2>
-              <form onSubmit={updateMusician} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="Enter musician/band name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Genre
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.genre}
-                    onChange={(e) =>
-                      setFormData({ ...formData, genre: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="e.g., Rock, Jazz, Pop"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Booking Fee ($)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.booking_fee}
-                    onChange={(e) =>
-                      setFormData({ ...formData, booking_fee: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={formData.isActive ? "available" : "not-available"}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        isActive: e.target.value === "available",
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                  >
-                    <option value="available">Available</option>
-                    <option value="not-available">Not Available</option>
-                  </select>
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Update Musician
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowEditModal(false);
-                      setSelectedMusician(null);
-                      setFormData({
-                        name: "",
-                        genre: "",
-                        booking_fee: "",
-                        isActive: true,
-                      });
-                    }}
-                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <EditMusician
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedMusician(null);
+          }}
+          onSuccess={handleModalSuccess}
+          musician={selectedMusician}
+        />
 
         {/* Error Alert */}
         {error && (
