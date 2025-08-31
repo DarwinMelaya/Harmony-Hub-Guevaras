@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Layout from "../../components/Layout/Layout";
+import AddInventory from "../../components/Modals/Admin/AddInventory";
+import { Plus, Box, Calendar, AlertCircle } from "lucide-react";
 
 const Inventory = () => {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [image, setImage] = useState("");
-  const [imagePreview, setImagePreview] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Fetch inventory from backend
   const fetchInventory = async () => {
@@ -34,110 +32,36 @@ const Inventory = () => {
     fetchInventory();
   }, []);
 
-  // Handle image file change and convert to base64
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImage(reader.result);
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Handle add inventory
-  const handleAddInventory = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    if (!name || !price) {
-      setError("Name and price are required.");
-      return;
-    }
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "http://localhost:5000/api/inventory",
-        { name, price, image },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setSuccess(response.data.message || "Inventory item added successfully.");
-      setName("");
-      setPrice("");
-      setImage("");
-      setImagePreview(null);
-      fetchInventory();
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
-    }
+  // Handle modal success
+  const handleModalSuccess = () => {
+    fetchInventory();
   };
 
   return (
     <Layout>
       <div className="bg-[#30343c] min-h-screen w-full text-white p-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Inventory Management</h1>
-
-          {/* Add Inventory Form */}
-          <form
-            onSubmit={handleAddInventory}
-            className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8"
-          >
-            <div className="mb-4">
-              <label className="block mb-1 font-medium">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                placeholder="e.g. Sounds and lights"
-                required
-              />
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Box className="w-6 h-6 text-blue-400" />
+                  Inventory Management
+                </h1>
+                <p className="text-gray-300 mt-1">
+                  Manage all inventory items ({inventory.length} total)
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Inventory
+              </button>
             </div>
-            <div className="mb-4">
-              <label className="block mb-1 font-medium">Price (₱)</label>
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                placeholder="e.g. 10000"
-                min="0"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1 font-medium">Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-              />
-              {imagePreview && (
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="mt-2 h-24 rounded border border-gray-600"
-                />
-              )}
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold"
-            >
-              Add Inventory
-            </button>
-            {error && <div className="mt-4 text-red-400">{error}</div>}
-            {success && <div className="mt-4 text-green-400">{success}</div>}
-          </form>
+          </div>
 
           {/* Inventory Table */}
           <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
@@ -166,7 +90,7 @@ const Inventory = () => {
                         colSpan="4"
                         className="px-6 py-12 text-center text-gray-400"
                       >
-                        Loading...
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto"></div>
                       </td>
                     </tr>
                   ) : inventory.length === 0 ? (
@@ -175,7 +99,13 @@ const Inventory = () => {
                         colSpan="4"
                         className="px-6 py-12 text-center text-gray-400"
                       >
-                        No inventory items found.
+                        <Box className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                        <div className="text-lg font-medium">
+                          No inventory items found
+                        </div>
+                        <div className="text-sm">
+                          Try adding a new inventory item
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -199,19 +129,23 @@ const Inventory = () => {
                           {item.name}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          ₱{Number(item.price).toLocaleString()}
+                          <span className="text-green-400 mr-1">₱</span>
+                          {Number(item.price).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                          {item.createdAt
-                            ? new Date(item.createdAt).toLocaleDateString(
-                                "en-US",
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                }
-                              )
-                            : "-"}
+                          <div className="flex items-center">
+                            <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                            {item.createdAt
+                              ? new Date(item.createdAt).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  }
+                                )
+                              : "-"}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -220,7 +154,34 @@ const Inventory = () => {
               </table>
             </div>
           </div>
+
+          {/* Results Summary */}
+          {inventory.length > 0 && !loading && (
+            <div className="mt-4 text-sm text-gray-400 text-center">
+              Showing {inventory.length} inventory item
+              {inventory.length > 1 ? "s" : ""}
+            </div>
+          )}
+
+          {/* Error Alert */}
+          {error && (
+            <div className="fixed top-4 right-4 bg-red-900/90 text-red-100 px-4 py-3 rounded-lg border border-red-700 flex items-center gap-2 z-50">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="ml-2 text-red-300 hover:text-red-100"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
+        <AddInventory
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={handleModalSuccess}
+        />
       </div>
     </Layout>
   );
