@@ -3,13 +3,13 @@ const Inventory = require("../models/Inventory");
 // Add new inventory item (admin only)
 exports.addInventory = async (req, res) => {
   try {
-    const { name, price, image } = req.body;
+    const { name, price, quantity, image } = req.body;
     if (!name || price === undefined) {
       return res
         .status(400)
         .json({ success: false, message: "Name and price are required." });
     }
-    const inventory = new Inventory({ name, price, image });
+    const inventory = new Inventory({ name, price, quantity, image });
     await inventory.save();
     res.status(201).json({
       success: true,

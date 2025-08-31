@@ -79,6 +79,9 @@ const Inventory = () => {
                       Price
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Quantity
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Added
                     </th>
                   </tr>
@@ -131,6 +134,10 @@ const Inventory = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-green-400 mr-1">₱</span>
                           {Number(item.price).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-green-400 mr-1"></span>
+                          {Number(item.quantity ?? 0).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                           <div className="flex items-center">
