@@ -7,6 +7,7 @@ import {
   Inventory,
   User,
   Musician,
+  Packages,
 } from "../pages";
 import ClientDashboard from "../pages/ClientDashboard";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
@@ -36,6 +37,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole="admin">
               <Inventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-packages"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <Packages />
             </ProtectedRoute>
           }
         />

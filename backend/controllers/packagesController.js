@@ -1,0 +1,47 @@
+const Package = require("../models/Packages");
+const Inventory = require("../models/Inventory");
+
+// Add new package
+exports.addPackage = async (req, res) => {
+  try {
+    const { name, description, items, price, image } = req.body;
+
+    for (const item of items) {
+      const inventoryItem = await Inventory.findById(item.inventoryItem);
+      if (!inventoryItem) {
+        return res.status(400).json({ error: `Inventory item not found: ${item.inventoryItem}` });
+      }
+    }
+
+    const newPackage = new Package({
+      name,
+      description,
+      items,
+      price,
+      image,
+    });
+
+    await newPackage.save();
+
+    res.status(201).json({
+      message: "Package created successfully",
+      package: newPackage,
+    });
+  } catch (error) {
+    console.error("Error creating package:", error);
+    res.status(500).json({ error: "Server error while creating package" });
+  }
+};
+
+// Get all packages
+exports.getAllPackages = async (req, res) => {
+  try {
+    const packages = await Package.find()
+      .populate("items.inventoryItem", "name price quantity image"); 
+
+    res.status(200).json(packages);
+  } catch (error) {
+    console.error("Error fetching packages:", error);
+    res.status(500).json({ error: "Server error while fetching packages" });
+  }
+};

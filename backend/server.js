@@ -41,6 +41,7 @@ app.use("/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/band-artists", require("./routes/bandArtists"));
 app.use("/api/inventory", require("./routes/inventory"));
+app.use("/api/packages", require("./routes/packages"));
 
 // Start server
 const PORT = process.env.PORT || 5000;
