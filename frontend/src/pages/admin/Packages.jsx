@@ -1,26 +1,41 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Layout from "../../components/Layout/Layout";
-import AddInventory from "../../components/Modals/Admin/AddInventory";
-import { Plus, Box, Calendar, AlertCircle } from "lucide-react";
+import AddPackage from "../../components/Modals/Admin/AddPackage";
+import {
+  Plus,
+  Gift,
+  Calendar,
+  AlertCircle,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-const Inventory = () => {
-  const [inventory, setInventory] = useState([]);
+const Packages = () => {
+  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Fetch inventory from backend
-  const fetchInventory = async () => {
+  // New state for modal
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [showItemsModal, setShowItemsModal] = useState(false);
+
+  // Fetch packages from backend
+  const fetchPackages = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/inventory", {
+      const response = await axios.get("http://localhost:5000/api/packages", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setInventory(response.data.data || response.data.inventory || []);
+      setPackages(response.data || []);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -29,12 +44,18 @@ const Inventory = () => {
   };
 
   useEffect(() => {
-    fetchInventory();
+    fetchPackages();
   }, []);
 
   // Handle modal success
   const handleModalSuccess = () => {
-    fetchInventory();
+    fetchPackages();
+  };
+
+  // Open items modal
+  const openItemsModal = (pkg) => {
+    setSelectedPackage(pkg);
+    setShowItemsModal(true);
   };
 
   return (
@@ -46,11 +67,11 @@ const Inventory = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                  <Box className="w-6 h-6 text-blue-400" />
-                  Inventory Management
+                  <Gift className="w-6 h-6 text-pink-400" />
+                  Package Management
                 </h1>
                 <p className="text-gray-300 mt-1">
-                  Manage all inventory items ({inventory.length} total)
+                  Manage all packages ({packages.length} total)
                 </p>
               </div>
               <button
@@ -58,12 +79,12 @@ const Inventory = () => {
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Add Inventory
+                Add Package
               </button>
             </div>
           </div>
 
-          {/* Inventory Table */}
+          {/* Package Table */}
           <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -79,7 +100,7 @@ const Inventory = () => {
                       Price
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Quantity
+                      Items
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Added
@@ -90,38 +111,36 @@ const Inventory = () => {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="px-6 py-12 text-center text-gray-400"
                       >
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-400 mx-auto"></div>
                       </td>
                     </tr>
-                  ) : inventory.length === 0 ? (
+                  ) : packages.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="px-6 py-12 text-center text-gray-400"
                       >
-                        <Box className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                        <Gift className="w-12 h-12 mx-auto mb-4 text-gray-600" />
                         <div className="text-lg font-medium">
-                          No inventory items found
+                          No packages found
                         </div>
-                        <div className="text-sm">
-                          Try adding a new inventory item
-                        </div>
+                        <div className="text-sm">Try adding a new package</div>
                       </td>
                     </tr>
                   ) : (
-                    inventory.map((item) => (
+                    packages.map((pkg) => (
                       <tr
-                        key={item._id}
+                        key={pkg._id}
                         className="hover:bg-gray-700 transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {item.image ? (
+                          {pkg.image ? (
                             <img
-                              src={item.image}
-                              alt={item.name}
+                              src={pkg.image}
+                              alt={pkg.name}
                               className="h-12 w-12 object-cover rounded border border-gray-600"
                             />
                           ) : (
@@ -129,21 +148,24 @@ const Inventory = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap font-medium">
-                          {item.name}
+                          {pkg.name}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-green-400 mr-1">₱</span>
-                          {Number(item.price).toLocaleString()}
+                          {Number(pkg.price).toLocaleString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-green-400 mr-1"></span>
-                          {Number(item.quantity ?? 0).toLocaleString()}
+                        <td
+                          className="px-6 py-4 whitespace-nowrap text-sm text-blue-400 cursor-pointer hover:underline"
+                          onClick={() => openItemsModal(pkg)}
+                        >
+                          {pkg.items?.length || 0} item
+                          {pkg.items?.length > 1 ? "s" : ""}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 mr-2 text-gray-500" />
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString(
+                            {pkg.createdAt
+                              ? new Date(pkg.createdAt).toLocaleDateString(
                                   "en-US",
                                   {
                                     year: "numeric",
@@ -163,10 +185,10 @@ const Inventory = () => {
           </div>
 
           {/* Results Summary */}
-          {inventory.length > 0 && !loading && (
+          {packages.length > 0 && !loading && (
             <div className="mt-4 text-sm text-gray-400 text-center">
-              Showing {inventory.length} inventory item
-              {inventory.length > 1 ? "s" : ""}
+              Showing {packages.length} package
+              {packages.length > 1 ? "s" : ""}
             </div>
           )}
 
@@ -184,14 +206,62 @@ const Inventory = () => {
             </div>
           )}
         </div>
-        <AddInventory
+
+        {/* Add Package Modal */}
+        <AddPackage
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onSuccess={handleModalSuccess}
         />
+
+        {/* Items Modal */}
+        <Dialog open={showItemsModal} onOpenChange={setShowItemsModal}>
+          <DialogContent className="max-w-2xl bg-gray-900 text-white border border-gray-700">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedPackage?.name} – Items
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {selectedPackage?.items?.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 bg-gray-800 p-3 rounded-lg border border-gray-700"
+                >
+                  {item.inventoryItem?.image ? (
+                    <img
+                      src={item.inventoryItem.image}
+                      alt={item.inventoryItem.name}
+                      className="h-12 w-12 object-cover rounded border border-gray-600"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 flex items-center justify-center bg-gray-700 text-gray-400 rounded">
+                      No Img
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="font-medium text-white">
+                      {item.inventoryItem?.name || "Unknown Item"}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      ₱
+                      {item.inventoryItem?.price?.toLocaleString() || 0}
+                    </div>
+                  </div>
+                  <span className="text-gray-300">
+                    x{item.quantity}
+                  </span>
+                </div>
+              ))}
+              {selectedPackage?.items?.length === 0 && (
+                <p className="text-gray-400">No items in this package.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
 };
 
-export default Inventory;
+export default Packages;

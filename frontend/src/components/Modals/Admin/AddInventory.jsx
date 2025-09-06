@@ -6,6 +6,7 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: "",
     price: "",
+    quantity: "",
     image: "",
   });
   const [imagePreview, setImagePreview] = useState(null);
@@ -35,6 +36,7 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
         {
           name: formData.name,
           price: formData.price,
+          quantity: formData.quantity,
           image: formData.image,
         },
         {
@@ -44,7 +46,7 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
           },
         }
       );
-      setFormData({ name: "", price: "", image: "" });
+      setFormData({ name: "", price: "", quantity: "", image: "" });
       setImagePreview(null);
       onSuccess();
       onClose();
@@ -56,7 +58,7 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleClose = () => {
-    setFormData({ name: "", price: "", image: "" });
+    setFormData({ name: "", price: "", quantity: "", image: "" });
     setImagePreview(null);
     setError(null);
     onClose();
@@ -98,6 +100,22 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
               value={formData.price}
               onChange={(e) =>
                 setFormData({ ...formData, price: e.target.value })
+              }
+              className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Quantity
+            </label>
+            <input
+              type="number"
+              required
+              min="0"
+              value={formData.quantity}
+              onChange={(e) =>
+                setFormData({ ...formData, quantity: e.target.value })
               }
               className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
               placeholder="0.00"
