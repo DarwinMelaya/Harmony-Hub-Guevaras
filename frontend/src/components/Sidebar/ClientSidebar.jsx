@@ -14,9 +14,9 @@ const ClientSidebar = () => {
   const navigationItems = [
     {
       icon: LayoutDashboard,
-      text: "Dashboard",
-      path: "/dashboard",
-      isActive: location.pathname === "/dashboard",
+      text: "Home",
+      path: "/home",
+      isActive: location.pathname === "/home",
     },
     {
       icon: Calendar,

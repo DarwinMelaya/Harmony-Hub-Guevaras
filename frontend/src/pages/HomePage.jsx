@@ -2,7 +2,7 @@ import Layout from "../components/Layout/Layout";
 import { useState, useEffect } from "react";
 import { User, ChevronDown } from "lucide-react";
 
-const ClientDashboard = () => {
+const HomePage = () => {
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
@@ -83,4 +83,4 @@ const ClientDashboard = () => {
   );
 };
 
-export default ClientDashboard;
+export default HomePage;

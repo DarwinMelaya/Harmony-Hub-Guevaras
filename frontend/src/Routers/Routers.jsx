@@ -9,7 +9,7 @@ import {
   Musician,
   Packages,
 } from "../pages";
-import ClientDashboard from "../pages/ClientDashboard";
+import HomePage from "../pages/HomePage";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
 
@@ -66,10 +66,10 @@ export const Routers = () => {
         />
         {/* Protected Client Pages */}
         <Route
-          path="/dashboard"
+          path="/home"
           element={
             <ProtectedRoute>
-              <ClientDashboard />
+              <HomePage />
             </ProtectedRoute>
           }
         />
