@@ -32,3 +32,14 @@ exports.getAllInventory = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error." });
   }
 };
+
+// Get all inventory items (public - for clients)
+exports.getPublicInventory = async (req, res) => {
+  try {
+    const inventory = await Inventory.find({ quantity: { $gt: 0 } }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, inventory });
+  } catch (error) {
+    console.error("Get Public Inventory Error:", error);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+};

@@ -45,3 +45,16 @@ exports.getAllPackages = async (req, res) => {
     res.status(500).json({ error: "Server error while fetching packages" });
   }
 };
+
+// Get all packages (public - for clients)
+exports.getPublicPackages = async (req, res) => {
+  try {
+    const packages = await Package.find()
+      .populate("items.inventoryItem", "name price quantity image"); 
+
+    res.status(200).json({ success: true, packages });
+  } catch (error) {
+    console.error("Error fetching public packages:", error);
+    res.status(500).json({ success: false, error: "Server error while fetching packages" });
+  }
+};
