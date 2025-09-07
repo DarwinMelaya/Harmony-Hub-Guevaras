@@ -15,6 +15,9 @@ import {
   X,
   Music,
 } from "lucide-react";
+import InventoryCard from "../../components/User/Dashboard/InventoryCard";
+import ArtistCard from "../../components/User/Dashboard/ArtistCard";
+import PackagesCard from "../../components/User/Dashboard/PackagesCard";
 import axios from "axios";
 
 const UserHome = () => {
@@ -741,70 +744,13 @@ const UserHome = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {filteredInventory.map((item) => (
-                    <div
+                    <InventoryCard
                       key={item._id}
-                      className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 group"
-                    >
-                      <div className="relative">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            id={`${item._id}-img-inv`}
-                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
-                        ) : (
-                          <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
-                            <ShoppingCart className="w-12 h-12 text-gray-500" />
-                          </div>
-                        )}
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="bg-gray-800/80 hover:bg-gray-700/80 p-2 rounded-full">
-                            <Heart className="w-4 h-4 text-white" />
-                          </button>
-                        </div>
-                        {item.quantity === 0 && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
-                              Out of Stock
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-medium text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
-                          {item.name}
-                        </h3>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-green-400 font-bold text-lg">
-                            ₱{Number(item.price).toLocaleString()}
-                          </span>
-                          <span className="text-gray-400 text-sm">
-                            {item.quantity} left
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              handleAddToCartClick(
-                                item,
-                                "inventory",
-                                `${item._id}-img-inv`
-                              )
-                            }
-                            disabled={item.quantity === 0}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
-                          >
-                            {item.quantity === 0
-                              ? "Out of Stock"
-                              : "Add to Cart"}
-                          </button>
-                          <button className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded transition-colors">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      item={item}
+                      onAdd={(it, sourceId) =>
+                        handleAddToCartClick(it, "inventory", sourceId)
+                      }
+                    />
                   ))}
                 </div>
               )}
@@ -843,61 +789,13 @@ const UserHome = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredBandArtists.map((artist) => (
-                  <div
+                  <ArtistCard
                     key={artist._id}
-                    className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-purple-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/20 group"
-                  >
-                    <div className="p-6">
-                      <div className="flex items-center mb-4">
-                        <div
-                          id={`${artist._id}-img-artist`}
-                          className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mr-4"
-                        >
-                          <Music className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-white text-lg group-hover:text-purple-400 transition-colors">
-                            {artist.name}
-                          </h3>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-700">
-                            {artist.genre}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-purple-400 font-bold text-xl">
-                          ₱{Number(artist.booking_fee).toLocaleString()}
-                        </span>
-                        <div className="flex items-center text-yellow-400">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span className="ml-1 text-sm">4.9</span>
-                        </div>
-                      </div>
-
-                      {!artist.isAvailable && (
-                        <div className="mb-3">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/50 text-red-300 border border-red-700">
-                            Unavailable
-                          </span>
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() =>
-                          handleAddToCartClick(
-                            artist,
-                            "bandArtist",
-                            `${artist._id}-img-artist`
-                          )
-                        }
-                        disabled={!artist.isAvailable}
-                        className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
-                      >
-                        {artist.isAvailable ? "Add to Cart" : "Unavailable"}
-                      </button>
-                    </div>
-                  </div>
+                    artist={artist}
+                    onAdd={(a, sourceId) =>
+                      handleAddToCartClick(a, "bandArtist", sourceId)
+                    }
+                  />
                 ))}
               </div>
             )}
@@ -935,96 +833,13 @@ const UserHome = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredPackages.map((pkg) => (
-                  <div
+                  <PackagesCard
                     key={pkg._id}
-                    className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-green-500 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20 group"
-                  >
-                    <div className="relative">
-                      {pkg.image ? (
-                        <img
-                          src={pkg.image}
-                          alt={pkg.name}
-                          id={`${pkg._id}-img-pkg`}
-                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
-                      ) : (
-                        <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
-                          <Package className="w-12 h-12 text-gray-500" />
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="bg-gray-800/80 hover:bg-gray-700/80 p-2 rounded-full">
-                          <Heart className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                      {!pkg.isAvailable && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
-                            Unavailable
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-6">
-                      <h3 className="font-bold text-white mb-2 text-lg group-hover:text-green-400 transition-colors">
-                        {pkg.name}
-                      </h3>
-                      {pkg.description && (
-                        <p className="text-gray-300 text-sm mb-4 line-clamp-3">
-                          {pkg.description}
-                        </p>
-                      )}
-
-                      {/* Package Items */}
-                      {pkg.items && pkg.items.length > 0 && (
-                        <div className="mb-4">
-                          <h4 className="text-gray-400 text-sm font-medium mb-2">
-                            Includes:
-                          </h4>
-                          <div className="space-y-1">
-                            {pkg.items.slice(0, 3).map((item, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center text-sm text-gray-300"
-                              >
-                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-2"></span>
-                                {item.inventoryItem?.name} (x{item.quantity})
-                              </div>
-                            ))}
-                            {pkg.items.length > 3 && (
-                              <div className="text-xs text-gray-500">
-                                +{pkg.items.length - 3} more items
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-green-400 font-bold text-xl">
-                          ₱{Number(pkg.price).toLocaleString()}
-                        </span>
-                        <div className="flex items-center text-yellow-400">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span className="ml-1 text-sm">4.8</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() =>
-                          handleAddToCartClick(
-                            pkg,
-                            "package",
-                            `${pkg._id}-img-pkg`
-                          )
-                        }
-                        disabled={!pkg.isAvailable}
-                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
-                      >
-                        {pkg.isAvailable ? "Add to Cart" : "Unavailable"}
-                      </button>
-                    </div>
-                  </div>
+                    pkg={pkg}
+                    onAdd={(p, sourceId) =>
+                      handleAddToCartClick(p, "package", sourceId)
+                    }
+                  />
                 ))}
               </div>
             )}
