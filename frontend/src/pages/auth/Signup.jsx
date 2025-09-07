@@ -135,7 +135,7 @@ const Signup = () => {
               navigate("/admin-dashboard");
               break;
             case "client":
-              navigate("/dashboard");
+              navigate("/user-home");
               break;
             case "staff":
               navigate("/staff-dashboard");
@@ -144,7 +144,7 @@ const Signup = () => {
               navigate("/artist-dashboard");
               break;
             default:
-              navigate("/dashboard");
+              navigate("/user-home");
           }
         }, 2000);
       }

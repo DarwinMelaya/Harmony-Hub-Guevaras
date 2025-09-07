@@ -1,5 +1,11 @@
+import Layout from "../../components/Layout/Layout";
+
 const UserBooking = () => {
-  return <div>UserBooking</div>;
+  return (
+    <Layout>
+      <div>UserBooking</div>
+    </Layout>
+  );
 };
 
 export default UserBooking;

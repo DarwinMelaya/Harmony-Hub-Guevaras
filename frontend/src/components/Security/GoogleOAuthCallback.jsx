@@ -27,7 +27,7 @@ const GoogleOAuthCallback = () => {
               navigate("/admin-dashboard");
               break;
             case "client":
-              navigate("/dashboard");
+              navigate("/user-home");
               break;
             case "staff":
               navigate("/staff-dashboard");
@@ -36,7 +36,7 @@ const GoogleOAuthCallback = () => {
               navigate("/artist-dashboard");
               break;
             default:
-              navigate("/dashboard");
+              navigate("/user-home");
           }
         } catch (error) {
           console.error("Error handling Google OAuth callback:", error);
