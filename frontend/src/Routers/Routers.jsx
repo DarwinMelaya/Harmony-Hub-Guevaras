@@ -8,8 +8,8 @@ import {
   User,
   Musician,
   Packages,
+  UserHome,
 } from "../pages";
-import HomePage from "../pages/HomePage";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
 
@@ -66,10 +66,10 @@ export const Routers = () => {
         />
         {/* Protected Client Pages */}
         <Route
-          path="/home"
+          path="/user-home"
           element={
             <ProtectedRoute>
-              <HomePage />
+              <UserHome />
             </ProtectedRoute>
           }
         />

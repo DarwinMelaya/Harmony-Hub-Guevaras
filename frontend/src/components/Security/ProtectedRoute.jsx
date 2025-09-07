@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
       case "admin":
         return <Navigate to="/admin-dashboard" replace />;
       case "client":
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/user-home" replace />;
       case "staff":
         return <Navigate to="/staff-dashboard" replace />;
       case "artist":

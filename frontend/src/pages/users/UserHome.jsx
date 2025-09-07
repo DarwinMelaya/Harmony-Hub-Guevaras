@@ -1,4 +1,4 @@
-import Layout from "../components/Layout/Layout";
+import Layout from "../../components/Layout/Layout";
 import { useState, useEffect } from "react";
 import {
   User,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const HomePage = () => {
+const UserHome = () => {
   const [userData, setUserData] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -568,4 +568,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage;
+export default UserHome;

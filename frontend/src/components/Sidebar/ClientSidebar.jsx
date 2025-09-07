@@ -15,8 +15,8 @@ const ClientSidebar = () => {
     {
       icon: LayoutDashboard,
       text: "Home",
-      path: "/home",
-      isActive: location.pathname === "/home",
+      path: "/user-home",
+      isActive: location.pathname === "/user-home",
     },
     {
       icon: Calendar,
