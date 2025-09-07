@@ -70,7 +70,7 @@ const ClientSidebar = () => {
           scrollbarColor: "#4B5563 #1F2937",
         }}
       >
-        <style jsx>{`
+        <style>{`
           nav::-webkit-scrollbar {
             width: 6px;
           }
