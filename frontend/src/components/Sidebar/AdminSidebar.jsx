@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const AdminSidebar = () => {
+const AdminSidebar = ({ onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -89,6 +89,7 @@ const AdminSidebar = () => {
 
   const handleNavigation = (path) => {
     navigate(path);
+    if (typeof onNavigate === "function") onNavigate();
   };
 
   const handleLogout = () => {
@@ -98,6 +99,7 @@ const AdminSidebar = () => {
 
     // Redirect to login page
     navigate("/login");
+    if (typeof onNavigate === "function") onNavigate();
   };
 
   return (
