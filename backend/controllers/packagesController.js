@@ -58,3 +58,58 @@ exports.getPublicPackages = async (req, res) => {
     res.status(500).json({ success: false, error: "Server error while fetching packages" });
   }
 };
+
+// Update package (admin only)
+exports.updatePackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, items, price, image, isAvailable } = req.body;
+
+    // Optionally validate items' inventory references
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        const inventoryItem = await Inventory.findById(item.inventoryItem);
+        if (!inventoryItem) {
+          return res.status(400).json({ success: false, error: `Inventory item not found: ${item.inventoryItem}` });
+        }
+      }
+    }
+
+    const update = {};
+    if (name !== undefined) update.name = name;
+    if (description !== undefined) update.description = description;
+    if (items !== undefined) update.items = items;
+    if (price !== undefined) update.price = price;
+    if (image !== undefined) update.image = image;
+    if (isAvailable !== undefined) update.isAvailable = isAvailable;
+
+    const updated = await Package.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true,
+    }).populate("items.inventoryItem", "name price quantity image");
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Package not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Package updated successfully", package: updated });
+  } catch (error) {
+    console.error("Error updating package:", error);
+    res.status(500).json({ success: false, error: "Server error while updating package" });
+  }
+};
+
+// Delete package (admin only)
+exports.deletePackage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Package.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: "Package not found" });
+    }
+    res.status(200).json({ success: true, message: "Package deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting package:", error);
+    res.status(500).json({ success: false, error: "Server error while deleting package" });
+  }
+};
