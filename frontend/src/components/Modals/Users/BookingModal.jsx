@@ -46,10 +46,11 @@ const BookingModal = ({
                       className="flex justify-between items-center py-2"
                     >
                       <span className="text-gray-300">
-                        {item.name} x{item.quantity}
+                        {item.name} x
+                        {item.type === "package" || item.type === "bandArtist" ? 1 : item.quantity}
                       </span>
                       <span className="text-white font-medium">
-                        ₱{Number(item.price * item.quantity).toLocaleString()}
+                        ₱{Number(item.price * (item.type === "package" || item.type === "bandArtist" ? 1 : item.quantity)).toLocaleString()}
                       </span>
                     </div>
                   ))}

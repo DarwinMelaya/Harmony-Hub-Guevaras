@@ -69,8 +69,10 @@ const createBooking = async (req, res) => {
     // Validate each item and calculate total
     for (const item of items) {
       const { type, itemId, quantity, price, name } = item;
+      // Normalize quantity: non-inventory items are singular
+      const normalizedQuantity = type === "inventory" ? quantity : 1;
 
-      if (!type || !itemId || !quantity || !price || !name) {
+      if (!type || !itemId || !normalizedQuantity || !price || !name) {
         return res.status(400).json({
           success: false,
           message: "Invalid item data",
@@ -86,7 +88,7 @@ const createBooking = async (req, res) => {
           const inventoryItem = await Inventory.findById(itemId);
           if (inventoryItem) {
             itemExists = true;
-            isAvailable = inventoryItem.quantity >= quantity;
+            isAvailable = inventoryItem.quantity >= normalizedQuantity;
           }
           break;
 
@@ -94,20 +96,18 @@ const createBooking = async (req, res) => {
           const packageItem = await Packages.findById(itemId);
           if (packageItem) {
             itemExists = true;
-            // Check if all items in package are available
-            for (const pkgItem of packageItem.items) {
-              const invItem = await Inventory.findById(pkgItem.inventoryItem);
-              if (!invItem || invItem.quantity < pkgItem.quantity * quantity) {
-                isAvailable = false;
-                break;
-              }
+            // Treat undefined as available for backward compatibility
+            const packageAvailable = packageItem.isAvailable !== false;
+            if (!packageAvailable) {
+              isAvailable = false;
+              break;
             }
           }
           break;
 
         case "bandArtist":
           const artist = await BandArtist.findById(itemId);
-          if (artist && artist.isActive) {
+          if (artist && artist.isActive && artist.isAvailable !== false) {
             itemExists = true;
             isAvailable = true;
           }
@@ -130,19 +130,21 @@ const createBooking = async (req, res) => {
       if (!isAvailable) {
         return res.status(400).json({
           success: false,
-          message: `${name} is not available in the requested quantity`,
+          message: `${name} is not available${
+            type === "inventory" ? " in the requested quantity" : ""
+          }`,
         });
       }
 
       validatedItems.push({
         type,
         itemId,
-        quantity,
+        quantity: normalizedQuantity,
         price,
         name,
       });
 
-      totalAmount += price * quantity;
+      totalAmount += price * normalizedQuantity;
     }
 
     // Create the booking
@@ -161,6 +163,31 @@ const createBooking = async (req, res) => {
     });
 
     await booking.save();
+
+    // Apply side effects upon booking creation
+    // - Decrease inventory quantities for inventory items
+    // - Mark packages and band artists as unavailable
+    for (const bookingItem of validatedItems) {
+      if (bookingItem.type === "inventory") {
+        await Inventory.findByIdAndUpdate(
+          bookingItem.itemId,
+          { $inc: { quantity: -bookingItem.quantity } },
+          { new: true }
+        );
+      } else if (bookingItem.type === "package") {
+        await Packages.findByIdAndUpdate(
+          bookingItem.itemId,
+          { $set: { isAvailable: false } },
+          { new: true }
+        );
+      } else if (bookingItem.type === "bandArtist") {
+        await BandArtist.findByIdAndUpdate(
+          bookingItem.itemId,
+          { $set: { isAvailable: false } },
+          { new: true }
+        );
+      }
+    }
 
     // Populate the booking with item details
     await booking.populate("user", "fullName email username");
@@ -318,8 +345,42 @@ const updateBookingStatus = async (req, res) => {
       });
     }
 
+    const previousStatus = booking.status;
     booking.status = status;
     await booking.save();
+
+    // Handle side effects based on status transitions
+    // Return inventory quantities when booking gets confirmed
+    if (previousStatus !== "confirmed" && status === "confirmed") {
+      for (const item of booking.items) {
+        if (item.type === "inventory") {
+          await Inventory.findByIdAndUpdate(
+            item.itemId,
+            { $inc: { quantity: item.quantity } },
+            { new: true }
+          );
+        }
+      }
+    }
+
+    // Re-enable availability for packages and band artists when completed
+    if (previousStatus !== "completed" && status === "completed") {
+      for (const item of booking.items) {
+        if (item.type === "package") {
+          await Packages.findByIdAndUpdate(
+            item.itemId,
+            { $set: { isAvailable: true } },
+            { new: true }
+          );
+        } else if (item.type === "bandArtist") {
+          await BandArtist.findByIdAndUpdate(
+            item.itemId,
+            { $set: { isAvailable: true } },
+            { new: true }
+          );
+        }
+      }
+    }
 
     await booking.populate("user", "fullName email username");
 

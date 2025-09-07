@@ -30,6 +30,10 @@ const PackageSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
     image: {
       type: String, 
     },

@@ -63,6 +63,13 @@ const UserHome = () => {
     fetchData();
   }, []);
 
+  // Refetch data after successful booking to reflect availability/quantities
+  useEffect(() => {
+    if (bookingSuccess) {
+      fetchData();
+    }
+  }, [bookingSuccess]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -170,11 +177,15 @@ const UserHome = () => {
       );
 
       if (existingItem) {
-        return prevCart.map((cartItem) =>
-          cartItem.id === item._id && cartItem.type === type
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
-        );
+        // For inventory, increase quantity; for package/bandArtist, keep quantity at 1
+        if (type === "inventory") {
+          return prevCart.map((cartItem) =>
+            cartItem.id === item._id && cartItem.type === type
+              ? { ...cartItem, quantity: cartItem.quantity + 1 }
+              : cartItem
+          );
+        }
+        return prevCart;
       } else {
         return [...prevCart, cartItem];
       }
@@ -188,6 +199,10 @@ const UserHome = () => {
   };
 
   const updateCartQuantity = (itemId, type, newQuantity) => {
+    // Packages and band artists are singular; force quantity to 1
+    if (type === "package" || type === "bandArtist") {
+      return;
+    }
     if (newQuantity <= 0) {
       removeFromCart(itemId, type);
       return;
@@ -653,11 +668,20 @@ const UserHome = () => {
                         </div>
                       </div>
 
+                      {!artist.isAvailable && (
+                        <div className="mb-3">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/50 text-red-300 border border-red-700">
+                            Unavailable
+                          </span>
+                        </div>
+                      )}
+
                       <button
                         onClick={() => addToCart(artist, "bandArtist")}
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded font-medium transition-colors"
+                        disabled={!artist.isAvailable}
+                        className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
                       >
-                        Add to Cart
+                        {artist.isAvailable ? "Add to Cart" : "Unavailable"}
                       </button>
                     </div>
                   </div>
@@ -715,6 +739,13 @@ const UserHome = () => {
                           <Heart className="w-4 h-4 text-white" />
                         </button>
                       </div>
+                      {!pkg.isAvailable && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
+                            Unavailable
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-6">
                       <h3 className="font-bold text-white mb-2 text-lg group-hover:text-green-400 transition-colors">
@@ -763,9 +794,10 @@ const UserHome = () => {
 
                       <button
                         onClick={() => addToCart(pkg, "package")}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded font-medium transition-colors"
+                        disabled={!pkg.isAvailable}
+                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
                       >
-                        Add to Cart
+                        {pkg.isAvailable ? "Add to Cart" : "Unavailable"}
                       </button>
                     </div>
                   </div>

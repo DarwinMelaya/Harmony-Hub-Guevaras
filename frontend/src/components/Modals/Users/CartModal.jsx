@@ -78,12 +78,13 @@ const CartModal = ({
                                 item.quantity - 1
                               )
                             }
-                            className="bg-gray-600 hover:bg-gray-500 text-white p-1 rounded"
+                            disabled={item.type === "package" || item.type === "bandArtist"}
+                            className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white p-1 rounded"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <span className="text-white font-medium w-8 text-center">
-                            {item.quantity}
+                            {item.type === "package" || item.type === "bandArtist" ? 1 : item.quantity}
                           </span>
                           <button
                             onClick={() =>
@@ -93,7 +94,8 @@ const CartModal = ({
                                 item.quantity + 1
                               )
                             }
-                            className="bg-gray-600 hover:bg-gray-500 text-white p-1 rounded"
+                            disabled={item.type === "package" || item.type === "bandArtist"}
+                            className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white p-1 rounded"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
