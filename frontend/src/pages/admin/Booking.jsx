@@ -16,6 +16,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import axios from "axios";
+import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
 
 const Booking = () => {
   const [bookings, setBookings] = useState([]);
@@ -26,6 +27,9 @@ const Booking = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     fetchBookings();
@@ -53,6 +57,48 @@ const Booking = () => {
       setError(err.response?.data?.message || "Failed to fetch bookings");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Map bookings to schedules by date string for the calendar component
+  const schedulesByDate = bookings.reduce((acc, booking) => {
+    const date = new Date(booking.bookingDate);
+    const dateKey = date.toDateString();
+    if (!acc[dateKey]) acc[dateKey] = [];
+    // Compose schedule object expected by AdminCalendar
+    acc[dateKey].push({
+      id: booking._id,
+      event_name: booking.items?.map((i) => i.name).join(", ") || "Booking",
+      department: booking.user?.fullName || booking.user?.username || "User",
+      start_time: booking.bookingTime,
+      completed: booking.status === "completed",
+      venues: { name: "Booking" },
+    });
+    return acc;
+  }, {});
+
+  const handleMonthChange = (forward) => {
+    let month = calendarMonth + (forward ? 1 : -1);
+    let year = calendarYear;
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    } else if (month < 0) {
+      month = 11;
+      year -= 1;
+    }
+    setCalendarMonth(month);
+    setCalendarYear(year);
+  };
+
+  const handleDateClick = () => {};
+  const handleScheduleClick = (e, schedule) => {
+    e.stopPropagation();
+    const booking = bookings.find((b) => b._id === schedule.id);
+    if (booking) {
+      setSelectedBooking(booking);
+      setShowDetailsModal(true);
+      setShowCalendar(false);
     }
   };
 
@@ -174,13 +220,22 @@ const Booking = () => {
                 Manage all customer bookings and reservations
               </p>
             </div>
-            <button
-              onClick={fetchBookings}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowCalendar(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <Calendar className="w-4 h-4" />
+                Calendar
+              </button>
+              <button
+                onClick={fetchBookings}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Filters and Search */}
@@ -645,6 +700,37 @@ const Booking = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Calendar Modal */}
+      {showCalendar && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-700">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h2 className="text-lg font-semibold text-white">
+                Bookings Calendar
+              </h2>
+              <button
+                onClick={() => setShowCalendar(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto">
+              <AdminCalendar
+                monthNow={calendarMonth}
+                yearNow={calendarYear}
+                schedules={schedulesByDate}
+                onDateClick={handleDateClick}
+                onScheduleClick={handleScheduleClick}
+                onMonthChange={handleMonthChange}
+                selectedVenue={null}
+                isLightText
+              />
             </div>
           </div>
         </div>
