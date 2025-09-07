@@ -382,6 +382,31 @@ const updateBookingStatus = async (req, res) => {
       }
     }
 
+    // When booking is cancelled by admin, restore inventory and re-enable availability
+    if (previousStatus !== "cancelled" && status === "cancelled") {
+      for (const item of booking.items) {
+        if (item.type === "inventory") {
+          await Inventory.findByIdAndUpdate(
+            item.itemId,
+            { $inc: { quantity: item.quantity } },
+            { new: true }
+          );
+        } else if (item.type === "package") {
+          await Packages.findByIdAndUpdate(
+            item.itemId,
+            { $set: { isAvailable: true } },
+            { new: true }
+          );
+        } else if (item.type === "bandArtist") {
+          await BandArtist.findByIdAndUpdate(
+            item.itemId,
+            { $set: { isAvailable: true } },
+            { new: true }
+          );
+        }
+      }
+    }
+
     await booking.populate("user", "fullName email username");
 
     res.json({
@@ -439,6 +464,29 @@ const cancelBooking = async (req, res) => {
 
     booking.status = "cancelled";
     await booking.save();
+
+    // Restore inventory and re-enable availability on cancellation
+    for (const item of booking.items) {
+      if (item.type === "inventory") {
+        await Inventory.findByIdAndUpdate(
+          item.itemId,
+          { $inc: { quantity: item.quantity } },
+          { new: true }
+        );
+      } else if (item.type === "package") {
+        await Packages.findByIdAndUpdate(
+          item.itemId,
+          { $set: { isAvailable: true } },
+          { new: true }
+        );
+      } else if (item.type === "bandArtist") {
+        await BandArtist.findByIdAndUpdate(
+          item.itemId,
+          { $set: { isAvailable: true } },
+          { new: true }
+        );
+      }
+    }
 
     await booking.populate("user", "fullName email username");
 
