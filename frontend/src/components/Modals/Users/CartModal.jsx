@@ -17,7 +17,7 @@ const CartModal = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h2 className="text-xl font-bold text-white">Shopping Cart</h2>
+              <h2 className="text-xl font-bold text-white">Booking Cart</h2>
               <button
                 onClick={() => setShowCart(false)}
                 className="text-gray-400 hover:text-white"
@@ -78,13 +78,19 @@ const CartModal = ({
                                 item.quantity - 1
                               )
                             }
-                            disabled={item.type === "package" || item.type === "bandArtist"}
+                            disabled={
+                              item.type === "package" ||
+                              item.type === "bandArtist"
+                            }
                             className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white p-1 rounded"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <span className="text-white font-medium w-8 text-center">
-                            {item.type === "package" || item.type === "bandArtist" ? 1 : item.quantity}
+                            {item.type === "package" ||
+                            item.type === "bandArtist"
+                              ? 1
+                              : item.quantity}
                           </span>
                           <button
                             onClick={() =>
@@ -94,7 +100,10 @@ const CartModal = ({
                                 item.quantity + 1
                               )
                             }
-                            disabled={item.type === "package" || item.type === "bandArtist"}
+                            disabled={
+                              item.type === "package" ||
+                              item.type === "bandArtist"
+                            }
                             className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white p-1 rounded"
                           >
                             <Plus className="w-4 h-4" />

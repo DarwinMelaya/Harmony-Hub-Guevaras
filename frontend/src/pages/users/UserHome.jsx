@@ -56,6 +56,9 @@ const UserHome = () => {
   const cartButtonRef = useRef(null);
   const [flyItems, setFlyItems] = useState([]);
 
+  // Booking mode: 'standard' (Inventory + Artists) or 'packages'
+  const [bookingMode, setBookingMode] = useState("standard");
+
   useEffect(() => {
     // Get user data from localStorage
     const user = localStorage.getItem("user");
@@ -361,6 +364,26 @@ const UserHome = () => {
     });
   };
 
+  const switchBookingMode = (mode) => {
+    if (mode === bookingMode) return;
+    // On mode switch, keep only compatible items
+    if (mode === "packages") {
+      // Release inventory reservations and remove inventory; keep packages and artists
+      setCart((prev) => {
+        prev.forEach((item) => {
+          if (item.type === "inventory") {
+            adjustInventoryQuantity(item.id, -item.quantity);
+          }
+        });
+        return prev.filter((i) => i.type !== "inventory");
+      });
+    } else {
+      // standard: remove packages only, keep inventory and artists
+      setCart((prev) => prev.filter((i) => i.type !== "package"));
+    }
+    setBookingMode(mode);
+  };
+
   // Booking functions
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
@@ -660,100 +683,133 @@ const UserHome = () => {
             </div>
           )}
 
-          {/* Inventory Section */}
-          <div className="mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <ShoppingCart className="w-6 h-6 text-blue-400" />
-                Musical Instruments & Equipment
-              </h2>
-              <span className="text-gray-400 text-sm">
-                {filteredInventory.length} items available
-              </span>
-            </div>
+          {/* Mode Toggle */}
+          <div className="mb-6 flex items-center gap-3">
+            <span className="text-gray-300 text-sm">Booking Mode:</span>
+            <button
+              onClick={() => switchBookingMode("standard")}
+              className={`px-3 py-1.5 rounded border text-sm ${
+                bookingMode === "standard"
+                  ? "bg-blue-600 border-blue-500 text-white"
+                  : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+              }`}
+            >
+              Inventory + Artists
+            </button>
+            <button
+              onClick={() => switchBookingMode("packages")}
+              className={`px-3 py-1.5 rounded border text-sm ${
+                bookingMode === "packages"
+                  ? "bg-green-600 border-green-500 text-white"
+                  : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+              }`}
+            >
+              Packages Only
+            </button>
+          </div>
 
-            {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+          {/* Inventory Section (shown only in standard mode) */}
+          {bookingMode === "standard" && (
+            <div className="mb-12">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <ShoppingCart className="w-6 h-6 text-blue-400" />
+                  Musical Instruments & Equipment
+                </h2>
+                <span className="text-gray-400 text-sm">
+                  {filteredInventory.length} items available
+                </span>
               </div>
-            ) : filteredInventory.length === 0 ? (
-              <div className="text-center py-12">
-                <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-                <p className="text-gray-400 text-lg">
-                  {searchTerm || selectedCategory !== "all"
-                    ? "No items match your search criteria"
-                    : "No inventory items available"}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredInventory.map((item) => (
-                  <div
-                    key={item._id}
-                    className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 group"
-                  >
-                    <div className="relative">
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          id={`${item._id}-img-inv`}
-                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
-                      ) : (
-                        <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
-                          <ShoppingCart className="w-12 h-12 text-gray-500" />
+
+              {loading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+                </div>
+              ) : bookingMode !== "standard" ? (
+                <div className="text-center py-12 text-gray-400">
+                  Switch to "Inventory + Artists" mode to add instruments.
+                </div>
+              ) : filteredInventory.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+                  <p className="text-gray-400 text-lg">
+                    {searchTerm || selectedCategory !== "all"
+                      ? "No items match your search criteria"
+                      : "No inventory items available"}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {filteredInventory.map((item) => (
+                    <div
+                      key={item._id}
+                      className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 group"
+                    >
+                      <div className="relative">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            id={`${item._id}-img-inv`}
+                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : (
+                          <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
+                            <ShoppingCart className="w-12 h-12 text-gray-500" />
+                          </div>
+                        )}
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="bg-gray-800/80 hover:bg-gray-700/80 p-2 rounded-full">
+                            <Heart className="w-4 h-4 text-white" />
+                          </button>
                         </div>
-                      )}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="bg-gray-800/80 hover:bg-gray-700/80 p-2 rounded-full">
-                          <Heart className="w-4 h-4 text-white" />
-                        </button>
+                        {item.quantity === 0 && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
+                              Out of Stock
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      {item.quantity === 0 && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
-                            Out of Stock
+                      <div className="p-4">
+                        <h3 className="font-medium text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+                          {item.name}
+                        </h3>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-green-400 font-bold text-lg">
+                            ₱{Number(item.price).toLocaleString()}
+                          </span>
+                          <span className="text-gray-400 text-sm">
+                            {item.quantity} left
                           </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-medium text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
-                        {item.name}
-                      </h3>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-green-400 font-bold text-lg">
-                          ₱{Number(item.price).toLocaleString()}
-                        </span>
-                        <span className="text-gray-400 text-sm">
-                          {item.quantity} left
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() =>
-                            handleAddToCartClick(
-                              item,
-                              "inventory",
-                              `${item._id}-img-inv`
-                            )
-                          }
-                          disabled={item.quantity === 0}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
-                        >
-                          {item.quantity === 0 ? "Out of Stock" : "Add to Cart"}
-                        </button>
-                        <button className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              handleAddToCartClick(
+                                item,
+                                "inventory",
+                                `${item._id}-img-inv`
+                              )
+                            }
+                            disabled={item.quantity === 0}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
+                          >
+                            {item.quantity === 0
+                              ? "Out of Stock"
+                              : "Add to Cart"}
+                          </button>
+                          <button className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded transition-colors">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Band Artists Section */}
           <div className="mb-12">
@@ -770,6 +826,10 @@ const UserHome = () => {
             {loading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400"></div>
+              </div>
+            ) : bookingMode !== "standard" && bookingMode !== "packages" ? (
+              <div className="text-center py-12 text-gray-400">
+                Switch mode to view artists.
               </div>
             ) : filteredBandArtists.length === 0 ? (
               <div className="text-center py-12">
@@ -858,6 +918,10 @@ const UserHome = () => {
             {loading ? (
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400"></div>
+              </div>
+            ) : bookingMode !== "packages" ? (
+              <div className="text-center py-12 text-gray-400">
+                Switch to "Packages Only" mode to add packages.
               </div>
             ) : filteredPackages.length === 0 ? (
               <div className="text-center py-12">
