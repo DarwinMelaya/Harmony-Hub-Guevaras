@@ -10,6 +10,7 @@ import {
   Packages,
   UserHome,
   UserBooking,
+  Booking,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -62,6 +63,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole="admin">
               <Musician />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin-booking"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <Booking />
             </ProtectedRoute>
           }
         />

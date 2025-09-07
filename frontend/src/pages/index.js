@@ -10,6 +10,7 @@ export { default as Inventory } from "./admin/Inventory";
 export { default as User } from "./admin/User";
 export { default as Musician } from "./admin/Musician";
 export { default as Packages } from "./admin/Packages";
+export { default as Booking } from "./admin/Booking";
 
 // User Pages
 export { default as UserBooking } from "./users/UserBooking";
