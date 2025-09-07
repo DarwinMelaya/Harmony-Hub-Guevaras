@@ -81,6 +81,29 @@ const getRoleDisplayName = (role) => {
   return displayNames[role] || role;
 };
 
+// Middleware to require specific roles
+const requireRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const userRole = req.user.role;
+
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Insufficient permissions",
+      });
+    }
+
+    next();
+  };
+};
+
 module.exports = {
   ROLES,
   ROLE_HIERARCHY,
@@ -90,4 +113,5 @@ module.exports = {
   canManageRole,
   getValidRoles,
   getRoleDisplayName,
+  requireRole,
 };
