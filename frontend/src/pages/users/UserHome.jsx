@@ -1,7 +1,7 @@
 import Layout from "../../components/Layout/Layout";
 import CartModal from "../../components/Modals/Users/CartModal";
 import BookingModal from "../../components/Modals/Users/BookingModal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   User,
   ChevronDown,
@@ -51,6 +51,10 @@ const UserHome = () => {
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  // Fly-to-cart animation state
+  const cartButtonRef = useRef(null);
+  const [flyItems, setFlyItems] = useState([]);
 
   useEffect(() => {
     // Get user data from localStorage
@@ -159,6 +163,18 @@ const UserHome = () => {
   };
 
   // Cart functions
+  const adjustInventoryQuantity = (itemId, delta) => {
+    // delta > 0 means reserve (decrease displayed inventory)
+    // delta < 0 means release (increase displayed inventory)
+    setInventory((prev) =>
+      prev.map((inv) =>
+        inv._id === itemId
+          ? { ...inv, quantity: Math.max(0, (inv.quantity ?? 0) - delta) }
+          : inv
+      )
+    );
+  };
+
   const addToCart = (item, type) => {
     const cartItem = {
       id: item._id,
@@ -171,31 +187,125 @@ const UserHome = () => {
       description: item.description,
     };
 
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(
-        (cartItem) => cartItem.id === item._id && cartItem.type === type
+    if (type === "inventory") {
+      const inv = inventory.find((invItem) => invItem._id === item._id);
+      if (!inv || (inv.quantity ?? 0) <= 0) return; // no stock to reserve
+
+      // Reserve one unit visually first
+      setInventory((prev) =>
+        prev.map((invItem) =>
+          invItem._id === item._id
+            ? { ...invItem, quantity: Math.max(0, (invItem.quantity ?? 0) - 1) }
+            : invItem
+        )
       );
 
-      if (existingItem) {
-        // For inventory, increase quantity; for package/bandArtist, keep quantity at 1
-        if (type === "inventory") {
-          return prevCart.map((cartItem) =>
-            cartItem.id === item._id && cartItem.type === type
-              ? { ...cartItem, quantity: cartItem.quantity + 1 }
-              : cartItem
+      // Then update cart
+      setCart((prevCart) => {
+        const existingItem = prevCart.find(
+          (ci) => ci.id === item._id && ci.type === type
+        );
+        if (existingItem) {
+          return prevCart.map((c) =>
+            c.id === item._id && c.type === type
+              ? { ...c, quantity: c.quantity + 1 }
+              : c
           );
         }
-        return prevCart;
-      } else {
         return [...prevCart, cartItem];
-      }
+      });
+      return;
+    }
+
+    // Non-inventory items: add once
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(
+        (ci) => ci.id === item._id && ci.type === type
+      );
+      if (existingItem) return prevCart;
+      return [...prevCart, cartItem];
     });
   };
 
+  // Trigger fly animation from a source element id
+  const triggerFlyFrom = (sourceElementId, imageSrc) => {
+    const sourceEl = document.getElementById(sourceElementId);
+    const cartEl = cartButtonRef.current;
+    if (!sourceEl || !cartEl) return;
+
+    const srcRect = sourceEl.getBoundingClientRect();
+    const cartRect = cartEl.getBoundingClientRect();
+
+    const startX = srcRect.left + srcRect.width / 2;
+    const startY = srcRect.top + srcRect.height / 2;
+    const endX = cartRect.left + cartRect.width / 2;
+    const endY = cartRect.top + cartRect.height / 2;
+
+    const id = Date.now() + Math.random();
+    const initial = {
+      id,
+      src: imageSrc,
+      style: {
+        position: "fixed",
+        left: `${startX - 20}px`,
+        top: `${startY - 20}px`,
+        width: "40px",
+        height: "40px",
+        borderRadius: "9999px",
+        overflow: "hidden",
+        pointerEvents: "none",
+        opacity: 1,
+        transform: "scale(1)",
+        transition:
+          "left 600ms cubic-bezier(0.22, 1, 0.36, 1), top 600ms cubic-bezier(0.22, 1, 0.36, 1), transform 600ms ease, opacity 600ms ease",
+        zIndex: 9999,
+      },
+    };
+    setFlyItems((prev) => [...prev, initial]);
+
+    // Animate to cart on next frame
+    requestAnimationFrame(() => {
+      setFlyItems((prev) =>
+        prev.map((f) =>
+          f.id === id
+            ? {
+                ...f,
+                style: {
+                  ...f.style,
+                  left: `${endX - 12}px`,
+                  top: `${endY - 12}px`,
+                  width: "24px",
+                  height: "24px",
+                  transform: "scale(0.6)",
+                  opacity: 0.2,
+                },
+              }
+            : f
+        )
+      );
+    });
+
+    // Cleanup after animation
+    setTimeout(() => {
+      setFlyItems((prev) => prev.filter((f) => f.id !== id));
+    }, 700);
+  };
+
+  const handleAddToCartClick = (item, type, sourceElementId) => {
+    addToCart(item, type);
+    const img = item.image || null;
+    triggerFlyFrom(sourceElementId, img);
+  };
+
   const removeFromCart = (itemId, type) => {
-    setCart((prevCart) =>
-      prevCart.filter((item) => !(item.id === itemId && item.type === type))
-    );
+    setCart((prevCart) => {
+      const item = prevCart.find((i) => i.id === itemId && i.type === type);
+      if (item && type === "inventory") {
+        // Release reserved quantity back to inventory
+        adjustInventoryQuantity(itemId, -item.quantity);
+      }
+      return prevCart.filter((i) => !(i.id === itemId && i.type === type));
+    });
   };
 
   const updateCartQuantity = (itemId, type, newQuantity) => {
@@ -208,13 +318,31 @@ const UserHome = () => {
       return;
     }
 
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === itemId && item.type === type
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
+    setCart((prevCart) => {
+      return prevCart.map((item) => {
+        if (item.id === itemId && item.type === type) {
+          const currentQty = item.quantity;
+          const diff = newQuantity - currentQty;
+          if (diff === 0) return item;
+          if (diff > 0) {
+            // Need to reserve more units if available
+            const inv = inventory.find((invItem) => invItem._id === itemId);
+            const available = inv?.quantity ?? 0;
+            const canReserve = Math.min(diff, available);
+            if (canReserve > 0) {
+              adjustInventoryQuantity(itemId, +canReserve);
+              return { ...item, quantity: currentQty + canReserve };
+            }
+            return item; // no change if not enough stock
+          } else {
+            // Reduce reserved units
+            adjustInventoryQuantity(itemId, diff); // diff is negative, releases stock
+            return { ...item, quantity: newQuantity };
+          }
+        }
+        return item;
+      });
+    });
   };
 
   const getCartTotal = () => {
@@ -222,7 +350,15 @@ const UserHome = () => {
   };
 
   const clearCart = () => {
-    setCart([]);
+    // Release all reserved inventory
+    setCart((prev) => {
+      prev.forEach((item) => {
+        if (item.type === "inventory") {
+          adjustInventoryQuantity(item.id, -item.quantity);
+        }
+      });
+      return [];
+    });
   };
 
   // Booking functions
@@ -355,6 +491,7 @@ const UserHome = () => {
               {/* Cart Button */}
               <button
                 onClick={() => setShowCart(true)}
+                ref={cartButtonRef}
                 className="relative bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
               >
                 <ShoppingCart className="w-5 h-5 text-gray-300" />
@@ -560,6 +697,7 @@ const UserHome = () => {
                         <img
                           src={item.image}
                           alt={item.name}
+                          id={`${item._id}-img-inv`}
                           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
                         />
                       ) : (
@@ -594,7 +732,13 @@ const UserHome = () => {
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => addToCart(item, "inventory")}
+                          onClick={() =>
+                            handleAddToCartClick(
+                              item,
+                              "inventory",
+                              `${item._id}-img-inv`
+                            )
+                          }
                           disabled={item.quantity === 0}
                           className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
                         >
@@ -645,7 +789,10 @@ const UserHome = () => {
                   >
                     <div className="p-6">
                       <div className="flex items-center mb-4">
-                        <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mr-4">
+                        <div
+                          id={`${artist._id}-img-artist`}
+                          className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mr-4"
+                        >
                           <Music className="w-6 h-6 text-white" />
                         </div>
                         <div>
@@ -677,7 +824,13 @@ const UserHome = () => {
                       )}
 
                       <button
-                        onClick={() => addToCart(artist, "bandArtist")}
+                        onClick={() =>
+                          handleAddToCartClick(
+                            artist,
+                            "bandArtist",
+                            `${artist._id}-img-artist`
+                          )
+                        }
                         disabled={!artist.isAvailable}
                         className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
                       >
@@ -727,6 +880,7 @@ const UserHome = () => {
                         <img
                           src={pkg.image}
                           alt={pkg.name}
+                          id={`${pkg._id}-img-pkg`}
                           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
                         />
                       ) : (
@@ -793,7 +947,13 @@ const UserHome = () => {
                       </div>
 
                       <button
-                        onClick={() => addToCart(pkg, "package")}
+                        onClick={() =>
+                          handleAddToCartClick(
+                            pkg,
+                            "package",
+                            `${pkg._id}-img-pkg`
+                          )
+                        }
                         disabled={!pkg.isAvailable}
                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
                       >
@@ -807,6 +967,21 @@ const UserHome = () => {
           </div>
         </div>
       </div>
+
+      {/* Fly thumbnails container */}
+      {flyItems.map((f) => (
+        <div key={f.id} style={f.style}>
+          {f.src ? (
+            <img
+              src={f.src}
+              alt="thumb"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-600 rounded-full" />
+          )}
+        </div>
+      ))}
 
       {/* Cart Modal */}
       <CartModal
@@ -838,3 +1013,6 @@ const UserHome = () => {
 };
 
 export default UserHome;
+
+// Floating thumbnails for fly-to-cart animation (portal-like inline)
+// Rendered globally via a fixed container
