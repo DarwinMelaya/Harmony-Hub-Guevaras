@@ -165,13 +165,13 @@ const UserHome = () => {
       description: item.description,
     };
 
-    setCart(prevCart => {
-      const existingItem = prevCart.find(cartItem => 
-        cartItem.id === item._id && cartItem.type === type
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(
+        (cartItem) => cartItem.id === item._id && cartItem.type === type
       );
-      
+
       if (existingItem) {
-        return prevCart.map(cartItem =>
+        return prevCart.map((cartItem) =>
           cartItem.id === item._id && cartItem.type === type
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
@@ -183,9 +183,9 @@ const UserHome = () => {
   };
 
   const removeFromCart = (itemId, type) => {
-    setCart(prevCart => prevCart.filter(item => 
-      !(item.id === itemId && item.type === type)
-    ));
+    setCart((prevCart) =>
+      prevCart.filter((item) => !(item.id === itemId && item.type === type))
+    );
   };
 
   const updateCartQuantity = (itemId, type, newQuantity) => {
@@ -194,8 +194,8 @@ const UserHome = () => {
       return;
     }
 
-    setCart(prevCart =>
-      prevCart.map(item =>
+    setCart((prevCart) =>
+      prevCart.map((item) =>
         item.id === itemId && item.type === type
           ? { ...item, quantity: newQuantity }
           : item
@@ -204,7 +204,7 @@ const UserHome = () => {
   };
 
   const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const clearCart = () => {
@@ -214,7 +214,7 @@ const UserHome = () => {
   // Booking functions
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (cart.length === 0) {
       setError("Cart is empty. Please add items to book.");
       return;
@@ -231,7 +231,7 @@ const UserHome = () => {
     try {
       const token = localStorage.getItem("token");
       const bookingPayload = {
-        items: cart.map(item => ({
+        items: cart.map((item) => ({
           type: item.type,
           itemId: item.id,
           quantity: item.quantity,
@@ -280,9 +280,9 @@ const UserHome = () => {
   };
 
   const handleBookingDataChange = (field, value) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setBookingData(prev => ({
+    if (field.includes(".")) {
+      const [parent, child] = field.split(".");
+      setBookingData((prev) => ({
         ...prev,
         [parent]: {
           ...prev[parent],
@@ -290,7 +290,7 @@ const UserHome = () => {
         },
       }));
     } else {
-      setBookingData(prev => ({
+      setBookingData((prev) => ({
         ...prev,
         [field]: value,
       }));
@@ -563,7 +563,7 @@ const UserHome = () => {
                         </span>
                       </div>
                       <div className="flex gap-2">
-                        <button 
+                        <button
                           onClick={() => addToCart(item, "inventory")}
                           disabled={item.quantity === 0}
                           className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
@@ -638,7 +638,7 @@ const UserHome = () => {
                         </div>
                       </div>
 
-                      <button 
+                      <button
                         onClick={() => addToCart(artist, "bandArtist")}
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded font-medium transition-colors"
                       >
@@ -746,7 +746,7 @@ const UserHome = () => {
                         </div>
                       </div>
 
-                      <button 
+                      <button
                         onClick={() => addToCart(pkg, "package")}
                         className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded font-medium transition-colors"
                       >
@@ -784,35 +784,64 @@ const UserHome = () => {
               ) : (
                 <div className="space-y-4">
                   {cart.map((item, index) => (
-                    <div key={`${item.id}-${item.type}`} className="flex items-center justify-between bg-gray-700 p-4 rounded-lg">
+                    <div
+                      key={`${item.id}-${item.type}`}
+                      className="flex items-center justify-between bg-gray-700 p-4 rounded-lg"
+                    >
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-gray-600 rounded flex items-center justify-center">
-                          {item.type === "inventory" && <ShoppingCart className="w-6 h-6 text-gray-300" />}
-                          {item.type === "package" && <Package className="w-6 h-6 text-gray-300" />}
-                          {item.type === "bandArtist" && <Music className="w-6 h-6 text-gray-300" />}
+                          {item.type === "inventory" && (
+                            <ShoppingCart className="w-6 h-6 text-gray-300" />
+                          )}
+                          {item.type === "package" && (
+                            <Package className="w-6 h-6 text-gray-300" />
+                          )}
+                          {item.type === "bandArtist" && (
+                            <Music className="w-6 h-6 text-gray-300" />
+                          )}
                         </div>
                         <div>
-                          <h3 className="text-white font-medium">{item.name}</h3>
+                          <h3 className="text-white font-medium">
+                            {item.name}
+                          </h3>
                           <p className="text-gray-400 text-sm">
-                            {item.type === "bandArtist" && item.genre && `Genre: ${item.genre}`}
+                            {item.type === "bandArtist" &&
+                              item.genre &&
+                              `Genre: ${item.genre}`}
                             {item.type === "package" && "Service Package"}
                             {item.type === "inventory" && "Musical Instrument"}
                           </p>
-                          <p className="text-blue-400 font-bold">₱{Number(item.price).toLocaleString()}</p>
+                          <p className="text-blue-400 font-bold">
+                            ₱{Number(item.price).toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => updateCartQuantity(item.id, item.type, item.quantity - 1)}
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.id,
+                                item.type,
+                                item.quantity - 1
+                              )
+                            }
                             className="bg-gray-600 hover:bg-gray-500 text-white p-1 rounded"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
-                          <span className="text-white font-medium w-8 text-center">{item.quantity}</span>
+                          <span className="text-white font-medium w-8 text-center">
+                            {item.quantity}
+                          </span>
                           <button
-                            onClick={() => updateCartQuantity(item.id, item.type, item.quantity + 1)}
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.id,
+                                item.type,
+                                item.quantity + 1
+                              )
+                            }
                             className="bg-gray-600 hover:bg-gray-500 text-white p-1 rounded"
                           >
                             <Plus className="w-4 h-4" />
@@ -835,7 +864,9 @@ const UserHome = () => {
               <div className="p-6 border-t border-gray-700">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-lg font-bold text-white">Total:</span>
-                  <span className="text-2xl font-bold text-green-400">₱{Number(getCartTotal()).toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-green-400">
+                    ₱{Number(getCartTotal()).toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex space-x-3">
                   <button
@@ -865,7 +896,9 @@ const UserHome = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-700">
-              <h2 className="text-xl font-bold text-white">Complete Your Booking</h2>
+              <h2 className="text-xl font-bold text-white">
+                Complete Your Booking
+              </h2>
               <button
                 onClick={() => setShowBookingModal(false)}
                 className="text-gray-400 hover:text-white"
@@ -874,21 +907,35 @@ const UserHome = () => {
               </button>
             </div>
 
-            <form onSubmit={handleBookingSubmit} className="p-6 overflow-y-auto max-h-[70vh]">
+            <form
+              onSubmit={handleBookingSubmit}
+              className="p-6 overflow-y-auto max-h-[70vh]"
+            >
               {/* Cart Summary */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-3">Booking Summary</h3>
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  Booking Summary
+                </h3>
                 <div className="bg-gray-700 p-4 rounded-lg">
                   {cart.map((item, index) => (
-                    <div key={`${item.id}-${item.type}`} className="flex justify-between items-center py-2">
-                      <span className="text-gray-300">{item.name} x{item.quantity}</span>
-                      <span className="text-white font-medium">₱{Number(item.price * item.quantity).toLocaleString()}</span>
+                    <div
+                      key={`${item.id}-${item.type}`}
+                      className="flex justify-between items-center py-2"
+                    >
+                      <span className="text-gray-300">
+                        {item.name} x{item.quantity}
+                      </span>
+                      <span className="text-white font-medium">
+                        ₱{Number(item.price * item.quantity).toLocaleString()}
+                      </span>
                     </div>
                   ))}
                   <div className="border-t border-gray-600 pt-2 mt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-white font-bold">Total:</span>
-                      <span className="text-green-400 font-bold text-lg">₱{Number(getCartTotal()).toLocaleString()}</span>
+                      <span className="text-green-400 font-bold text-lg">
+                        ₱{Number(getCartTotal()).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -905,8 +952,10 @@ const UserHome = () => {
                     <input
                       type="date"
                       value={bookingData.bookingDate}
-                      onChange={(e) => handleBookingDataChange("bookingDate", e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) =>
+                        handleBookingDataChange("bookingDate", e.target.value)
+                      }
+                      min={new Date().toISOString().split("T")[0]}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -919,7 +968,9 @@ const UserHome = () => {
                     <input
                       type="time"
                       value={bookingData.bookingTime}
-                      onChange={(e) => handleBookingDataChange("bookingTime", e.target.value)}
+                      onChange={(e) =>
+                        handleBookingDataChange("bookingTime", e.target.value)
+                      }
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     />
@@ -935,7 +986,12 @@ const UserHome = () => {
                     min="1"
                     max="24"
                     value={bookingData.duration}
-                    onChange={(e) => handleBookingDataChange("duration", parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleBookingDataChange(
+                        "duration",
+                        parseInt(e.target.value)
+                      )
+                    }
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -946,7 +1002,9 @@ const UserHome = () => {
                   </label>
                   <textarea
                     value={bookingData.notes}
-                    onChange={(e) => handleBookingDataChange("notes", e.target.value)}
+                    onChange={(e) =>
+                      handleBookingDataChange("notes", e.target.value)
+                    }
                     rows="3"
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Any special requirements or notes..."
@@ -955,7 +1013,9 @@ const UserHome = () => {
 
                 {/* Contact Information */}
                 <div className="border-t border-gray-600 pt-4">
-                  <h4 className="text-lg font-semibold text-white mb-3">Contact Information</h4>
+                  <h4 className="text-lg font-semibold text-white mb-3">
+                    Contact Information
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -964,7 +1024,12 @@ const UserHome = () => {
                       <input
                         type="tel"
                         value={bookingData.contactInfo.phone}
-                        onChange={(e) => handleBookingDataChange("contactInfo.phone", e.target.value)}
+                        onChange={(e) =>
+                          handleBookingDataChange(
+                            "contactInfo.phone",
+                            e.target.value
+                          )
+                        }
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="+63 912 345 6789"
                       />
@@ -976,7 +1041,12 @@ const UserHome = () => {
                       <input
                         type="email"
                         value={bookingData.contactInfo.email}
-                        onChange={(e) => handleBookingDataChange("contactInfo.email", e.target.value)}
+                        onChange={(e) =>
+                          handleBookingDataChange(
+                            "contactInfo.email",
+                            e.target.value
+                          )
+                        }
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="your.email@example.com"
                       />
@@ -988,7 +1058,12 @@ const UserHome = () => {
                     </label>
                     <textarea
                       value={bookingData.contactInfo.address}
-                      onChange={(e) => handleBookingDataChange("contactInfo.address", e.target.value)}
+                      onChange={(e) =>
+                        handleBookingDataChange(
+                          "contactInfo.address",
+                          e.target.value
+                        )
+                      }
                       rows="2"
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Event location or delivery address..."
@@ -1031,9 +1106,12 @@ const UserHome = () => {
           <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
             <div className="text-center">
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">Booking Successful!</h2>
+              <h2 className="text-xl font-bold text-white mb-2">
+                Booking Successful!
+              </h2>
               <p className="text-gray-300 mb-6">
-                Your booking has been submitted successfully. We will contact you soon to confirm the details.
+                Your booking has been submitted successfully. We will contact
+                you soon to confirm the details.
               </p>
               <button
                 onClick={() => setBookingSuccess(false)}
