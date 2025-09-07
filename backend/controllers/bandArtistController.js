@@ -273,9 +273,31 @@ const toggleBandArtistStatus = async (req, res) => {
   }
 };
 
+// Get all band artists for public display (no auth required)
+const getAllBandArtistsPublic = async (req, res) => {
+  try {
+    const bandArtists = await BandArtist.find({ isActive: true })
+      .populate("createdBy", "fullName username")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: bandArtists,
+    });
+  } catch (error) {
+    console.error("Get all band artists public error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   addBandArtist,
   getAllBandArtists,
+  getAllBandArtistsPublic,
   getBandArtistById,
   updateBandArtist,
   deleteBandArtist,

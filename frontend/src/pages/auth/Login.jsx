@@ -71,7 +71,7 @@ const Login = () => {
             navigate("/admin-dashboard");
             break;
           case "client":
-            navigate("/dashboard");
+            navigate("/home");
             break;
           case "staff":
             navigate("/staff-dashboard");
@@ -80,7 +80,7 @@ const Login = () => {
             navigate("/artist-dashboard");
             break;
           default:
-            navigate("/dashboard");
+            navigate("/home");
         }
       }
     } catch (error) {

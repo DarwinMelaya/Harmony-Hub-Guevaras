@@ -8,6 +8,7 @@ const {
 const {
   addBandArtist,
   getAllBandArtists,
+  getAllBandArtistsPublic,
   getBandArtistById,
   updateBandArtist,
   deleteBandArtist,
@@ -24,6 +25,9 @@ router.put(
   authorizeAdmin,
   toggleBandArtistStatus
 );
+
+// Public route (no auth required)
+router.get("/public", getAllBandArtistsPublic);
 
 // Staff and Admin routes
 router.get("/", authenticateToken, authorizeStaffOrAdmin, getAllBandArtists);
