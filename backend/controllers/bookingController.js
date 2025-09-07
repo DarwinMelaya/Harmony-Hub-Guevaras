@@ -13,6 +13,9 @@ const createBooking = async (req, res) => {
       duration = 1,
       notes,
       contactInfo,
+      paymentMethod = "cash",
+      paymentReference,
+      paymentImage,
     } = req.body;
 
     const userId = req.user.id;
@@ -30,6 +33,25 @@ const createBooking = async (req, res) => {
         success: false,
         message: "Booking date and time are required",
       });
+    }
+
+    // Validate payment method
+    if (!["cash", "gcash"].includes(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment method",
+      });
+    }
+
+    // Validate GCash payment requirements
+    if (paymentMethod === "gcash") {
+      if (!paymentReference || !paymentImage) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Payment reference and image are required for GCash payments",
+        });
+      }
     }
 
     // Validate booking date is not in the past
@@ -133,6 +155,9 @@ const createBooking = async (req, res) => {
       duration,
       notes,
       contactInfo,
+      paymentMethod,
+      paymentReference,
+      paymentImage,
     });
 
     await booking.save();

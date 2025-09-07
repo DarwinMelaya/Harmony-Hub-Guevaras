@@ -49,6 +49,9 @@ const UserHome = () => {
       email: "",
       address: "",
     },
+    paymentMethod: "cash",
+    paymentReference: "",
+    paymentImage: null,
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -225,6 +228,16 @@ const UserHome = () => {
       return;
     }
 
+    // Validate GCash payment requirements
+    if (bookingData.paymentMethod === "gcash") {
+      if (!bookingData.paymentReference || !bookingData.paymentImage) {
+        setError(
+          "Payment reference and image are required for GCash payments."
+        );
+        return;
+      }
+    }
+
     setBookingLoading(true);
     setError(null);
 
@@ -243,6 +256,9 @@ const UserHome = () => {
         duration: bookingData.duration,
         notes: bookingData.notes,
         contactInfo: bookingData.contactInfo,
+        paymentMethod: bookingData.paymentMethod,
+        paymentReference: bookingData.paymentReference,
+        paymentImage: bookingData.paymentImage,
       };
 
       const response = await axios.post(
@@ -270,6 +286,9 @@ const UserHome = () => {
             email: "",
             address: "",
           },
+          paymentMethod: "cash",
+          paymentReference: "",
+          paymentImage: null,
         });
       }
     } catch (err) {
@@ -1009,6 +1028,110 @@ const UserHome = () => {
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Any special requirements or notes..."
                   />
+                </div>
+
+                {/* Payment Method */}
+                <div className="border-t border-gray-600 pt-4">
+                  <h4 className="text-lg font-semibold text-white mb-3">
+                    Payment Method
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Select Payment Method
+                      </label>
+                      <div className="flex space-x-4">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="cash"
+                            checked={bookingData.paymentMethod === "cash"}
+                            onChange={(e) =>
+                              handleBookingDataChange(
+                                "paymentMethod",
+                                e.target.value
+                              )
+                            }
+                            className="mr-2 text-blue-600"
+                          />
+                          <span className="text-white">Cash</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="gcash"
+                            checked={bookingData.paymentMethod === "gcash"}
+                            onChange={(e) =>
+                              handleBookingDataChange(
+                                "paymentMethod",
+                                e.target.value
+                              )
+                            }
+                            className="mr-2 text-blue-600"
+                          />
+                          <span className="text-white">GCash</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {bookingData.paymentMethod === "gcash" && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Payment Reference Number
+                          </label>
+                          <input
+                            type="text"
+                            value={bookingData.paymentReference}
+                            onChange={(e) =>
+                              handleBookingDataChange(
+                                "paymentReference",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Enter GCash reference number (e.g., GCASH123456789)"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Payment Screenshot
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  handleBookingDataChange(
+                                    "paymentImage",
+                                    event.target.result
+                                  );
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
+                          />
+                          {bookingData.paymentImage && (
+                            <div className="mt-2">
+                              <img
+                                src={bookingData.paymentImage}
+                                alt="Payment screenshot"
+                                className="w-32 h-32 object-cover rounded-lg border border-gray-600"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Contact Information */}

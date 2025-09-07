@@ -64,6 +64,18 @@ const BookingSchema = new mongoose.Schema({
     email: String,
     address: String,
   },
+  paymentMethod: {
+    type: String,
+    enum: ["cash", "gcash"],
+    default: "cash",
+  },
+  paymentReference: {
+    type: String,
+    trim: true,
+  },
+  paymentImage: {
+    type: String, // base64 string or file path
+  },
   createdAt: {
     type: Date,
     default: Date.now,

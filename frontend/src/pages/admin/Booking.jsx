@@ -512,6 +512,47 @@ const Booking = () => {
                 </div>
               </div>
 
+              {/* Payment Information */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  Payment Information
+                </h3>
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Payment Method</p>
+                      <p className="text-white font-medium capitalize">
+                        {selectedBooking.paymentMethod === "gcash"
+                          ? "GCash"
+                          : "Cash"}
+                      </p>
+                    </div>
+                    {selectedBooking.paymentReference && (
+                      <div>
+                        <p className="text-gray-400 text-sm">
+                          Reference Number
+                        </p>
+                        <p className="text-white font-mono">
+                          {selectedBooking.paymentReference}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {selectedBooking.paymentImage && (
+                    <div className="mt-4">
+                      <p className="text-gray-400 text-sm mb-2">
+                        Payment Screenshot
+                      </p>
+                      <img
+                        src={selectedBooking.paymentImage}
+                        alt="Payment screenshot"
+                        className="w-48 h-48 object-cover rounded-lg border border-gray-600"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Items */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-3">
