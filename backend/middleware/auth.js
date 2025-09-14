@@ -161,6 +161,25 @@ const authorizeStaffOrAdmin = (req, res, next) => {
   next();
 };
 
+// Owner, Admin, or Staff middleware
+const authorizeOwnerAdminOrStaff = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+  }
+
+  if (!["owner", "admin", "staff"].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. Owner, admin, or staff privileges required.",
+    });
+  }
+
+  next();
+};
+
 // Artist middleware
 const authorizeArtist = (req, res, next) => {
   if (!req.user) {
@@ -213,6 +232,7 @@ module.exports = {
   authorizeAdmin,
   authorizeOwnerOrAdmin,
   authorizeStaffOrAdmin,
+  authorizeOwnerAdminOrStaff,
   authorizeArtist,
   optionalAuth,
 };

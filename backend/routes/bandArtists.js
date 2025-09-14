@@ -4,6 +4,7 @@ const {
   authenticateToken,
   authorizeOwnerOrAdmin,
   authorizeStaffOrAdmin,
+  authorizeOwnerAdminOrStaff,
 } = require("../middleware/auth");
 const {
   addBandArtist,
@@ -34,8 +35,18 @@ router.put(
 // Public route (no auth required)
 router.get("/public", getAllBandArtistsPublic);
 
-// Staff and Admin routes
-router.get("/", authenticateToken, authorizeStaffOrAdmin, getAllBandArtists);
-router.get("/:id", authenticateToken, authorizeStaffOrAdmin, getBandArtistById);
+// Staff, Admin, and Owner routes
+router.get(
+  "/",
+  authenticateToken,
+  authorizeOwnerAdminOrStaff,
+  getAllBandArtists
+);
+router.get(
+  "/:id",
+  authenticateToken,
+  authorizeOwnerAdminOrStaff,
+  getBandArtistById
+);
 
 module.exports = router;

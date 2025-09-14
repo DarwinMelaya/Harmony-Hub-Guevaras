@@ -18,3 +18,8 @@ export { default as UserHome } from "./users/UserHome";
 
 // Owner Pages
 export { default as OwnerDashboard } from "./owner/OwnerDashboard";
+export { default as OwnerInventory } from "./owner/OwnerInventory";
+export { default as OwnerMusician } from "./owner/OwnerMusician";
+export { default as OwnerPackages } from "./owner/OwnerPackages";
+export { default as OwnerUser } from "./owner/OwnerUser";
+export { default as OwnerBooking } from "./owner/OwnerBooking";

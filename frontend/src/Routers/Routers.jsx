@@ -12,6 +12,11 @@ import {
   UserBooking,
   Booking,
   OwnerDashboard,
+  OwnerInventory,
+  OwnerPackages,
+  OwnerUser,
+  OwnerMusician,
+  OwnerBooking,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -98,6 +103,46 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole="owner">
               <OwnerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner-inventory"
+          element={
+            <ProtectedRoute requiredRole={["owner"]}>
+              <OwnerInventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner-packages"
+          element={
+            <ProtectedRoute requiredRole={["owner"]}>
+              <OwnerPackages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner-user"
+          element={
+            <ProtectedRoute requiredRole={["owner"]}>
+              <OwnerUser />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner-musician"
+          element={
+            <ProtectedRoute requiredRole={["owner"]}>
+              <OwnerMusician />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner-booking"
+          element={
+            <ProtectedRoute requiredRole={["owner"]}>
+              <OwnerBooking />
             </ProtectedRoute>
           }
         />
