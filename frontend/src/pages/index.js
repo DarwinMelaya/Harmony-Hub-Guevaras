@@ -30,3 +30,6 @@ export { default as StaffInventory } from "./staff/StaffInventory";
 export { default as StaffPackages } from "./staff/StaffPackages";
 export { default as StaffMusician } from "./staff/StaffMusician";
 export { default as StaffBooking } from "./staff/StaffBooking";
+
+// Artist Pages
+export { default as ArtistDashboard } from "./artist/ArtistDashboard";

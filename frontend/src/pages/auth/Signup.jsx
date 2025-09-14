@@ -1,6 +1,12 @@
 import { FcGoogle } from "react-icons/fc";
 import { useState } from "react";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import {
+  FaEye,
+  FaEyeSlash,
+  FaArrowLeft,
+  FaArrowRight,
+  FaCheck,
+} from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -14,6 +20,9 @@ const Signup = () => {
     username: "",
     password: "",
     confirmPassword: "",
+    role: "client",
+    genre: "",
+    booking_fee: "",
   });
   const [focusedFields, setFocusedFields] = useState({
     fullName: false,
@@ -23,6 +32,8 @@ const Signup = () => {
     username: false,
     password: false,
     confirmPassword: false,
+    genre: false,
+    booking_fee: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -30,6 +41,8 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 3;
 
   const API_BASE_URL = "http://localhost:5000/api";
 
@@ -38,6 +51,74 @@ const Signup = () => {
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const nextStep = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const validateCurrentStep = () => {
+    const newErrors = {};
+
+    if (currentStep === 1) {
+      if (!formData.fullName.trim()) {
+        newErrors.fullName = "Full name is required";
+      }
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required";
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = "Email is invalid";
+      }
+      if (!formData.username.trim()) {
+        newErrors.username = "Username is required";
+      } else if (formData.username.length < 3) {
+        newErrors.username = "Username must be at least 3 characters";
+      }
+    }
+
+    if (currentStep === 2) {
+      if (!formData.password) {
+        newErrors.password = "Password is required";
+      } else if (formData.password.length < 6) {
+        newErrors.password = "Password must be at least 6 characters";
+      }
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
+      }
+      if (formData.role === "artist") {
+        if (!formData.genre.trim()) {
+          newErrors.genre = "Genre is required for artists";
+        }
+        if (!formData.booking_fee) {
+          newErrors.booking_fee = "Booking fee is required for artists";
+        } else if (parseFloat(formData.booking_fee) < 0) {
+          newErrors.booking_fee = "Booking fee must be a positive number";
+        }
+      }
+    }
+
+    if (currentStep === 3) {
+      if (!agreeToTerms) {
+        newErrors.terms = "You must agree to the terms and conditions";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateCurrentStep()) {
+      nextStep();
     }
   };
 
@@ -52,32 +133,38 @@ const Signup = () => {
   const validateForm = () => {
     const newErrors = {};
 
+    // Validate all steps
     if (!formData.fullName.trim()) {
       newErrors.fullName = "Full name is required";
     }
-
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email is invalid";
     }
-
     if (!formData.username.trim()) {
       newErrors.username = "Username is required";
     } else if (formData.username.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
     }
-
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
-
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-
+    if (formData.role === "artist") {
+      if (!formData.genre.trim()) {
+        newErrors.genre = "Genre is required for artists";
+      }
+      if (!formData.booking_fee) {
+        newErrors.booking_fee = "Booking fee is required for artists";
+      } else if (parseFloat(formData.booking_fee) < 0) {
+        newErrors.booking_fee = "Booking fee must be a positive number";
+      }
+    }
     if (!agreeToTerms) {
       newErrors.terms = "You must agree to the terms and conditions";
     }
@@ -110,8 +197,14 @@ const Signup = () => {
         location: formData.location,
         username: formData.username,
         password: formData.password,
-        role: "client", // Automatically set to client
+        role: formData.role,
       };
+
+      // Add artist-specific fields if role is artist
+      if (formData.role === "artist") {
+        userData.genre = formData.genre;
+        userData.booking_fee = parseFloat(formData.booking_fee);
+      }
 
       const response = await axios.post(
         `${API_BASE_URL}/users/register`,
@@ -183,7 +276,7 @@ const Signup = () => {
       </div>
 
       {/* Glass Card */}
-      <div className="relative z-10 w-full max-w-lg mx-4">
+      <div className="relative z-10 w-full max-w-2xl mx-4">
         <div className="bg-gray-900/60 backdrop-blur-lg rounded-3xl shadow-2xl border border-gray-700/50 p-8">
           {/* System Title */}
           <div className="text-center mb-8">
@@ -192,8 +285,37 @@ const Signup = () => {
             </h1>
             <p className="text-gray-300 text-lg">Create Account</p>
             <p className="text-gray-400 text-sm mt-1">
-              Join us and start your journey
+              Step {currentStep} of {totalSteps}
             </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-2">
+              {[1, 2, 3].map((step) => (
+                <div
+                  key={step}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                    step <= currentStep
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-700 text-gray-400"
+                  }`}
+                >
+                  {step < currentStep ? <FaCheck className="w-4 h-4" /> : step}
+                </div>
+              ))}
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2">
+              <div
+                className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-2">
+              <span>Personal Info</span>
+              <span>Account Details</span>
+              <span>Terms & Submit</span>
+            </div>
           </div>
 
           {/* Success Message */}
@@ -210,291 +332,467 @@ const Signup = () => {
             </div>
           )}
 
-          {/* Signup Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name Field */}
-            <div className="relative">
-              <input
-                type="text"
-                id="fullName"
-                value={formData.fullName}
-                onChange={(e) => handleInputChange("fullName", e.target.value)}
-                onFocus={() => handleFocus("fullName")}
-                onBlur={() => handleBlur("fullName")}
-                className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
-                  errors.fullName ? "border-red-500" : "border-gray-600"
-                }`}
-                placeholder="Enter your full name"
-              />
-              <label
-                htmlFor="fullName"
-                className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.fullName || formData.fullName
-                    ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                    : "text-gray-400 text-sm top-4"
-                }`}
-              >
-                Full Name
-              </label>
-              {errors.fullName && (
-                <p className="text-red-400 text-xs mt-1">{errors.fullName}</p>
-              )}
-            </div>
+          {/* Step Content */}
+          <div className="min-h-[400px]">
+            {/* Step 1: Personal Information */}
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+                  Personal Information
+                </h2>
 
-            {/* Email Field */}
-            <div className="relative">
-              <input
-                type="email"
-                id="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                onFocus={() => handleFocus("email")}
-                onBlur={() => handleBlur("email")}
-                className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
-                  errors.email ? "border-red-500" : "border-gray-600"
-                }`}
-                placeholder="Enter your email"
-              />
-              <label
-                htmlFor="email"
-                className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.email || formData.email
-                    ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                    : "text-gray-400 text-sm top-4"
-                }`}
-              >
-                Email Address
-              </label>
-              {errors.email && (
-                <p className="text-red-400 text-xs mt-1">{errors.email}</p>
-              )}
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Full Name */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="fullName"
+                      value={formData.fullName}
+                      onChange={(e) =>
+                        handleInputChange("fullName", e.target.value)
+                      }
+                      onFocus={() => handleFocus("fullName")}
+                      onBlur={() => handleBlur("fullName")}
+                      className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                        errors.fullName ? "border-red-500" : "border-gray-600"
+                      }`}
+                      placeholder="Enter your full name"
+                    />
+                    <label
+                      htmlFor="fullName"
+                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                        focusedFields.fullName || formData.fullName
+                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                          : "text-gray-400 text-sm top-4"
+                      }`}
+                    >
+                      Full Name
+                    </label>
+                    {errors.fullName && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.fullName}
+                      </p>
+                    )}
+                  </div>
 
-            {/* Phone Number Field */}
-            <div className="relative">
-              <input
-                type="tel"
-                id="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={(e) =>
-                  handleInputChange("phoneNumber", e.target.value)
-                }
-                onFocus={() => handleFocus("phoneNumber")}
-                onBlur={() => handleBlur("phoneNumber")}
-                className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
-                placeholder="Enter your phone number"
-              />
-              <label
-                htmlFor="phoneNumber"
-                className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.phoneNumber || formData.phoneNumber
-                    ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                    : "text-gray-400 text-sm top-4"
-                }`}
-              >
-                Phone Number
-              </label>
-            </div>
+                  {/* Email */}
+                  <div className="relative">
+                    <input
+                      type="email"
+                      id="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
+                      onFocus={() => handleFocus("email")}
+                      onBlur={() => handleBlur("email")}
+                      className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                        errors.email ? "border-red-500" : "border-gray-600"
+                      }`}
+                      placeholder="Enter your email"
+                    />
+                    <label
+                      htmlFor="email"
+                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                        focusedFields.email || formData.email
+                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                          : "text-gray-400 text-sm top-4"
+                      }`}
+                    >
+                      Email Address
+                    </label>
+                    {errors.email && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.email}
+                      </p>
+                    )}
+                  </div>
 
-            {/* Location Field */}
-            <div className="relative">
-              <input
-                type="text"
-                id="location"
-                value={formData.location}
-                onChange={(e) => handleInputChange("location", e.target.value)}
-                onFocus={() => handleFocus("location")}
-                onBlur={() => handleBlur("location")}
-                className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
-                placeholder="Enter your location"
-              />
-              <label
-                htmlFor="location"
-                className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.location || formData.location
-                    ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                    : "text-gray-400 text-sm top-4"
-                }`}
-              >
-                Location
-              </label>
-            </div>
+                  {/* Phone Number */}
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      id="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={(e) =>
+                        handleInputChange("phoneNumber", e.target.value)
+                      }
+                      onFocus={() => handleFocus("phoneNumber")}
+                      onBlur={() => handleBlur("phoneNumber")}
+                      className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
+                      placeholder="Enter your phone number"
+                    />
+                    <label
+                      htmlFor="phoneNumber"
+                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                        focusedFields.phoneNumber || formData.phoneNumber
+                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                          : "text-gray-400 text-sm top-4"
+                      }`}
+                    >
+                      Phone Number
+                    </label>
+                  </div>
 
-            {/* Username Field */}
-            <div className="relative">
-              <input
-                type="text"
-                id="username"
-                value={formData.username}
-                onChange={(e) => handleInputChange("username", e.target.value)}
-                onFocus={() => handleFocus("username")}
-                onBlur={() => handleBlur("username")}
-                className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
-                  errors.username ? "border-red-500" : "border-gray-600"
-                }`}
-                placeholder="Choose a username"
-              />
-              <label
-                htmlFor="username"
-                className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.username || formData.username
-                    ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                    : "text-gray-400 text-sm top-4"
-                }`}
-              >
-                Username
-              </label>
-              {errors.username && (
-                <p className="text-red-400 text-xs mt-1">{errors.username}</p>
-              )}
-            </div>
+                  {/* Location */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="location"
+                      value={formData.location}
+                      onChange={(e) =>
+                        handleInputChange("location", e.target.value)
+                      }
+                      onFocus={() => handleFocus("location")}
+                      onBlur={() => handleBlur("location")}
+                      className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
+                      placeholder="Enter your location"
+                    />
+                    <label
+                      htmlFor="location"
+                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                        focusedFields.location || formData.location
+                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                          : "text-gray-400 text-sm top-4"
+                      }`}
+                    >
+                      Location
+                    </label>
+                  </div>
+                </div>
 
-            {/* Password Field */}
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                onFocus={() => handleFocus("password")}
-                onBlur={() => handleBlur("password")}
-                className={`w-full px-4 py-4 pr-12 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
-                  errors.password ? "border-red-500" : "border-gray-600"
-                }`}
-                placeholder="Create a password"
-              />
-              <label
-                htmlFor="password"
-                className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.password || formData.password
-                    ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                    : "text-gray-400 text-sm top-4"
-                }`}
-              >
-                Password
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:text-gray-200"
-              >
-                {showPassword ? (
-                  <FaEyeSlash className="w-5 h-5" />
-                ) : (
-                  <FaEye className="w-5 h-5" />
-                )}
-              </button>
-              {errors.password && (
-                <p className="text-red-400 text-xs mt-1">{errors.password}</p>
-              )}
-            </div>
-
-            {/* Confirm Password Field */}
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                id="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={(e) =>
-                  handleInputChange("confirmPassword", e.target.value)
-                }
-                onFocus={() => handleFocus("confirmPassword")}
-                onBlur={() => handleBlur("confirmPassword")}
-                className={`w-full px-4 py-4 pr-12 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
-                  errors.confirmPassword ? "border-red-500" : "border-gray-600"
-                }`}
-                placeholder="Confirm your password"
-              />
-              <label
-                htmlFor="confirmPassword"
-                className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                  focusedFields.confirmPassword || formData.confirmPassword
-                    ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                    : "text-gray-400 text-sm top-4"
-                }`}
-              >
-                Confirm Password
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:text-gray-200"
-              >
-                {showConfirmPassword ? (
-                  <FaEyeSlash className="w-5 h-5" />
-                ) : (
-                  <FaEye className="w-5 h-5" />
-                )}
-              </button>
-              {errors.confirmPassword && (
-                <p className="text-red-400 text-xs mt-1">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-
-            {/* Terms & Conditions */}
-            <div className="flex items-start space-x-3 pt-2">
-              <input
-                type="checkbox"
-                id="terms"
-                checked={agreeToTerms}
-                onChange={(e) => setAgreeToTerms(e.target.checked)}
-                className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2 mt-1"
-              />
-              <label
-                htmlFor="terms"
-                className="text-sm text-gray-300 leading-relaxed"
-              >
-                I agree to the{" "}
-                <a
-                  href="#"
-                  className="text-blue-400 hover:text-blue-300 underline"
-                >
-                  Terms & Conditions
-                </a>{" "}
-                and{" "}
-                <a
-                  href="#"
-                  className="text-blue-400 hover:text-blue-300 underline"
-                >
-                  Privacy Policy
-                </a>
-              </label>
-            </div>
-            {errors.terms && (
-              <p className="text-red-400 text-xs mt-1">{errors.terms}</p>
+                {/* Username */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) =>
+                      handleInputChange("username", e.target.value)
+                    }
+                    onFocus={() => handleFocus("username")}
+                    onBlur={() => handleBlur("username")}
+                    className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                      errors.username ? "border-red-500" : "border-gray-600"
+                    }`}
+                    placeholder="Choose a username"
+                  />
+                  <label
+                    htmlFor="username"
+                    className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                      focusedFields.username || formData.username
+                        ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                        : "text-gray-400 text-sm top-4"
+                    }`}
+                  >
+                    Username
+                  </label>
+                  {errors.username && (
+                    <p className="text-red-400 text-xs mt-1">
+                      {errors.username}
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {loading ? "Creating Account..." : "Create Account"}
-            </button>
-          </form>
+            {/* Step 2: Account Details */}
+            {currentStep === 2 && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+                  Account Details
+                </h2>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-900/60 text-gray-400">
-                Or continue with
-              </span>
-            </div>
+                {/* Role Selection */}
+                <div className="relative">
+                  <select
+                    id="role"
+                    value={formData.role}
+                    onChange={(e) => handleInputChange("role", e.target.value)}
+                    className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300"
+                  >
+                    <option value="client">Client</option>
+                    <option value="artist">Artist</option>
+                  </select>
+                  <label
+                    htmlFor="role"
+                    className="absolute left-4 -top-2 text-blue-400 text-xs bg-gray-900/60 px-2"
+                  >
+                    Account Type
+                  </label>
+                </div>
+
+                {/* Artist-specific fields */}
+                {formData.role === "artist" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Genre Field */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="genre"
+                        value={formData.genre}
+                        onChange={(e) =>
+                          handleInputChange("genre", e.target.value)
+                        }
+                        onFocus={() => handleFocus("genre")}
+                        onBlur={() => handleBlur("genre")}
+                        className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                          errors.genre ? "border-red-500" : "border-gray-600"
+                        }`}
+                        placeholder="Enter your music genre"
+                      />
+                      <label
+                        htmlFor="genre"
+                        className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                          focusedFields.genre || formData.genre
+                            ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                            : "text-gray-400 text-sm top-4"
+                        }`}
+                      >
+                        Music Genre
+                      </label>
+                      {errors.genre && (
+                        <p className="text-red-400 text-xs mt-1">
+                          {errors.genre}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Booking Fee Field */}
+                    <div className="relative">
+                      <input
+                        type="number"
+                        id="booking_fee"
+                        value={formData.booking_fee}
+                        onChange={(e) =>
+                          handleInputChange("booking_fee", e.target.value)
+                        }
+                        onFocus={() => handleFocus("booking_fee")}
+                        onBlur={() => handleBlur("booking_fee")}
+                        min="0"
+                        step="0.01"
+                        className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                          errors.booking_fee
+                            ? "border-red-500"
+                            : "border-gray-600"
+                        }`}
+                        placeholder="Enter your booking fee"
+                      />
+                      <label
+                        htmlFor="booking_fee"
+                        className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                          focusedFields.booking_fee || formData.booking_fee
+                            ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                            : "text-gray-400 text-sm top-4"
+                        }`}
+                      >
+                        Booking Fee (₱)
+                      </label>
+                      {errors.booking_fee && (
+                        <p className="text-red-400 text-xs mt-1">
+                          {errors.booking_fee}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Password Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Password Field */}
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      id="password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
+                      onFocus={() => handleFocus("password")}
+                      onBlur={() => handleBlur("password")}
+                      className={`w-full px-4 py-4 pr-12 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                        errors.password ? "border-red-500" : "border-gray-600"
+                      }`}
+                      placeholder="Create a password"
+                    />
+                    <label
+                      htmlFor="password"
+                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                        focusedFields.password || formData.password
+                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                          : "text-gray-400 text-sm top-4"
+                      }`}
+                    >
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:text-gray-200"
+                    >
+                      {showPassword ? (
+                        <FaEyeSlash className="w-5 h-5" />
+                      ) : (
+                        <FaEye className="w-5 h-5" />
+                      )}
+                    </button>
+                    {errors.password && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.password}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Confirm Password Field */}
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      id="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        handleInputChange("confirmPassword", e.target.value)
+                      }
+                      onFocus={() => handleFocus("confirmPassword")}
+                      onBlur={() => handleBlur("confirmPassword")}
+                      className={`w-full px-4 py-4 pr-12 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                        errors.confirmPassword
+                          ? "border-red-500"
+                          : "border-gray-600"
+                      }`}
+                      placeholder="Confirm your password"
+                    />
+                    <label
+                      htmlFor="confirmPassword"
+                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                        focusedFields.confirmPassword ||
+                        formData.confirmPassword
+                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                          : "text-gray-400 text-sm top-4"
+                      }`}
+                    >
+                      Confirm Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors focus:outline-none focus:text-gray-200"
+                    >
+                      {showConfirmPassword ? (
+                        <FaEyeSlash className="w-5 h-5" />
+                      ) : (
+                        <FaEye className="w-5 h-5" />
+                      )}
+                    </button>
+                    {errors.confirmPassword && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.confirmPassword}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Terms & Submit */}
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+                  Terms & Conditions
+                </h2>
+
+                {/* Terms & Conditions */}
+                <div className="flex items-start space-x-3 pt-2">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={agreeToTerms}
+                    onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 focus:ring-2 mt-1"
+                  />
+                  <label
+                    htmlFor="terms"
+                    className="text-sm text-gray-300 leading-relaxed"
+                  >
+                    I agree to the{" "}
+                    <a
+                      href="#"
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Terms & Conditions
+                    </a>{" "}
+                    and{" "}
+                    <a
+                      href="#"
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Privacy Policy
+                    </a>
+                  </label>
+                </div>
+                {errors.terms && (
+                  <p className="text-red-400 text-xs mt-1">{errors.terms}</p>
+                )}
+
+                {/* Google Signup Option */}
+                <div className="pt-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-600"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-gray-900/60 text-gray-400">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleGoogleSignup}
+                    className="w-full flex items-center justify-center gap-3 bg-gray-800/50 backdrop-blur-sm border border-gray-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300 transform hover:scale-105 mt-4"
+                  >
+                    <FcGoogle className="w-5 h-5" />
+                    Continue with Google
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Google Signup Button */}
-          <button
-            onClick={handleGoogleSignup}
-            className="w-full flex items-center justify-center gap-3 bg-gray-800/50 backdrop-blur-sm border border-gray-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300 transform hover:scale-105"
-          >
-            <FcGoogle className="w-5 h-5" />
-            Continue with Google
-          </button>
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8">
+            <button
+              type="button"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="px-6 py-3 bg-gray-700/50 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-gray-600/50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <FaArrowLeft className="w-4 h-4" />
+              Previous
+            </button>
+
+            {currentStep < totalSteps ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+              >
+                Next
+                <FaArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? "Creating Account..." : "Create Account"}
+                <FaCheck className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* Login Link */}
           <div className="text-center mt-6">

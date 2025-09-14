@@ -32,6 +32,22 @@ const UserSchema = new mongoose.Schema({
   permissions: [{ type: String }],
   isActive: { type: Boolean, default: true },
 
+  // Artist-specific fields
+  genre: {
+    type: String,
+    required: function () {
+      return this.role === "artist";
+    },
+    trim: true,
+  },
+  booking_fee: {
+    type: Number,
+    required: function () {
+      return this.role === "artist";
+    },
+    min: 0,
+  },
+
   // Common fields
   displayName: { type: String },
 

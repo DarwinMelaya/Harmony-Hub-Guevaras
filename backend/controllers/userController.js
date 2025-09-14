@@ -4,8 +4,17 @@ const jwt = require("jsonwebtoken");
 // Register new user
 const registerUser = async (req, res) => {
   try {
-    const { fullName, email, phoneNumber, location, username, password, role } =
-      req.body;
+    const {
+      fullName,
+      email,
+      phoneNumber,
+      location,
+      username,
+      password,
+      role,
+      genre,
+      booking_fee,
+    } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -30,8 +39,24 @@ const registerUser = async (req, res) => {
       });
     }
 
+    // Validate artist-specific fields
+    if (userRole === "artist") {
+      if (!genre || !booking_fee) {
+        return res.status(400).json({
+          success: false,
+          message: "Genre and booking fee are required for artist registration",
+        });
+      }
+      if (booking_fee < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Booking fee must be a positive number",
+        });
+      }
+    }
+
     // Create new user
-    const user = new User({
+    const userData = {
       fullName,
       email,
       phoneNumber,
@@ -40,7 +65,15 @@ const registerUser = async (req, res) => {
       password,
       role: userRole,
       displayName: fullName,
-    });
+    };
+
+    // Add artist-specific fields if role is artist
+    if (userRole === "artist") {
+      userData.genre = genre;
+      userData.booking_fee = parseFloat(booking_fee);
+    }
+
+    const user = new User(userData);
 
     await user.save();
 
@@ -65,6 +98,12 @@ const registerUser = async (req, res) => {
       isActive: user.isActive,
       createdAt: user.createdAt,
     };
+
+    // Add artist-specific fields to response if user is an artist
+    if (user.role === "artist") {
+      userResponse.genre = user.genre;
+      userResponse.booking_fee = user.booking_fee;
+    }
 
     res.status(201).json({
       success: true,

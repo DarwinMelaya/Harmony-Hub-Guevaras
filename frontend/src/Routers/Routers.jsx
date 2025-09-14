@@ -22,6 +22,7 @@ import {
   StaffPackages,
   StaffMusician,
   StaffBooking,
+  ArtistDashboard,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -189,6 +190,15 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole={["staff"]}>
               <StaffBooking />
+            </ProtectedRoute>
+          }
+        />
+        {/* Protected Artist Pages */}
+        <Route
+          path="/artist-dashboard"
+          element={
+            <ProtectedRoute requiredRole="artist">
+              <ArtistDashboard />
             </ProtectedRoute>
           }
         />
