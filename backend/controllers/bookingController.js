@@ -510,6 +510,68 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+// Get bookings for a specific artist
+const getArtistBookings = async (req, res) => {
+  try {
+    const artistId = req.user.id;
+    const { status, page = 1, limit = 10 } = req.query;
+
+    // Build query to find bookings where this artist is involved
+    const query = {
+      "items.type": "bandArtist",
+      "items.itemId": artistId,
+    };
+
+    if (status) {
+      query.status = status;
+    }
+
+    const bookings = await Booking.find(query)
+      .populate("user", "fullName email username phoneNumber")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Booking.countDocuments(query);
+
+    // Format the response to include artist-specific information
+    const formattedBookings = bookings.map((booking) => {
+      const artistItem = booking.items.find(
+        (item) =>
+          item.type === "bandArtist" && item.itemId.toString() === artistId
+      );
+
+      return {
+        ...booking.toObject(),
+        artistItem: artistItem, // Include the specific artist item details
+        clientInfo: {
+          fullName: booking.user.fullName,
+          email: booking.user.email,
+          username: booking.user.username,
+          phoneNumber: booking.user.phoneNumber,
+        },
+      };
+    });
+
+    res.json({
+      success: true,
+      data: formattedBookings,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching artist bookings:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -517,4 +579,5 @@ module.exports = {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  getArtistBookings,
 };

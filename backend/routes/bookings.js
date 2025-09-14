@@ -7,6 +7,7 @@ const {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  getArtistBookings,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
@@ -19,6 +20,9 @@ router.post("/", requireRole(["client"]), createBooking);
 
 // Get user's own bookings (client)
 router.get("/my-bookings", requireRole(["client"]), getUserBookings);
+
+// Get artist's bookings (artist only)
+router.get("/artist-bookings", requireRole(["artist"]), getArtistBookings);
 
 // Get all bookings (owner/admin/staff only)
 router.get("/", requireRole(["owner", "admin", "staff"]), getAllBookings);
