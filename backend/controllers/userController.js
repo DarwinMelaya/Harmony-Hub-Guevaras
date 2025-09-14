@@ -718,6 +718,67 @@ const updateArtistAvailabilityById = async (req, res) => {
   }
 };
 
+// Update artist booking fee (artist only)
+const updateArtistBookingFee = async (req, res) => {
+  try {
+    const { booking_fee } = req.body;
+    const userId = req.userId;
+
+    // Validate booking fee
+    if (booking_fee === undefined || booking_fee === null) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking fee is required",
+      });
+    }
+
+    if (typeof booking_fee !== "number" || booking_fee < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking fee must be a positive number",
+      });
+    }
+
+    // Find the user and verify they are an artist
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.role !== "artist") {
+      return res.status(403).json({
+        success: false,
+        message: "Only artists can update their booking fee",
+      });
+    }
+
+    // Update booking fee
+    user.booking_fee = parseFloat(booking_fee);
+    user.updatedAt = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Booking fee updated successfully",
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        booking_fee: user.booking_fee,
+      },
+    });
+  } catch (error) {
+    console.error("Update artist booking fee error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -734,4 +795,5 @@ module.exports = {
   getArtistsPublic,
   updateArtistAvailability,
   updateArtistAvailabilityById,
+  updateArtistBookingFee,
 };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "../../components/Layout/Layout";
+import EditBookingFee from "../../components/Modals/Artist/EditBookingFee";
 import {
   Calendar,
   Clock,
@@ -15,6 +16,8 @@ import {
   Search,
   Filter,
   Eye,
+  Edit,
+  Settings,
 } from "lucide-react";
 
 const ArtistBooking = () => {
@@ -23,6 +26,31 @@ const ArtistBooking = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [artistProfile, setArtistProfile] = useState(null);
+  const [showEditFeeModal, setShowEditFeeModal] = useState(false);
+
+  // Fetch artist profile
+  const fetchArtistProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/users/profile", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch profile");
+      }
+
+      const data = await response.json();
+      setArtistProfile(data.data);
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
 
   // Fetch artist bookings
   const fetchBookings = async () => {
@@ -56,8 +84,17 @@ const ArtistBooking = () => {
   };
 
   useEffect(() => {
+    fetchArtistProfile();
     fetchBookings();
   }, []);
+
+  // Handle successful booking fee update
+  const handleFeeUpdateSuccess = (updatedData) => {
+    setArtistProfile((prev) => ({
+      ...prev,
+      booking_fee: updatedData.booking_fee,
+    }));
+  };
 
   // Filter bookings based on search and status
   const filteredBookings = bookings.filter((booking) => {
@@ -156,13 +193,40 @@ const ArtistBooking = () => {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-blue-400" />
-              My Bookings
-            </h1>
-            <p className="text-gray-300 mt-1">
-              View all your upcoming and past bookings ({bookings.length} total)
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Calendar className="w-6 h-6 text-blue-400" />
+                  My Bookings
+                </h1>
+                <p className="text-gray-300 mt-1">
+                  View all your upcoming and past bookings ({bookings.length}{" "}
+                  total)
+                </p>
+              </div>
+
+              {/* Current Booking Fee & Edit Button */}
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-gray-400">
+                    Current Booking Fee
+                  </div>
+                  <div className="text-xl font-bold text-green-400">
+                    ₱
+                    {artistProfile?.booking_fee
+                      ? artistProfile.booking_fee.toLocaleString()
+                      : "0"}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEditFeeModal(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg border border-blue-500 flex items-center gap-2 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Fee
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Filters and Search */}
@@ -238,7 +302,8 @@ const ArtistBooking = () => {
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-purple-400" />
                           <span className="text-white">
-                            {booking.duration} hour{booking.duration > 1 ? "s" : ""}
+                            {booking.duration} hour
+                            {booking.duration > 1 ? "s" : ""}
                           </span>
                         </div>
                       </div>
@@ -278,7 +343,9 @@ const ArtistBooking = () => {
                           </div>
                           <div className="text-sm text-gray-300">
                             <div>Name: {booking.artistItem.name}</div>
-                            <div>Price: {formatCurrency(booking.artistItem.price)}</div>
+                            <div>
+                              Price: {formatCurrency(booking.artistItem.price)}
+                            </div>
                             <div>Quantity: {booking.artistItem.quantity}</div>
                           </div>
                         </div>
@@ -287,7 +354,9 @@ const ArtistBooking = () => {
                       {/* Notes */}
                       {booking.notes && (
                         <div className="mb-3">
-                          <div className="text-sm text-gray-400 mb-1">Notes:</div>
+                          <div className="text-sm text-gray-400 mb-1">
+                            Notes:
+                          </div>
                           <div className="text-sm text-gray-300 bg-gray-700 p-2 rounded">
                             {booking.notes}
                           </div>
@@ -297,7 +366,9 @@ const ArtistBooking = () => {
                       {/* Contact Info */}
                       {booking.contactInfo && (
                         <div className="mb-3">
-                          <div className="text-sm text-gray-400 mb-1">Event Details:</div>
+                          <div className="text-sm text-gray-400 mb-1">
+                            Event Details:
+                          </div>
                           <div className="text-sm text-gray-300">
                             {booking.contactInfo.address && (
                               <div className="flex items-center gap-2 mb-1">
@@ -316,7 +387,9 @@ const ArtistBooking = () => {
                         <div className="text-2xl font-bold text-green-400">
                           {formatCurrency(booking.totalAmount)}
                         </div>
-                        <div className="text-sm text-gray-400">Total Amount</div>
+                        <div className="text-sm text-gray-400">
+                          Total Amount
+                        </div>
                       </div>
                       {getStatusBadge(booking.status)}
                       <div className="text-xs text-gray-500">
@@ -349,6 +422,14 @@ const ArtistBooking = () => {
               </button>
             </div>
           )}
+
+          {/* Edit Booking Fee Modal */}
+          <EditBookingFee
+            isOpen={showEditFeeModal}
+            onClose={() => setShowEditFeeModal(false)}
+            onSuccess={handleFeeUpdateSuccess}
+            currentFee={artistProfile?.booking_fee}
+          />
         </div>
       </div>
     </Layout>

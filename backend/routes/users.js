@@ -24,6 +24,7 @@ const {
   getArtistsPublic,
   updateArtistAvailability,
   updateArtistAvailabilityById,
+  updateArtistBookingFee,
 } = require("../controllers/userController");
 
 // Public routes
@@ -44,6 +45,7 @@ router.put(
   authenticateToken,
   updateArtistAvailability
 );
+router.put("/profile/booking-fee", authenticateToken, updateArtistBookingFee);
 router.put(
   "/:userId/availability",
   authenticateToken,
