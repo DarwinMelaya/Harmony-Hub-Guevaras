@@ -36,7 +36,7 @@ const Musician = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      const response = await fetch("http://localhost:5000/api/band-artists", {
+      const response = await fetch("http://localhost:5000/api/users/artists", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -71,9 +71,9 @@ const Musician = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:5000/api/band-artists/${id}`,
+        `http://localhost:5000/api/users/${id}/toggle-status`,
         {
-          method: "DELETE",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -97,7 +97,7 @@ const Musician = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:5000/api/band-artists/${id}/toggle-status`,
+        `http://localhost:5000/api/users/${id}/toggle-status`,
         {
           method: "PUT",
           headers: {
@@ -132,7 +132,7 @@ const Musician = () => {
   // Filter musicians based on search and filters
   const filteredMusicians = musicians.filter((musician) => {
     const matchesSearch =
-      musician.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      musician.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       musician.genre?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesGenre =
@@ -303,11 +303,10 @@ const Musician = () => {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-white">
-                                {musician.name}
+                                {musician.fullName}
                               </div>
                               <div className="text-sm text-gray-400">
-                                Added by{" "}
-                                {musician.createdBy?.fullName || "Unknown"}
+                                {musician.email}
                               </div>
                             </div>
                           </div>

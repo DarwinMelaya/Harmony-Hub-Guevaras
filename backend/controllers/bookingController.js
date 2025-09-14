@@ -1,7 +1,7 @@
 const Booking = require("../models/Booking");
 const Inventory = require("../models/Inventory");
 const Packages = require("../models/Packages");
-const BandArtist = require("../models/BandArtist");
+const User = require("../models/User");
 
 // Create a new booking
 const createBooking = async (req, res) => {
@@ -106,8 +106,13 @@ const createBooking = async (req, res) => {
           break;
 
         case "bandArtist":
-          const artist = await BandArtist.findById(itemId);
-          if (artist && artist.isActive && artist.isAvailable !== false) {
+          const artist = await User.findById(itemId);
+          if (
+            artist &&
+            artist.role === "artist" &&
+            artist.isActive &&
+            artist.isAvailable !== false
+          ) {
             itemExists = true;
             isAvailable = true;
           }
@@ -181,7 +186,7 @@ const createBooking = async (req, res) => {
           { new: true }
         );
       } else if (bookingItem.type === "bandArtist") {
-        await BandArtist.findByIdAndUpdate(
+        await User.findByIdAndUpdate(
           bookingItem.itemId,
           { $set: { isAvailable: false } },
           { new: true }
@@ -373,7 +378,7 @@ const updateBookingStatus = async (req, res) => {
             { new: true }
           );
         } else if (item.type === "bandArtist") {
-          await BandArtist.findByIdAndUpdate(
+          await User.findByIdAndUpdate(
             item.itemId,
             { $set: { isAvailable: true } },
             { new: true }
@@ -398,7 +403,7 @@ const updateBookingStatus = async (req, res) => {
             { new: true }
           );
         } else if (item.type === "bandArtist") {
-          await BandArtist.findByIdAndUpdate(
+          await User.findByIdAndUpdate(
             item.itemId,
             { $set: { isAvailable: true } },
             { new: true }
@@ -480,7 +485,7 @@ const cancelBooking = async (req, res) => {
           { new: true }
         );
       } else if (item.type === "bandArtist") {
-        await BandArtist.findByIdAndUpdate(
+        await User.findByIdAndUpdate(
           item.itemId,
           { $set: { isAvailable: true } },
           { new: true }

@@ -47,6 +47,10 @@ const UserSchema = new mongoose.Schema({
     },
     min: 0,
   },
+  isAvailable: {
+    type: Boolean,
+    default: true,
+  },
 
   // Common fields
   displayName: { type: String },

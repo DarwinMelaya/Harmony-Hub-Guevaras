@@ -541,6 +541,133 @@ const getUserStats = async (req, res) => {
   }
 };
 
+// Get all artists (staff/admin only)
+const getArtists = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search, genre, isActive } = req.query;
+
+    // Build filter object
+    const filter = { role: "artist" };
+
+    if (search) {
+      filter.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { genre: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (genre) {
+      filter.genre = { $regex: genre, $options: "i" };
+    }
+
+    if (isActive !== undefined) {
+      filter.isActive = isActive === "true";
+    }
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+
+    // Get artists with pagination
+    const artists = await User.find(filter)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count for pagination
+    const total = await User.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: artists,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error("Get artists error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Get all artists for public display (no auth required)
+const getArtistsPublic = async (req, res) => {
+  try {
+    const artists = await User.find({ 
+      role: "artist", 
+      isActive: true,
+      isAvailable: true 
+    })
+      .select("-password -email -phoneNumber -location -username")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: artists,
+    });
+  } catch (error) {
+    console.error("Get artists public error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Update artist availability (artist only)
+const updateArtistAvailability = async (req, res) => {
+  try {
+    const { isAvailable } = req.body;
+    const userId = req.userId;
+
+    // Find the user and verify they are an artist
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.role !== "artist") {
+      return res.status(403).json({
+        success: false,
+        message: "Only artists can update their availability",
+      });
+    }
+
+    // Update availability
+    user.isAvailable = isAvailable;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Availability updated to ${isAvailable ? "Available" : "Not Available"}`,
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        isAvailable: user.isAvailable,
+      },
+    });
+  } catch (error) {
+    console.error("Update artist availability error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -553,4 +680,7 @@ module.exports = {
   updateUserRole,
   toggleUserStatus,
   getUserStats,
+  getArtists,
+  getArtistsPublic,
+  updateArtistAvailability,
 };

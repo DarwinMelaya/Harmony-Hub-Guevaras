@@ -4,6 +4,9 @@ import { Plus, AlertCircle } from "lucide-react";
 const AddMusician = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
+    username: "",
+    password: "",
     genre: "",
     booking_fee: "",
     isActive: true,
@@ -18,14 +21,18 @@ const AddMusician = ({ isOpen, onClose, onSuccess }) => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/band-artists", {
+      const response = await fetch("http://localhost:5000/api/users/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: formData.name,
+          fullName: formData.name,
+          email: formData.email,
+          username: formData.username,
+          password: formData.password,
+          role: "artist",
           genre: formData.genre,
           booking_fee: parseFloat(formData.booking_fee),
           isActive: formData.isActive,
@@ -38,7 +45,15 @@ const AddMusician = ({ isOpen, onClose, onSuccess }) => {
       }
 
       // Reset form and close modal
-      setFormData({ name: "", genre: "", booking_fee: "", isActive: true });
+      setFormData({ 
+        name: "", 
+        email: "",
+        username: "",
+        password: "",
+        genre: "", 
+        booking_fee: "", 
+        isActive: true 
+      });
       onSuccess();
       onClose();
     } catch (err) {
@@ -50,7 +65,15 @@ const AddMusician = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleClose = () => {
-    setFormData({ name: "", genre: "", booking_fee: "", isActive: true });
+    setFormData({ 
+      name: "", 
+      email: "",
+      username: "",
+      password: "",
+      genre: "", 
+      booking_fee: "", 
+      isActive: true 
+    });
     setError(null);
     onClose();
   };
@@ -68,7 +91,7 @@ const AddMusician = ({ isOpen, onClose, onSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Name
+              Full Name
             </label>
             <input
               type="text"
@@ -78,7 +101,55 @@ const AddMusician = ({ isOpen, onClose, onSuccess }) => {
                 setFormData({ ...formData, name: e.target.value })
               }
               className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
-              placeholder="Enter musician/band name"
+              placeholder="Enter full name"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
+              placeholder="Enter email address"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Username
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.username}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+              className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
+              placeholder="Enter username"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
+              placeholder="Enter password"
             />
           </div>
 

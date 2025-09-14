@@ -17,19 +17,53 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 const ArtistSidebar = ({ onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAvailable, setIsAvailable] = useState(true);
 
-  // Load availability status from localStorage on component mount
+  // Load availability status from server on component mount
   useEffect(() => {
-    const savedStatus = localStorage.getItem("artistAvailability");
-    if (savedStatus !== null) {
-      setIsAvailable(savedStatus === "true");
-    }
+    fetchArtistProfile();
   }, []);
+
+  const fetchArtistProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("No authentication token found");
+        return;
+      }
+
+      const response = await axios.get(
+        "http://localhost:5000/api/users/profile",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setIsAvailable(response.data.data.isAvailable);
+        // Update localStorage with the server value
+        localStorage.setItem(
+          "artistAvailability",
+          response.data.data.isAvailable.toString()
+        );
+        console.log("Artist profile loaded successfully");
+      }
+    } catch (error) {
+      console.error("Error fetching artist profile:", error);
+      // Fallback to localStorage if server request fails
+      const savedStatus = localStorage.getItem("artistAvailability");
+      if (savedStatus !== null) {
+        setIsAvailable(savedStatus === "true");
+      }
+    }
+  };
 
   const navigationItems = [
     {
@@ -53,13 +87,47 @@ const ArtistSidebar = ({ onNavigate }) => {
     },
   ];
 
-  const handleStatusToggle = () => {
+  const handleStatusToggle = async () => {
     const newStatus = !isAvailable;
-    setIsAvailable(newStatus);
-    localStorage.setItem("artistAvailability", newStatus.toString());
 
-    // You can add API call here to update status on server
-    // updateArtistStatus(newStatus);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await axios.put(
+        "http://localhost:5000/api/users/profile/availability",
+        { isAvailable: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setIsAvailable(newStatus);
+        localStorage.setItem("artistAvailability", newStatus.toString());
+        console.log(
+          `Status updated to: ${newStatus ? "Available" : "Not Available"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error updating artist availability:", error);
+      // Show user-friendly error message
+      if (error.response?.status === 401) {
+        alert("Authentication failed. Please log in again.");
+      } else if (error.response?.status === 403) {
+        const errorMessage =
+          error.response?.data?.message ||
+          "Access denied. Artist role required.";
+        alert(`Access denied: ${errorMessage}`);
+      } else {
+        alert("Failed to update availability status. Please try again.");
+      }
+    }
   };
 
   const handleNavigation = (path, isStatusToggle = false) => {
