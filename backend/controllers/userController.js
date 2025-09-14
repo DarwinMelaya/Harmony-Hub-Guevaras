@@ -600,10 +600,10 @@ const getArtists = async (req, res) => {
 // Get all artists for public display (no auth required)
 const getArtistsPublic = async (req, res) => {
   try {
-    const artists = await User.find({ 
-      role: "artist", 
+    const artists = await User.find({
+      role: "artist",
       isActive: true,
-      isAvailable: true 
+      isAvailable: true,
     })
       .select("-password -email -phoneNumber -location -username")
       .sort({ createdAt: -1 });
@@ -651,7 +651,9 @@ const updateArtistAvailability = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Availability updated to ${isAvailable ? "Available" : "Not Available"}`,
+      message: `Availability updated to ${
+        isAvailable ? "Available" : "Not Available"
+      }`,
       data: {
         _id: user._id,
         fullName: user.fullName,

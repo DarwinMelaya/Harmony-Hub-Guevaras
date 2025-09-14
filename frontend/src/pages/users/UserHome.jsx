@@ -83,16 +83,16 @@ const UserHome = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [inventoryResponse, packagesResponse, bandArtistsResponse] =
+      const [inventoryResponse, packagesResponse, artistsResponse] =
         await Promise.all([
           axios.get("http://localhost:5000/api/inventory/public"),
           axios.get("http://localhost:5000/api/packages/public"),
-          axios.get("http://localhost:5000/api/band-artists/public"),
+          axios.get("http://localhost:5000/api/users/artists/public"),
         ]);
 
       setInventory(inventoryResponse.data.inventory || []);
       setPackages(packagesResponse.data.packages || []);
-      setBandArtists(bandArtistsResponse.data.data || []);
+      setBandArtists(artistsResponse.data.data || []);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -108,9 +108,11 @@ const UserHome = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (item) =>
-          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.name || item.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
           (item.description &&
-            item.description.toLowerCase().includes(searchTerm.toLowerCase()))
+            item.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (item.genre &&
+            item.genre.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -184,7 +186,7 @@ const UserHome = () => {
   const addToCart = (item, type) => {
     const cartItem = {
       id: item._id,
-      name: item.name,
+      name: item.name || item.fullName,
       type: type,
       price: type === "bandArtist" ? item.booking_fee : item.price,
       quantity: 1,

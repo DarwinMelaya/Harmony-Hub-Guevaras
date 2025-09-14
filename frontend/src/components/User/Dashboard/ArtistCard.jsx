@@ -13,7 +13,7 @@ const ArtistCard = ({ artist, onAdd }) => {
           </div>
           <div>
             <h3 className="font-bold text-white text-lg group-hover:text-purple-400 transition-colors">
-              {artist.name}
+              {artist.fullName || artist.name}
             </h3>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-700">
               {artist.genre}
