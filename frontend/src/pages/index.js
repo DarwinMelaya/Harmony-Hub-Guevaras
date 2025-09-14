@@ -33,3 +33,4 @@ export { default as StaffBooking } from "./staff/StaffBooking";
 
 // Artist Pages
 export { default as ArtistDashboard } from "./artist/ArtistDashboard";
+export { default as ArtistBooking } from "./artist/ArtistBooking";

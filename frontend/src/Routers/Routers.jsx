@@ -23,6 +23,7 @@ import {
   StaffMusician,
   StaffBooking,
   ArtistDashboard,
+  ArtistBooking,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -199,6 +200,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole="artist">
               <ArtistDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/artist-bookings"
+          element={
+            <ProtectedRoute requiredRole="artist">
+              <ArtistBooking />
             </ProtectedRoute>
           }
         />
