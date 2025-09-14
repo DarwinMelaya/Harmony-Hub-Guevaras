@@ -670,6 +670,54 @@ const updateArtistAvailability = async (req, res) => {
   }
 };
 
+// Update artist availability by ID (admin/staff only)
+const updateArtistAvailabilityById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isAvailable } = req.body;
+
+    // Find the user and verify they are an artist
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.role !== "artist") {
+      return res.status(400).json({
+        success: false,
+        message: "User is not an artist",
+      });
+    }
+
+    // Update availability
+    user.isAvailable = isAvailable;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Artist availability updated to ${
+        isAvailable ? "Available" : "Not Available"
+      }`,
+      data: {
+        _id: user._id,
+        fullName: user.fullName,
+        isAvailable: user.isAvailable,
+      },
+    });
+  } catch (error) {
+    console.error("Update artist availability by ID error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -685,4 +733,5 @@ module.exports = {
   getArtists,
   getArtistsPublic,
   updateArtistAvailability,
+  updateArtistAvailabilityById,
 };

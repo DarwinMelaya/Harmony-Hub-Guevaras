@@ -92,29 +92,33 @@ const Musician = () => {
     }
   };
 
-  // Toggle musician status
+  // Toggle musician availability status
   const toggleStatus = async (id) => {
     try {
       const token = localStorage.getItem("token");
+      const musician = musicians.find(m => m._id === id);
+      const newAvailability = !musician.isAvailable;
+      
       const response = await fetch(
-        `http://localhost:5000/api/users/${id}/toggle-status`,
+        `http://localhost:5000/api/users/${id}/availability`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({ isAvailable: newAvailability }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to toggle musician status");
+        throw new Error("Failed to toggle musician availability");
       }
 
       fetchMusicians();
     } catch (err) {
       setError(err.message);
-      console.error("Error toggling musician status:", err);
+      console.error("Error toggling musician availability:", err);
     }
   };
 
@@ -139,8 +143,8 @@ const Musician = () => {
       genreFilter === "all" || musician.genre === genreFilter;
     const matchesStatus =
       statusFilter === "all" ||
-      (statusFilter === "available" && musician.isActive) ||
-      (statusFilter === "not-available" && !musician.isActive);
+      (statusFilter === "available" && musician.isAvailable) ||
+      (statusFilter === "not-available" && !musician.isAvailable);
 
     return matchesSearch && matchesGenre && matchesStatus;
   });
@@ -327,12 +331,12 @@ const Musician = () => {
                           <button
                             onClick={() => toggleStatus(musician._id)}
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${
-                              musician.isActive
+                              musician.isAvailable
                                 ? "bg-green-900/50 text-green-300 border border-green-700 hover:bg-green-800/50"
                                 : "bg-red-900/50 text-red-300 border border-red-700 hover:bg-red-800/50"
                             }`}
                           >
-                            {musician.isActive ? (
+                            {musician.isAvailable ? (
                               <>
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Available

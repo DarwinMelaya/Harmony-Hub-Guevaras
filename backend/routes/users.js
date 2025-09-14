@@ -23,6 +23,7 @@ const {
   getArtists,
   getArtistsPublic,
   updateArtistAvailability,
+  updateArtistAvailabilityById,
 } = require("../controllers/userController");
 
 // Public routes
@@ -38,7 +39,17 @@ router.delete("/account", authenticateToken, deleteUser);
 // Artist-specific routes
 router.get("/artists", authenticateToken, authorizeStaffOrAdmin, getArtists);
 router.get("/artists/public", getArtistsPublic);
-router.put("/profile/availability", authenticateToken, updateArtistAvailability);
+router.put(
+  "/profile/availability",
+  authenticateToken,
+  updateArtistAvailability
+);
+router.put(
+  "/:userId/availability",
+  authenticateToken,
+  authorizeStaffOrAdmin,
+  updateArtistAvailabilityById
+);
 
 // Owner/Admin routes
 router.get("/all", authenticateToken, authorizeOwnerOrAdmin, getAllUsers);
