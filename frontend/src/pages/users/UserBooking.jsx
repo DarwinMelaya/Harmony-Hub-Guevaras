@@ -13,6 +13,7 @@ const UserBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cancelling, setCancelling] = useState(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -36,6 +37,38 @@ const UserBooking = () => {
 
     fetchBookings();
   }, []);
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm("Are you sure you want to cancel this booking?")) {
+      return;
+    }
+
+    try {
+      setCancelling(bookingId);
+      setError(null);
+      const token = localStorage.getItem("token");
+      await axios.patch(
+        `http://localhost:5000/api/bookings/${bookingId}/cancel`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      
+      // Update the booking status in the local state
+      setBookings(prevBookings =>
+        prevBookings.map(booking =>
+          booking._id === bookingId
+            ? { ...booking, status: "cancelled" }
+            : booking
+        )
+      );
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <Layout>
@@ -77,8 +110,19 @@ const UserBooking = () => {
                         {new Date(b.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <div className="text-green-400 font-semibold">
-                      ₱{Number(b.totalAmount || 0).toLocaleString()}
+                    <div className="flex items-center gap-3">
+                      <div className="text-green-400 font-semibold">
+                        ₱{Number(b.totalAmount || 0).toLocaleString()}
+                      </div>
+                      {(b.status === "pending" || b.status === "confirmed") && (
+                        <button
+                          onClick={() => handleCancelBooking(b._id)}
+                          disabled={cancelling === b._id}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors"
+                        >
+                          {cancelling === b._id ? "Cancelling..." : "Cancel"}
+                        </button>
+                      )}
                     </div>
                   </div>
 
