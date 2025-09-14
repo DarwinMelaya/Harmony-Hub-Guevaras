@@ -23,3 +23,10 @@ export { default as OwnerMusician } from "./owner/OwnerMusician";
 export { default as OwnerPackages } from "./owner/OwnerPackages";
 export { default as OwnerUser } from "./owner/OwnerUser";
 export { default as OwnerBooking } from "./owner/OwnerBooking";
+
+// Staff Pages
+export { default as StaffDashboard } from "./staff/StaffDashboard";
+export { default as StaffInventory } from "./staff/StaffInventory";
+export { default as StaffPackages } from "./staff/StaffPackages";
+export { default as StaffMusician } from "./staff/StaffMusician";
+export { default as StaffBooking } from "./staff/StaffBooking";

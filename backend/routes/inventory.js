@@ -12,15 +12,15 @@ const {
   deleteInventory,
 } = require("../controllers/inventoryController");
 
-// POST /api/inventory - Add new inventory item (owner/admin only)
+// POST /api/inventory - Add new inventory item (owner/admin/staff only)
 router.post("/", authenticateToken, authorizeOwnerOrAdmin, addInventory);
-// GET /api/inventory - Get all inventory items (owner/admin only)
+// GET /api/inventory - Get all inventory items (owner/admin/staff only)
 router.get("/", authenticateToken, authorizeOwnerOrAdmin, getAllInventory);
 // GET /api/inventory/public - Get all inventory items (public for clients)
 router.get("/public", getPublicInventory);
-// PUT /api/inventory/:id - Update inventory item (owner/admin only)
+// PUT /api/inventory/:id - Update inventory item (owner/admin/staff only)
 router.put("/:id", authenticateToken, authorizeOwnerOrAdmin, updateInventory);
-// DELETE /api/inventory/:id - Delete inventory item (owner/admin only)
+// DELETE /api/inventory/:id - Delete inventory item (owner/admin/staff only)
 router.delete(
   "/:id",
   authenticateToken,

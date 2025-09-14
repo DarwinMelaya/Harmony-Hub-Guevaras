@@ -17,6 +17,11 @@ import {
   OwnerUser,
   OwnerMusician,
   OwnerBooking,
+  StaffDashboard,
+  StaffInventory,
+  StaffPackages,
+  StaffMusician,
+  StaffBooking,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -143,6 +148,47 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole={["owner"]}>
               <OwnerBooking />
+            </ProtectedRoute>
+          }
+        />
+        {/* Protected Staff Pages */}
+        <Route
+          path="/staff-dashboard"
+          element={
+            <ProtectedRoute requiredRole="staff">
+              <StaffDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff-inventory"
+          element={
+            <ProtectedRoute requiredRole={["staff"]}>
+              <StaffInventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff-packages"
+          element={
+            <ProtectedRoute requiredRole={["staff"]}>
+              <StaffPackages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff-musician"
+          element={
+            <ProtectedRoute requiredRole={["staff"]}>
+              <StaffMusician />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff-booking"
+          element={
+            <ProtectedRoute requiredRole={["staff"]}>
+              <StaffBooking />
             </ProtectedRoute>
           }
         />

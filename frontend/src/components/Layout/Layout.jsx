@@ -2,6 +2,7 @@ import { useState } from "react";
 import AdminSidebar from "../Sidebar/AdminSidebar";
 import ClientSidebar from "../Sidebar/ClientSidebar";
 import OwnerSidebar from "../Sidebar/OwnerSidebar";
+import StaffSidebar from "../Sidebar/StaffSidebar";
 
 const Layout = ({ children }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -15,6 +16,8 @@ const Layout = ({ children }) => {
       ? OwnerSidebar
       : userRole === "admin"
       ? AdminSidebar
+      : userRole === "staff"
+      ? StaffSidebar
       : ClientSidebar;
 
   const closeMobile = () => setIsMobileOpen(false);

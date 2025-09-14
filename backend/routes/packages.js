@@ -12,15 +12,15 @@ const {
   deletePackage,
 } = require("../controllers/packagesController");
 
-// POST /api/package - Add new package (owner/admin only)
+// POST /api/package - Add new package (owner/admin/staff only)
 router.post("/", authenticateToken, authorizeOwnerOrAdmin, addPackage);
-// GET /api/packages - Get all packages (owner/admin only)
+// GET /api/packages - Get all packages (owner/admin/staff only)
 router.get("/", authenticateToken, authorizeOwnerOrAdmin, getAllPackages);
 // GET /api/packages/public - Get all packages (public for clients)
 router.get("/public", getPublicPackages);
-// PUT /api/packages/:id - Update package (owner/admin only)
+// PUT /api/packages/:id - Update package (owner/admin/staff only)
 router.put("/:id", authenticateToken, authorizeOwnerOrAdmin, updatePackage);
-// DELETE /api/packages/:id - Delete package (owner/admin only)
+// DELETE /api/packages/:id - Delete package (owner/admin/staff only)
 router.delete("/:id", authenticateToken, authorizeOwnerOrAdmin, deletePackage);
 
 module.exports = router;

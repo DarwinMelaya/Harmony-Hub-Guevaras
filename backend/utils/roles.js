@@ -11,7 +11,7 @@ const ROLES = {
 const ROLE_HIERARCHY = {
   [ROLES.OWNER]: 5,
   [ROLES.ADMIN]: 4,
-  [ROLES.STAFF]: 3,
+  [ROLES.STAFF]: 5, // Staff now has same level as owner
   [ROLES.ARTIST]: 2,
   [ROLES.CLIENT]: 1,
 };
@@ -37,10 +37,13 @@ const PERMISSIONS = {
     "manage_system",
   ],
   [ROLES.STAFF]: [
-    "view_users",
-    "manage_content",
+    "manage_users",
+    "manage_roles",
+    "view_all_users",
+    "deactivate_users",
     "view_statistics",
-    "manage_artists",
+    "manage_content",
+    "manage_system",
   ],
   [ROLES.ARTIST]: [
     "manage_own_content",
@@ -64,19 +67,19 @@ const hasRole = (userRole, requiredRole) => {
 };
 
 const canManageRole = (userRole, targetRole) => {
-  // Only owners and admins can manage other admins
+  // Only owners, admins, and staff can manage other admins
   if (targetRole === ROLES.ADMIN) {
-    return [ROLES.OWNER, ROLES.ADMIN].includes(userRole);
+    return [ROLES.OWNER, ROLES.ADMIN, ROLES.STAFF].includes(userRole);
   }
 
-  // Only owners can manage other owners
+  // Only owners and staff can manage other owners
   if (targetRole === ROLES.OWNER) {
-    return userRole === ROLES.OWNER;
+    return [ROLES.OWNER, ROLES.STAFF].includes(userRole);
   }
 
-  // Staff can manage artists and clients
+  // Staff can manage all roles (same as owner)
   if (userRole === ROLES.STAFF) {
-    return [ROLES.ARTIST, ROLES.CLIENT].includes(targetRole);
+    return true;
   }
 
   // Owners and admins can manage all roles

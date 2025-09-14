@@ -36,14 +36,17 @@ The system supports five user roles:
 
 ### 3. Staff
 
-- **Level**: 3
-- **Permissions**: Limited administrative access
-- **Can manage**: Artists and clients
+- **Level**: 5 (Same as Owner)
+- **Permissions**: Full system access with same privileges as owner
+- **Can manage**: All users, roles, and system settings (including other owners)
 - **Default permissions**:
-  - `view_users` - View user information
-  - `manage_content` - Manage content
-  - `view_statistics` - Access statistics
-  - `manage_artists` - Manage artist accounts
+  - `manage_users` - Create, update, delete users
+  - `manage_roles` - Assign and change user roles
+  - `view_all_users` - View all user data
+  - `deactivate_users` - Activate/deactivate user accounts
+  - `view_statistics` - Access system statistics
+  - `manage_content` - Manage all content
+  - `manage_system` - System-wide settings
 
 ### 4. Artist
 
@@ -79,7 +82,7 @@ The system supports five user roles:
 - `PUT /api/users/change-password` - Change password
 - `DELETE /api/users/account` - Delete own account
 
-### Owner/Admin-Only Endpoints
+### Owner/Admin/Staff-Only Endpoints
 
 - `GET /api/users/all` - Get all users
 - `GET /api/users/stats` - Get user statistics
@@ -99,9 +102,9 @@ The system supports five user roles:
 
 ### Authorization Middleware
 
-- `authorizeOwner` - Owner only access
+- `authorizeOwner` - Owner and staff access
 - `authorizeAdmin` - Admin only access
-- `authorizeOwnerOrAdmin` - Owner or admin access
+- `authorizeOwnerOrAdmin` - Owner, admin, or staff access
 - `authorizeStaffOrAdmin` - Staff or admin access
 - `authorizeArtist` - Artist only access
 - `authorizeRoles(...roles)` - Custom role authorization
@@ -165,8 +168,7 @@ Only admins can assign admin or staff roles during registration. Regular registr
 
 ### Role Hierarchy
 
-- Admins can manage all roles
-- Staff can manage artists and clients
+- Owners, admins, and staff can manage all roles
 - Artists and clients can only manage their own profiles
 
 ### Security Features
@@ -192,8 +194,8 @@ if (user.role === "admin") {
 }
 
 // Check multiple roles
-if (["owner", "admin"].includes(user.role)) {
-  // Show owner/admin features
+if (["owner", "admin", "staff"].includes(user.role)) {
+  // Show owner/admin/staff features
 }
 
 // Check staff roles
@@ -211,12 +213,12 @@ router.get("/owner-only", authenticateToken, authorizeOwner, ownerController);
 // Protect admin routes
 router.get("/admin-only", authenticateToken, authorizeAdmin, adminController);
 
-// Protect owner/admin routes
+// Protect owner/admin/staff routes
 router.get(
-  "/owner-admin",
+  "/owner-admin-staff",
   authenticateToken,
   authorizeOwnerOrAdmin,
-  ownerAdminController
+  ownerAdminStaffController
 );
 
 // Protect staff routes

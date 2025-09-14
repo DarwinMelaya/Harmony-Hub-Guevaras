@@ -16,7 +16,7 @@ const {
   toggleBandArtistStatus,
 } = require("../controllers/bandArtistController");
 
-// Owner/Admin only routes
+// Owner/Admin/Staff routes
 router.post("/", authenticateToken, authorizeOwnerOrAdmin, addBandArtist);
 router.put("/:id", authenticateToken, authorizeOwnerOrAdmin, updateBandArtist);
 router.delete(

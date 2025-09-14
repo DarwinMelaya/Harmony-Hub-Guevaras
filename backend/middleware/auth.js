@@ -85,7 +85,7 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-// Owner only middleware
+// Owner only middleware (now includes staff)
 const authorizeOwner = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -94,10 +94,10 @@ const authorizeOwner = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== "owner") {
+  if (!["owner", "staff"].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: "Access denied. Owner privileges required.",
+      message: "Access denied. Owner or staff privileges required.",
     });
   }
 
@@ -123,7 +123,7 @@ const authorizeAdmin = (req, res, next) => {
   next();
 };
 
-// Owner or Admin middleware
+// Owner or Admin middleware (now includes staff)
 const authorizeOwnerOrAdmin = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -132,10 +132,10 @@ const authorizeOwnerOrAdmin = (req, res, next) => {
     });
   }
 
-  if (!["owner", "admin"].includes(req.user.role)) {
+  if (!["owner", "admin", "staff"].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: "Access denied. Owner or admin privileges required.",
+      message: "Access denied. Owner, admin, or staff privileges required.",
     });
   }
 
