@@ -72,6 +72,7 @@ const Booking = () => {
       department: booking.user?.fullName || booking.user?.username || "User",
       start_time: booking.bookingTime,
       completed: booking.status === "completed",
+      status: booking.status, // Add status for color coding
       venues: { name: "Booking" },
     });
     return acc;
@@ -719,6 +720,27 @@ const Booking = () => {
               >
                 ×
               </button>
+            </div>
+            {/* Color Legend */}
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-600 rounded"></div>
+                  <span className="text-gray-300">Pending</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                  <span className="text-gray-300">Confirmed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <span className="text-gray-300">Completed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span className="text-gray-300">Cancelled</span>
+                </div>
+              </div>
             </div>
             <div className="p-4 flex-1 overflow-auto">
               <AdminCalendar

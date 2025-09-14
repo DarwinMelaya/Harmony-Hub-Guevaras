@@ -32,6 +32,21 @@ const AdminCalendar = ({
     return `${formattedHour}:${minutes}${ampm}`;
   };
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-600 text-white";
+      case "confirmed":
+        return "bg-blue-600 text-white";
+      case "completed":
+        return "bg-green-600 text-white";
+      case "cancelled":
+        return "bg-red-600 text-white";
+      default:
+        return "bg-gray-600 text-white";
+    }
+  };
+
   const getDatesInMonth = (year, month) => {
     const dates = [];
     const date = new Date(year, month, 1);
@@ -103,16 +118,17 @@ const AdminCalendar = ({
                     <div
                       key={idx}
                       onClick={(e) => onScheduleClick(e, schedule)}
-                      className={`${
-                        schedule.completed
-                          ? "bg-gray-700 text-gray-300"
-                          : "bg-blue-600 text-white"
-                      } mb-2 rounded-lg p-1.5 md:p-2 hover:opacity-80 cursor-pointer transition-all text-[10px] md:text-xs`}
+                      className={`${getStatusColor(
+                        schedule.status
+                      )} mb-2 rounded-lg p-1.5 md:p-2 hover:opacity-80 cursor-pointer transition-all text-[10px] md:text-xs`}
                     >
                       <div className="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
                         <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/80 flex-shrink-0"></span>
                         <span className="font-semibold truncate">
                           {schedule.venues?.name || "Booking"}
+                        </span>
+                        <span className="text-xs bg-white/20 px-1 rounded text-white/90 font-medium">
+                          {schedule.status}
                         </span>
                       </div>
                       <div className="pl-3 md:pl-4 space-y-0.5">
