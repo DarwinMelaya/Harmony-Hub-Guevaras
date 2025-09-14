@@ -1,16 +1,11 @@
 import { useState, useEffect } from "react";
 import Layout from "../../components/Layout/Layout";
-import AddMusician from "../../components/Modals/Admin/AddMusician";
-import EditMusician from "../../components/Modals/Admin/EditMusician";
 import {
   Music,
   Search,
   Filter,
   MoreVertical,
-  Edit,
-  Trash2,
   Eye,
-  Plus,
   Mic,
   Calendar,
   User,
@@ -26,9 +21,6 @@ const StaffMusician = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [genreFilter, setGenreFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedMusician, setSelectedMusician] = useState(null);
 
   // Fetch musicians from backend
   const fetchMusicians = async () => {
@@ -62,36 +54,6 @@ const StaffMusician = () => {
     fetchMusicians();
   }, []);
 
-  // Delete musician
-  const deleteMusician = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this musician?")) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `http://localhost:5000/api/band-artists/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to delete musician");
-      }
-
-      fetchMusicians();
-    } catch (err) {
-      setError(err.message);
-      console.error("Error deleting musician:", err);
-    }
-  };
-
   // Toggle musician status
   const toggleStatus = async (id) => {
     try {
@@ -116,17 +78,6 @@ const StaffMusician = () => {
       setError(err.message);
       console.error("Error toggling musician status:", err);
     }
-  };
-
-  // Open edit modal
-  const openEditModal = (musician) => {
-    setSelectedMusician(musician);
-    setShowEditModal(true);
-  };
-
-  // Handle modal success
-  const handleModalSuccess = () => {
-    fetchMusicians();
   };
 
   // Filter musicians based on search and filters
@@ -191,13 +142,6 @@ const StaffMusician = () => {
                   Manage all musicians and bands ({musicians.length} total)
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Musician
-              </button>
             </div>
           </div>
 
@@ -354,20 +298,7 @@ const StaffMusician = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => openEditModal(musician)}
-                              className="text-blue-400 hover:text-blue-300 p-1 transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteMusician(musician._id)}
-                              className="text-red-400 hover:text-red-300 p-1 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <span className="text-gray-400">View Only</span>
                           </div>
                         </td>
                       </tr>
@@ -385,23 +316,6 @@ const StaffMusician = () => {
             </div>
           )}
         </div>
-
-        {/* Modal Components */}
-        <AddMusician
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onSuccess={handleModalSuccess}
-        />
-
-        <EditMusician
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedMusician(null);
-          }}
-          onSuccess={handleModalSuccess}
-          musician={selectedMusician}
-        />
 
         {/* Error Alert */}
         {error && (
