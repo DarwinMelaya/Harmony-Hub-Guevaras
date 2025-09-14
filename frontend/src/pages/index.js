@@ -15,3 +15,6 @@ export { default as Booking } from "./admin/Booking";
 // User Pages
 export { default as UserBooking } from "./users/UserBooking";
 export { default as UserHome } from "./users/UserHome";
+
+// Owner Pages
+export { default as OwnerDashboard } from "./owner/OwnerDashboard";

@@ -23,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   // Role-based fields
   role: {
     type: String,
-    enum: ["admin", "client", "staff", "artist"],
+    enum: ["owner", "admin", "client", "staff", "artist"],
     default: "client",
     required: true,
   },
@@ -71,9 +71,19 @@ UserSchema.methods.hasAnyRole = function (roles) {
   return roles.includes(this.role);
 };
 
+// Method to check if user is owner
+UserSchema.methods.isOwner = function () {
+  return this.role === "owner";
+};
+
 // Method to check if user is admin
 UserSchema.methods.isAdmin = function () {
   return this.role === "admin";
+};
+
+// Method to check if user is owner or admin
+UserSchema.methods.isOwnerOrAdmin = function () {
+  return ["owner", "admin"].includes(this.role);
 };
 
 // Method to check if user is staff or admin

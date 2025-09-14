@@ -20,14 +20,18 @@ router.post("/", requireRole(["client"]), createBooking);
 // Get user's own bookings (client)
 router.get("/my-bookings", requireRole(["client"]), getUserBookings);
 
-// Get all bookings (admin only)
-router.get("/", requireRole(["admin"]), getAllBookings);
+// Get all bookings (owner/admin only)
+router.get("/", requireRole(["owner", "admin"]), getAllBookings);
 
 // Get booking by ID (user can get their own, admin can get any)
 router.get("/:id", getBookingById);
 
-// Update booking status (admin only)
-router.patch("/:id/status", requireRole(["admin"]), updateBookingStatus);
+// Update booking status (owner/admin only)
+router.patch(
+  "/:id/status",
+  requireRole(["owner", "admin"]),
+  updateBookingStatus
+);
 
 // Cancel booking (user can cancel their own)
 router.patch("/:id/cancel", cancelBooking);

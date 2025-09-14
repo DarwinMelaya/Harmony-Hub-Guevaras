@@ -11,9 +11,16 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
   }
 
   // If role is required and user doesn't have it, redirect to appropriate page
-  if (requiredRole && user.role !== requiredRole) {
+  if (
+    requiredRole &&
+    !(Array.isArray(requiredRole)
+      ? requiredRole.includes(user.role)
+      : user.role === requiredRole)
+  ) {
     // Redirect based on user role
     switch (user.role) {
+      case "owner":
+        return <Navigate to="/owner-dashboard" replace />;
       case "admin":
         return <Navigate to="/admin-dashboard" replace />;
       case "client":

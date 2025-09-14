@@ -1,5 +1,6 @@
 // Role constants
 const ROLES = {
+  OWNER: "owner",
   ADMIN: "admin",
   CLIENT: "client",
   STAFF: "staff",
@@ -8,6 +9,7 @@ const ROLES = {
 
 // Role hierarchy (higher roles have more permissions)
 const ROLE_HIERARCHY = {
+  [ROLES.OWNER]: 5,
   [ROLES.ADMIN]: 4,
   [ROLES.STAFF]: 3,
   [ROLES.ARTIST]: 2,
@@ -16,6 +18,15 @@ const ROLE_HIERARCHY = {
 
 // Permissions for each role
 const PERMISSIONS = {
+  [ROLES.OWNER]: [
+    "manage_users",
+    "manage_roles",
+    "view_all_users",
+    "deactivate_users",
+    "view_statistics",
+    "manage_content",
+    "manage_system",
+  ],
   [ROLES.ADMIN]: [
     "manage_users",
     "manage_roles",
@@ -53,9 +64,14 @@ const hasRole = (userRole, requiredRole) => {
 };
 
 const canManageRole = (userRole, targetRole) => {
-  // Only admins can manage other admins
+  // Only owners and admins can manage other admins
   if (targetRole === ROLES.ADMIN) {
-    return userRole === ROLES.ADMIN;
+    return [ROLES.OWNER, ROLES.ADMIN].includes(userRole);
+  }
+
+  // Only owners can manage other owners
+  if (targetRole === ROLES.OWNER) {
+    return userRole === ROLES.OWNER;
   }
 
   // Staff can manage artists and clients
@@ -63,8 +79,8 @@ const canManageRole = (userRole, targetRole) => {
     return [ROLES.ARTIST, ROLES.CLIENT].includes(targetRole);
   }
 
-  // Admins can manage all roles
-  return userRole === ROLES.ADMIN;
+  // Owners and admins can manage all roles
+  return [ROLES.OWNER, ROLES.ADMIN].includes(userRole);
 };
 
 const getValidRoles = () => {
@@ -73,6 +89,7 @@ const getValidRoles = () => {
 
 const getRoleDisplayName = (role) => {
   const displayNames = {
+    [ROLES.OWNER]: "Owner",
     [ROLES.ADMIN]: "Administrator",
     [ROLES.STAFF]: "Staff Member",
     [ROLES.ARTIST]: "Artist",

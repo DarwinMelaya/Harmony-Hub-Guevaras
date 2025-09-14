@@ -85,6 +85,25 @@ const authorizeRoles = (...roles) => {
   };
 };
 
+// Owner only middleware
+const authorizeOwner = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+  }
+
+  if (req.user.role !== "owner") {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. Owner privileges required.",
+    });
+  }
+
+  next();
+};
+
 // Admin only middleware
 const authorizeAdmin = (req, res, next) => {
   if (!req.user) {
@@ -98,6 +117,25 @@ const authorizeAdmin = (req, res, next) => {
     return res.status(403).json({
       success: false,
       message: "Access denied. Admin privileges required.",
+    });
+  }
+
+  next();
+};
+
+// Owner or Admin middleware
+const authorizeOwnerOrAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+  }
+
+  if (!["owner", "admin"].includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. Owner or admin privileges required.",
     });
   }
 
@@ -171,7 +209,9 @@ const optionalAuth = async (req, res, next) => {
 module.exports = {
   authenticateToken,
   authorizeRoles,
+  authorizeOwner,
   authorizeAdmin,
+  authorizeOwnerOrAdmin,
   authorizeStaffOrAdmin,
   authorizeArtist,
   optionalAuth,

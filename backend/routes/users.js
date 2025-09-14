@@ -2,7 +2,9 @@ const express = require("express");
 const router = express.Router();
 const {
   authenticateToken,
+  authorizeOwner,
   authorizeAdmin,
+  authorizeOwnerOrAdmin,
   authorizeStaffOrAdmin,
   authorizeRoles,
 } = require("../middleware/auth");
@@ -30,20 +32,25 @@ router.put("/profile", authenticateToken, updateUserProfile);
 router.put("/change-password", authenticateToken, changePassword);
 router.delete("/account", authenticateToken, deleteUser);
 
-// Admin routes
-router.get("/all", authenticateToken, authorizeAdmin, getAllUsers);
-router.get("/stats", authenticateToken, authorizeAdmin, getUserStats);
+// Owner/Admin routes
+router.get("/all", authenticateToken, authorizeOwnerOrAdmin, getAllUsers);
+router.get("/stats", authenticateToken, authorizeOwnerOrAdmin, getUserStats);
 router.get(
   "/by-role/:role",
   authenticateToken,
   authorizeStaffOrAdmin,
   getUsersByRole
 );
-router.put("/:userId/role", authenticateToken, authorizeAdmin, updateUserRole);
+router.put(
+  "/:userId/role",
+  authenticateToken,
+  authorizeOwnerOrAdmin,
+  updateUserRole
+);
 router.put(
   "/:userId/toggle-status",
   authenticateToken,
-  authorizeAdmin,
+  authorizeOwnerOrAdmin,
   toggleUserStatus
 );
 

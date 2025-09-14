@@ -4,13 +4,13 @@ This document describes the role-based access control (RBAC) system implemented 
 
 ## Roles
 
-The system supports four user roles:
+The system supports five user roles:
 
-### 1. Admin
+### 1. Owner
 
-- **Level**: 4 (Highest)
-- **Permissions**: Full system access
-- **Can manage**: All users, roles, and system settings
+- **Level**: 5 (Highest)
+- **Permissions**: Full system access with highest privileges
+- **Can manage**: All users, roles, and system settings (including other owners)
 - **Default permissions**:
   - `manage_users` - Create, update, delete users
   - `manage_roles` - Assign and change user roles
@@ -20,7 +20,21 @@ The system supports four user roles:
   - `manage_content` - Manage all content
   - `manage_system` - System-wide settings
 
-### 2. Staff
+### 2. Admin
+
+- **Level**: 4
+- **Permissions**: Full system access
+- **Can manage**: All users, roles, and system settings (except other owners)
+- **Default permissions**:
+  - `manage_users` - Create, update, delete users
+  - `manage_roles` - Assign and change user roles
+  - `view_all_users` - View all user data
+  - `deactivate_users` - Activate/deactivate user accounts
+  - `view_statistics` - Access system statistics
+  - `manage_content` - Manage all content
+  - `manage_system` - System-wide settings
+
+### 3. Staff
 
 - **Level**: 3
 - **Permissions**: Limited administrative access
@@ -31,7 +45,7 @@ The system supports four user roles:
   - `view_statistics` - Access statistics
   - `manage_artists` - Manage artist accounts
 
-### 3. Artist
+### 4. Artist
 
 - **Level**: 2
 - **Permissions**: Content creation and management
@@ -41,7 +55,7 @@ The system supports four user roles:
   - `view_own_profile` - View own profile
   - `update_own_profile` - Update own profile
 
-### 4. Client
+### 5. Client
 
 - **Level**: 1 (Lowest)
 - **Permissions**: Basic user access
@@ -65,7 +79,7 @@ The system supports four user roles:
 - `PUT /api/users/change-password` - Change password
 - `DELETE /api/users/account` - Delete own account
 
-### Admin-Only Endpoints
+### Owner/Admin-Only Endpoints
 
 - `GET /api/users/all` - Get all users
 - `GET /api/users/stats` - Get user statistics
@@ -85,7 +99,9 @@ The system supports four user roles:
 
 ### Authorization Middleware
 
+- `authorizeOwner` - Owner only access
 - `authorizeAdmin` - Admin only access
+- `authorizeOwnerOrAdmin` - Owner or admin access
 - `authorizeStaffOrAdmin` - Staff or admin access
 - `authorizeArtist` - Artist only access
 - `authorizeRoles(...roles)` - Custom role authorization
@@ -96,13 +112,16 @@ The User model includes helper methods for role checking:
 
 ```javascript
 // Check specific role
+user.hasRole("owner");
 user.hasRole("admin");
 
 // Check multiple roles
-user.hasAnyRole(["admin", "staff"]);
+user.hasAnyRole(["owner", "admin", "staff"]);
 
 // Role-specific checks
+user.isOwner();
 user.isAdmin();
+user.isOwnerOrAdmin();
 user.isStaffOrAdmin();
 user.isArtist();
 user.isClient();
@@ -162,12 +181,22 @@ Only admins can assign admin or staff roles during registration. Regular registr
 ### Frontend Role Checking
 
 ```javascript
+// Check if user is owner
+if (user.role === "owner") {
+  // Show owner features
+}
+
 // Check if user is admin
 if (user.role === "admin") {
   // Show admin features
 }
 
 // Check multiple roles
+if (["owner", "admin"].includes(user.role)) {
+  // Show owner/admin features
+}
+
+// Check staff roles
 if (["admin", "staff"].includes(user.role)) {
   // Show staff features
 }
@@ -176,8 +205,19 @@ if (["admin", "staff"].includes(user.role)) {
 ### API Authorization
 
 ```javascript
+// Protect owner routes
+router.get("/owner-only", authenticateToken, authorizeOwner, ownerController);
+
 // Protect admin routes
 router.get("/admin-only", authenticateToken, authorizeAdmin, adminController);
+
+// Protect owner/admin routes
+router.get(
+  "/owner-admin",
+  authenticateToken,
+  authorizeOwnerOrAdmin,
+  ownerAdminController
+);
 
 // Protect staff routes
 router.get(
@@ -192,7 +232,7 @@ router.get(
 
 The User model includes these role-related fields:
 
-- `role` - User role (enum: 'admin', 'client', 'staff', 'artist')
+- `role` - User role (enum: 'owner', 'admin', 'client', 'staff', 'artist')
 - `permissions` - Array of specific permissions
 - `isActive` - Account status (boolean)
 

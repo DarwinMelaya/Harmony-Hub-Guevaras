@@ -11,6 +11,7 @@ import {
   UserHome,
   UserBooking,
   Booking,
+  OwnerDashboard,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -37,7 +38,7 @@ export const Routers = () => {
         <Route
           path="/admin-inventory"
           element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole={["admin", "owner"]}>
               <Inventory />
             </ProtectedRoute>
           }
@@ -45,7 +46,7 @@ export const Routers = () => {
         <Route
           path="/admin-packages"
           element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole={["admin", "owner"]}>
               <Packages />
             </ProtectedRoute>
           }
@@ -53,7 +54,7 @@ export const Routers = () => {
         <Route
           path="/admin-user"
           element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole={["admin", "owner"]}>
               <User />
             </ProtectedRoute>
           }
@@ -61,7 +62,7 @@ export const Routers = () => {
         <Route
           path="/admin-musician"
           element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole={["admin", "owner"]}>
               <Musician />
             </ProtectedRoute>
           }
@@ -69,7 +70,7 @@ export const Routers = () => {
         <Route
           path="/admin-booking"
           element={
-            <ProtectedRoute requiredRole="admin">
+            <ProtectedRoute requiredRole={["admin", "owner"]}>
               <Booking />
             </ProtectedRoute>
           }
@@ -88,6 +89,15 @@ export const Routers = () => {
           element={
             <ProtectedRoute>
               <UserBooking />
+            </ProtectedRoute>
+          }
+        />
+        {/* Protected Owner Pages */}
+        <Route
+          path="/owner-dashboard"
+          element={
+            <ProtectedRoute requiredRole="owner">
+              <OwnerDashboard />
             </ProtectedRoute>
           }
         />

@@ -79,6 +79,9 @@ const Login = () => {
           case "artist":
             navigate("/artist-dashboard");
             break;
+          case "owner":
+            navigate("/owner-dashboard");
+            break;
           default:
             navigate("/home");
         }

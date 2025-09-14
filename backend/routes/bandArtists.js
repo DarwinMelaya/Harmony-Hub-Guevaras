@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   authenticateToken,
-  authorizeAdmin,
+  authorizeOwnerOrAdmin,
   authorizeStaffOrAdmin,
 } = require("../middleware/auth");
 const {
@@ -15,14 +15,19 @@ const {
   toggleBandArtistStatus,
 } = require("../controllers/bandArtistController");
 
-// Admin only routes
-router.post("/", authenticateToken, authorizeAdmin, addBandArtist);
-router.put("/:id", authenticateToken, authorizeAdmin, updateBandArtist);
-router.delete("/:id", authenticateToken, authorizeAdmin, deleteBandArtist);
+// Owner/Admin only routes
+router.post("/", authenticateToken, authorizeOwnerOrAdmin, addBandArtist);
+router.put("/:id", authenticateToken, authorizeOwnerOrAdmin, updateBandArtist);
+router.delete(
+  "/:id",
+  authenticateToken,
+  authorizeOwnerOrAdmin,
+  deleteBandArtist
+);
 router.put(
   "/:id/toggle-status",
   authenticateToken,
-  authorizeAdmin,
+  authorizeOwnerOrAdmin,
   toggleBandArtistStatus
 );
 
