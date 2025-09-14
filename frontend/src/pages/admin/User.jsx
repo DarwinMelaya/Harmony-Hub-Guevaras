@@ -24,6 +24,9 @@ const User = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newRole, setNewRole] = useState("");
 
   // Fetch users from backend
   const fetchUsers = async () => {
@@ -57,6 +60,75 @@ const User = () => {
     fetchUsers();
   }, []);
 
+  // Change user role
+  const changeUserRole = async (userId, role) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/users/${userId}/role`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ role }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update user role");
+      }
+
+      const data = await response.json();
+
+      // Update the user in the local state
+      setUsers(
+        users.map((user) =>
+          user._id === userId ? { ...user, role: data.data.role } : user
+        )
+      );
+
+      // Close modal and reset state
+      setShowRoleModal(false);
+      setSelectedUser(null);
+      setNewRole("");
+
+      // Show success message
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error updating user role:", err);
+    }
+  };
+
+  // Open role change modal
+  const openRoleModal = (user) => {
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setShowRoleModal(true);
+  };
+
+  // Get current user from localStorage
+  const getCurrentUser = () => {
+    const userData = localStorage.getItem("user");
+    return userData ? JSON.parse(userData) : null;
+  };
+
+  // Check if current user can change user roles (only admins)
+  const canChangeUserRoles = () => {
+    const currentUser = getCurrentUser();
+    return currentUser && currentUser.role === "admin";
+  };
+
+  // Handle role change
+  const handleRoleChange = () => {
+    if (selectedUser && newRole && newRole !== selectedUser.role) {
+      changeUserRole(selectedUser._id, newRole);
+    }
+  };
+
   // Filter users based on search and filters
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -76,6 +148,8 @@ const User = () => {
   // Get role badge color
   const getRoleBadgeColor = (role) => {
     switch (role) {
+      case "owner":
+        return "bg-yellow-900/50 text-yellow-300 border-yellow-700";
       case "admin":
         return "bg-red-900/50 text-red-300 border-red-700";
       case "staff":
@@ -175,6 +249,7 @@ const User = () => {
                   className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                 >
                   <option value="all">All Roles</option>
+                  <option value="owner">Owner</option>
                   <option value="admin">Admin</option>
                   <option value="staff">Staff</option>
                   <option value="artist">Artist</option>
@@ -329,13 +404,31 @@ const User = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
-                            <button className="text-blue-400 hover:text-blue-300 p-1 transition-colors">
+                            {canChangeUserRoles() && (
+                              <button
+                                onClick={() => openRoleModal(user)}
+                                className="text-purple-400 hover:text-purple-300 p-1 transition-colors"
+                                title="Change Role"
+                              >
+                                <Shield className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              className="text-blue-400 hover:text-blue-300 p-1 transition-colors"
+                              title="View Details"
+                            >
                               <Eye className="w-4 h-4" />
                             </button>
-                            <button className="text-green-400 hover:text-green-300 p-1 transition-colors">
+                            <button
+                              className="text-green-400 hover:text-green-300 p-1 transition-colors"
+                              title="Edit User"
+                            >
                               <Edit className="w-4 h-4" />
                             </button>
-                            <button className="text-red-400 hover:text-red-300 p-1 transition-colors">
+                            <button
+                              className="text-red-400 hover:text-red-300 p-1 transition-colors"
+                              title="Delete User"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -355,6 +448,104 @@ const User = () => {
             </div>
           )}
         </div>
+
+        {/* Role Change Modal */}
+        {showRoleModal && selectedUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">
+                  Change User Role
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowRoleModal(false);
+                    setSelectedUser(null);
+                    setNewRole("");
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-gray-300 mb-2">
+                  Change role for{" "}
+                  <span className="font-medium text-white">
+                    {selectedUser.fullName}
+                  </span>
+                </p>
+                <p className="text-sm text-gray-400 mb-4">
+                  Current role:{" "}
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${getRoleBadgeColor(
+                      selectedUser.role
+                    )}`}
+                  >
+                    {selectedUser.role}
+                  </span>
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  New Role
+                </label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                >
+                  <option value="client">Client</option>
+                  <option value="artist">Artist</option>
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
+                </select>
+                {!canChangeUserRoles() && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Only admins can change user roles
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowRoleModal(false);
+                    setSelectedUser(null);
+                    setNewRole("");
+                  }}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRoleChange}
+                  disabled={newRole === selectedUser.role}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  Update Role
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {error && (
+          <div className="fixed top-4 right-4 bg-red-900/90 text-red-100 px-4 py-3 rounded-lg border border-red-700 flex items-center gap-2 z-50">
+            <Shield className="w-5 h-5" />
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-2 text-red-300 hover:text-red-100"
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
     </Layout>
   );

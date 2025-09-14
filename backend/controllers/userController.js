@@ -350,13 +350,23 @@ const getUsersByRole = async (req, res) => {
   }
 };
 
-// Update user role (admin only)
+// Update user role (admin/owner only)
 const updateUserRole = async (req, res) => {
   try {
     const { userId } = req.params;
     const { role } = req.body;
+    const currentUser = req.user; // Current user making the request
 
-    const validRoles = ["admin", "client", "staff", "artist"];
+    // Only admins can change user roles
+    if (currentUser.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can change user roles",
+      });
+    }
+
+    // Validate role
+    const validRoles = ["admin", "client", "staff", "artist", "owner"];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -364,23 +374,34 @@ const updateUserRole = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { role, updatedAt: Date.now() },
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    if (!user) {
+    // Find the target user
+    const targetUser = await User.findById(userId).select("-password");
+    if (!targetUser) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
+    // Prevent admins from changing their own role
+    if (currentUser._id.toString() === userId) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot change your own role",
+      });
+    }
+
+    // Update the user role
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { role, updatedAt: Date.now() },
+      { new: true, runValidators: true }
+    ).select("-password");
+
     res.status(200).json({
       success: true,
       message: "User role updated successfully",
-      data: user,
+      data: updatedUser,
     });
   } catch (error) {
     console.error("Update user role error:", error);
