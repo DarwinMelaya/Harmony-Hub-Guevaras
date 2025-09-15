@@ -1,6 +1,16 @@
-import { Music, Star } from "lucide-react";
+import { Music, Star, Calendar, Clock } from "lucide-react";
 
-const ArtistCard = ({ artist, onAdd }) => {
+const ArtistCard = ({
+  artist,
+  onAdd,
+  bookingDate,
+  artistAvailability,
+  checkingAvailability,
+}) => {
+  // Only consider date-specific availability; default to available when no date selected
+  const isDateSpecificUnavailable =
+    bookingDate && artistAvailability[`${artist._id}-${bookingDate}`] === false;
+
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-purple-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/20 group">
       <div className="p-6">
@@ -31,20 +41,33 @@ const ArtistCard = ({ artist, onAdd }) => {
           </div>
         </div>
 
-        {!artist.isAvailable && (
+        {/* Availability Status - only date-specific */}
+        {isDateSpecificUnavailable && (
           <div className="mb-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/50 text-red-300 border border-red-700">
-              Unavailable
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-900/50 text-orange-300 border border-orange-700">
+              <Calendar className="w-3 h-3 mr-1" />
+              Booked on {bookingDate}
+            </span>
+          </div>
+        )}
+
+        {bookingDate && !isDateSpecificUnavailable && (
+          <div className="mb-3">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-700">
+              <Calendar className="w-3 h-3 mr-1" />
+              Available on {bookingDate}
             </span>
           </div>
         )}
 
         <button
           onClick={() => onAdd(artist, `${artist._id}-img-artist`)}
-          disabled={!artist.isAvailable}
+          disabled={Boolean(bookingDate && isDateSpecificUnavailable)}
           className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
         >
-          {artist.isAvailable ? "Add to Cart" : "Unavailable"}
+          {bookingDate && isDateSpecificUnavailable
+            ? "Unavailable on selected date"
+            : "Add to Cart"}
         </button>
       </div>
     </div>

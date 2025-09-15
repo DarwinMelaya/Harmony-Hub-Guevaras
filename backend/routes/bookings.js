@@ -8,11 +8,15 @@ const {
   updateBookingStatus,
   cancelBooking,
   getArtistBookings,
+  checkArtistAvailability,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
 
-// All routes require authentication
+// Check artist availability for specific date (public endpoint - no auth required)
+router.get("/check-availability", checkArtistAvailability);
+
+// All other routes require authentication
 router.use(authenticateToken);
 
 // Create a new booking (client only)

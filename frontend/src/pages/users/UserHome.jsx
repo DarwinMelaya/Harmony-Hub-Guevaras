@@ -62,6 +62,10 @@ const UserHome = () => {
   // Booking mode: 'standard' (Inventory + Artists) or 'packages'
   const [bookingMode, setBookingMode] = useState("standard");
 
+  // Artist availability tracking
+  const [artistAvailability, setArtistAvailability] = useState({});
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+
   useEffect(() => {
     // Get user data from localStorage
     const user = localStorage.getItem("user");
@@ -100,6 +104,31 @@ const UserHome = () => {
     }
   };
 
+  // Check artist availability for a specific date
+  const checkArtistAvailability = async (artistId, bookingDate) => {
+    if (!bookingDate) return true; // If no date selected, assume available
+
+    try {
+      setCheckingAvailability(true);
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/check-availability?artistId=${artistId}&bookingDate=${bookingDate}`
+      );
+      if (response.data.success) {
+        setArtistAvailability((prev) => ({
+          ...prev,
+          [`${artistId}-${bookingDate}`]: response.data.available,
+        }));
+        return response.data.available;
+      }
+      return false;
+    } catch (err) {
+      console.error("Error checking artist availability:", err);
+      return false;
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
   // Filter and search functions
   const filterItems = (items, type) => {
     let filtered = items;
@@ -108,9 +137,13 @@ const UserHome = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (item) =>
-          (item.name || item.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.name || item.fullName || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
           (item.description &&
-            item.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            item.description
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())) ||
           (item.genre &&
             item.genre.toLowerCase().includes(searchTerm.toLowerCase()))
       );
@@ -183,7 +216,7 @@ const UserHome = () => {
     );
   };
 
-  const addToCart = (item, type) => {
+  const addToCart = async (item, type) => {
     const cartItem = {
       id: item._id,
       name: item.name || item.fullName,
@@ -223,6 +256,22 @@ const UserHome = () => {
         return [...prevCart, cartItem];
       });
       return;
+    }
+
+    // For band artists, check availability if booking date is selected
+    if (type === "bandArtist" && bookingData.bookingDate) {
+      const isAvailable = await checkArtistAvailability(
+        item._id,
+        bookingData.bookingDate
+      );
+      if (!isAvailable) {
+        setError(
+          `${item.fullName || item.name} is not available on ${
+            bookingData.bookingDate
+          }`
+        );
+        return;
+      }
     }
 
     // Non-inventory items: add once
@@ -451,6 +500,8 @@ const UserHome = () => {
         setBookingSuccess(true);
         clearCart();
         setShowBookingModal(false);
+        // Clear artist availability cache since booking was successful
+        setArtistAvailability({});
         setBookingData({
           bookingDate: "",
           bookingTime: "",
@@ -473,7 +524,7 @@ const UserHome = () => {
     }
   };
 
-  const handleBookingDataChange = (field, value) => {
+  const handleBookingDataChange = async (field, value) => {
     if (field.includes(".")) {
       const [parent, child] = field.split(".");
       setBookingData((prev) => ({
@@ -488,6 +539,14 @@ const UserHome = () => {
         ...prev,
         [field]: value,
       }));
+
+      // If booking date changes, check availability for all artists
+      if (field === "bookingDate" && value) {
+        const artistPromises = bandArtists.map((artist) =>
+          checkArtistAvailability(artist._id, value)
+        );
+        await Promise.all(artistPromises);
+      }
     }
   };
 
@@ -797,6 +856,9 @@ const UserHome = () => {
                     onAdd={(a, sourceId) =>
                       handleAddToCartClick(a, "bandArtist", sourceId)
                     }
+                    bookingDate={bookingData.bookingDate}
+                    artistAvailability={artistAvailability}
+                    checkingAvailability={checkingAvailability}
                   />
                 ))}
               </div>
@@ -888,6 +950,8 @@ const UserHome = () => {
         bookingLoading={bookingLoading}
         bookingSuccess={bookingSuccess}
         setBookingSuccess={setBookingSuccess}
+        artistAvailability={artistAvailability}
+        checkArtistAvailability={checkArtistAvailability}
       />
     </Layout>
   );

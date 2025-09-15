@@ -1,4 +1,11 @@
-import { X, Calendar, Clock, CheckCircle } from "lucide-react";
+import {
+  X,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Music,
+} from "lucide-react";
 
 const BookingModal = ({
   showBookingModal,
@@ -11,6 +18,8 @@ const BookingModal = ({
   bookingLoading,
   bookingSuccess,
   setBookingSuccess,
+  artistAvailability,
+  checkArtistAvailability,
 }) => {
   return (
     <>
@@ -47,10 +56,19 @@ const BookingModal = ({
                     >
                       <span className="text-gray-300">
                         {item.name} x
-                        {item.type === "package" || item.type === "bandArtist" ? 1 : item.quantity}
+                        {item.type === "package" || item.type === "bandArtist"
+                          ? 1
+                          : item.quantity}
                       </span>
                       <span className="text-white font-medium">
-                        ₱{Number(item.price * (item.type === "package" || item.type === "bandArtist" ? 1 : item.quantity)).toLocaleString()}
+                        ₱
+                        {Number(
+                          item.price *
+                            (item.type === "package" ||
+                            item.type === "bandArtist"
+                              ? 1
+                              : item.quantity)
+                        ).toLocaleString()}
                       </span>
                     </div>
                   ))}
@@ -65,6 +83,53 @@ const BookingModal = ({
                 </div>
               </div>
 
+              {/* Artist Availability Warning */}
+              {cart.some((item) => item.type === "bandArtist") &&
+                bookingData.bookingDate && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                      <Music className="w-5 h-5 mr-2 text-purple-400" />
+                      Artist Availability Check
+                    </h3>
+                    <div className="space-y-2">
+                      {cart
+                        .filter((item) => item.type === "bandArtist")
+                        .map((artist) => {
+                          const isAvailable =
+                            artistAvailability[
+                              `${artist.id}-${bookingData.bookingDate}`
+                            ] !== false;
+                          return (
+                            <div
+                              key={`${artist.id}-availability`}
+                              className={`p-3 rounded-lg border ${
+                                isAvailable
+                                  ? "bg-green-900/20 border-green-700 text-green-300"
+                                  : "bg-red-900/20 border-red-700 text-red-300"
+                              }`}
+                            >
+                              <div className="flex items-center">
+                                {isAvailable ? (
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
+                                ) : (
+                                  <AlertTriangle className="w-4 h-4 mr-2 text-red-400" />
+                                )}
+                                <span className="font-medium">
+                                  {artist.name}
+                                </span>
+                                <span className="ml-2 text-sm">
+                                  {isAvailable
+                                    ? `is available on ${bookingData.bookingDate}`
+                                    : `is not available on ${bookingData.bookingDate}`}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
               {/* Booking Details */}
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -76,9 +141,19 @@ const BookingModal = ({
                     <input
                       type="date"
                       value={bookingData.bookingDate}
-                      onChange={(e) =>
-                        handleBookingDataChange("bookingDate", e.target.value)
-                      }
+                      onChange={async (e) => {
+                        const newDate = e.target.value;
+                        await handleBookingDataChange("bookingDate", newDate);
+                        // Check availability for artists in cart when date changes
+                        if (newDate) {
+                          const artistPromises = cart
+                            .filter((item) => item.type === "bandArtist")
+                            .map((artist) =>
+                              checkArtistAvailability(artist.id, newDate)
+                            );
+                          await Promise.all(artistPromises);
+                        }
+                      }}
                       min={new Date().toISOString().split("T")[0]}
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required

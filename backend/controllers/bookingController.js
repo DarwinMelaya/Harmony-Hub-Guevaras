@@ -114,7 +114,26 @@ const createBooking = async (req, res) => {
             artist.isAvailable !== false
           ) {
             itemExists = true;
-            isAvailable = true;
+
+            // Check if artist is already booked on the same date
+            const startOfDay = new Date(bookingDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(bookingDate);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            const existingBooking = await Booking.findOne({
+              "items.type": "bandArtist",
+              "items.itemId": itemId,
+              bookingDate: {
+                $gte: startOfDay,
+                $lte: endOfDay,
+              },
+              status: { $in: ["pending", "confirmed"] },
+            });
+
+            if (existingBooking) {
+              isAvailable = false;
+            }
           }
           break;
 
@@ -133,11 +152,15 @@ const createBooking = async (req, res) => {
       }
 
       if (!isAvailable) {
+        let message = `${name} is not available`;
+        if (type === "inventory") {
+          message += " in the requested quantity";
+        } else if (type === "bandArtist") {
+          message += " on the selected date";
+        }
         return res.status(400).json({
           success: false,
-          message: `${name} is not available${
-            type === "inventory" ? " in the requested quantity" : ""
-          }`,
+          message: message,
         });
       }
 
@@ -171,7 +194,7 @@ const createBooking = async (req, res) => {
 
     // Apply side effects upon booking creation
     // - Decrease inventory quantities for inventory items
-    // - Mark packages and band artists as unavailable
+    // - Mark packages as unavailable
     for (const bookingItem of validatedItems) {
       if (bookingItem.type === "inventory") {
         await Inventory.findByIdAndUpdate(
@@ -181,12 +204,6 @@ const createBooking = async (req, res) => {
         );
       } else if (bookingItem.type === "package") {
         await Packages.findByIdAndUpdate(
-          bookingItem.itemId,
-          { $set: { isAvailable: false } },
-          { new: true }
-        );
-      } else if (bookingItem.type === "bandArtist") {
-        await User.findByIdAndUpdate(
           bookingItem.itemId,
           { $set: { isAvailable: false } },
           { new: true }
@@ -368,7 +385,7 @@ const updateBookingStatus = async (req, res) => {
       }
     }
 
-    // Re-enable availability for packages and band artists when completed
+    // Re-enable availability for packages when completed
     if (previousStatus !== "completed" && status === "completed") {
       for (const item of booking.items) {
         if (item.type === "package") {
@@ -377,17 +394,11 @@ const updateBookingStatus = async (req, res) => {
             { $set: { isAvailable: true } },
             { new: true }
           );
-        } else if (item.type === "bandArtist") {
-          await User.findByIdAndUpdate(
-            item.itemId,
-            { $set: { isAvailable: true } },
-            { new: true }
-          );
         }
       }
     }
 
-    // When booking is cancelled by admin, restore inventory and re-enable availability
+    // When booking is cancelled by admin, restore inventory and re-enable package availability
     if (previousStatus !== "cancelled" && status === "cancelled") {
       for (const item of booking.items) {
         if (item.type === "inventory") {
@@ -398,12 +409,6 @@ const updateBookingStatus = async (req, res) => {
           );
         } else if (item.type === "package") {
           await Packages.findByIdAndUpdate(
-            item.itemId,
-            { $set: { isAvailable: true } },
-            { new: true }
-          );
-        } else if (item.type === "bandArtist") {
-          await User.findByIdAndUpdate(
             item.itemId,
             { $set: { isAvailable: true } },
             { new: true }
@@ -470,7 +475,7 @@ const cancelBooking = async (req, res) => {
     booking.status = "cancelled";
     await booking.save();
 
-    // Restore inventory and re-enable availability on cancellation
+    // Restore inventory and re-enable package availability on cancellation
     for (const item of booking.items) {
       if (item.type === "inventory") {
         await Inventory.findByIdAndUpdate(
@@ -480,12 +485,6 @@ const cancelBooking = async (req, res) => {
         );
       } else if (item.type === "package") {
         await Packages.findByIdAndUpdate(
-          item.itemId,
-          { $set: { isAvailable: true } },
-          { new: true }
-        );
-      } else if (item.type === "bandArtist") {
-        await User.findByIdAndUpdate(
           item.itemId,
           { $set: { isAvailable: true } },
           { new: true }
@@ -572,6 +571,72 @@ const getArtistBookings = async (req, res) => {
   }
 };
 
+// Check artist availability for specific date
+const checkArtistAvailability = async (req, res) => {
+  try {
+    const { artistId, bookingDate } = req.query;
+
+    if (!artistId || !bookingDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Artist ID and booking date are required",
+      });
+    }
+
+    // Check if artist exists and is generally available
+    const artist = await User.findById(artistId);
+    if (
+      !artist ||
+      artist.role !== "artist" ||
+      !artist.isActive ||
+      artist.isAvailable === false
+    ) {
+      return res.json({
+        success: true,
+        available: false,
+        reason: "Artist is not available for booking",
+      });
+    }
+
+    // Check if artist is already booked on the specific date
+    // Convert bookingDate to start and end of day for proper comparison
+    const startOfDay = new Date(bookingDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(bookingDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingBooking = await Booking.findOne({
+      "items.type": "bandArtist",
+      "items.itemId": artistId,
+      bookingDate: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+      status: { $in: ["pending", "confirmed"] },
+    });
+    const isAvailable = !existingBooking;
+
+    res.json({
+      success: true,
+      available: isAvailable,
+      reason: isAvailable ? null : "Artist is already booked on this date",
+      artist: {
+        _id: artist._id,
+        fullName: artist.fullName,
+        genre: artist.genre,
+        booking_fee: artist.booking_fee,
+      },
+    });
+  } catch (error) {
+    console.error("Error checking artist availability:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -580,4 +645,5 @@ module.exports = {
   updateBookingStatus,
   cancelBooking,
   getArtistBookings,
+  checkArtistAvailability,
 };
