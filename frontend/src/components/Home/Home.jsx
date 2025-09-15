@@ -1,4 +1,7 @@
+import { useNavigate } from "react-router-dom";
+
 const Home = () => {
+  const navigate = useNavigate();
   return (
     <div
       className="relative min-h-screen bg-cover bg-center bg-no-repeat"
@@ -36,7 +39,10 @@ const Home = () => {
         </div>
 
         {/* Book Now Button */}
-        <button className="bg-black/50 backdrop-blur-sm border border-white/20 text-white font-bold py-4 px-8 rounded-lg text-xl md:text-2xl transition-all duration-300 hover:bg-black/70 hover:border-white/40 shadow-2xl">
+        <button
+          onClick={() => navigate("/login")}
+          className="bg-black/50 backdrop-blur-sm border border-white/20 text-white font-bold py-4 px-8 rounded-lg text-xl md:text-2xl transition-all duration-300 hover:bg-black/70 hover:border-white/40 shadow-2xl"
+        >
           BOOK NOW
         </button>
       </div>
