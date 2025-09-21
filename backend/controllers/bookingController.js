@@ -349,9 +349,9 @@ const getBookingById = async (req, res) => {
 const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, issueType, affectedItems } = req.body;
 
-    if (!["pending", "confirmed", "cancelled", "completed"].includes(status)) {
+    if (!["pending", "confirmed", "cancelled", "completed"].includes(req.body.status)) {
       return res.status(400).json({
         success: false,
         message: "Invalid status",
@@ -369,6 +369,14 @@ const updateBookingStatus = async (req, res) => {
 
     const previousStatus = booking.status;
     booking.status = status;
+
+    if (status === "completed") {
+      if (issueType) booking.issueType = issueType; // "lost" | "damaged"
+      if (affectedItems && Array.isArray(affectedItems)) {
+        booking.affectedItems = affectedItems;
+      }
+    }
+
     await booking.save();
 
     // Handle side effects based on status transitions

@@ -30,6 +30,10 @@ const Booking = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completionStep, setCompletionStep] = useState("confirm"); 
+  const [issueType, setIssueType] = useState(""); 
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     fetchBookings();
@@ -103,14 +107,20 @@ const Booking = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId, newStatus) => {
+  const updateBookingStatus = async (bookingId, newStatus, issueData = {}) => {
     try {
       setUpdatingStatus(bookingId);
       const token = localStorage.getItem("token");
 
+      const body = {
+        status: newStatus,
+        issueType: issueData.issueType || null,
+        affectedItems: issueData.affectedItems || []
+      };
+
       const response = await axios.patch(
         `http://localhost:5000/api/bookings/${bookingId}/status`,
-        { status: newStatus },
+        body,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -123,13 +133,13 @@ const Booking = () => {
         setBookings((prevBookings) =>
           prevBookings.map((booking) =>
             booking._id === bookingId
-              ? { ...booking, status: newStatus }
+              ? { ...booking, status: newStatus, ...body }
               : booking
           )
         );
 
         if (selectedBooking && selectedBooking._id === bookingId) {
-          setSelectedBooking({ ...selectedBooking, status: newStatus });
+          setSelectedBooking({ ...selectedBooking, status: newStatus, ...body });
         }
       }
     } catch (err) {
@@ -208,6 +218,39 @@ const Booking = () => {
   const formatTime = (timeString) => {
     return timeString;
   };
+
+  const handleMarkAsCompleted = (booking) => {
+    setSelectedBooking(booking);
+    setShowCompleteModal(true);
+    setCompletionStep("confirm");
+    setIssueType("");
+    setSelectedItems([]);
+  };
+
+  const toggleItemSelection = (itemName) => {
+    setSelectedItems((prev) =>
+      prev.includes(itemName)
+        ? prev.filter((i) => i !== itemName)
+        : [...prev, itemName]
+    );
+  };
+
+  const handleCompletionSubmit = () => {
+    if (completionStep === "confirm") {
+      updateBookingStatus(selectedBooking._id, "completed");
+      setShowCompleteModal(false);
+    } else if (completionStep === "details") {
+      const issueData = {
+        issueType,
+        affectedItems: selectedItems
+      };
+
+      updateBookingStatus(selectedBooking._id, "completed", issueData);
+      setShowCompleteModal(false);
+    }
+  };
+
+
 
   return (
     <Layout>
@@ -452,9 +495,7 @@ const Booking = () => {
 
                             {booking.status === "confirmed" && (
                               <button
-                                onClick={() =>
-                                  updateBookingStatus(booking._id, "completed")
-                                }
+                                onClick={() => handleMarkAsCompleted(booking)}
                                 disabled={updatingStatus === booking._id}
                                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white p-2 rounded transition-colors"
                                 title="Mark as Completed"
@@ -465,6 +506,20 @@ const Booking = () => {
                                   <CheckCircle className="w-4 h-4" />
                                 )}
                               </button>
+                              // <button
+                              //   onClick={() =>
+                              //     updateBookingStatus(booking._id, "completed")
+                              //   }
+                              //   disabled={updatingStatus === booking._id}
+                              //   className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white p-2 rounded transition-colors"
+                              //   title="Mark as Completed"
+                              // >
+                              //   {updatingStatus === booking._id ? (
+                              //     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              //   ) : (
+                              //     <CheckCircle className="w-4 h-4" />
+                              //   )}
+                              // </button>
                             )}
                           </div>
                         </td>
@@ -757,6 +812,101 @@ const Booking = () => {
           </div>
         </div>
       )}
+
+      {showCompleteModal && selectedBooking && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6 space-y-4">
+          <h2 className="text-xl font-bold text-white">Complete Booking</h2>
+
+          {completionStep === "confirm" && (
+            <>
+              <p className="text-gray-300">
+                Are there no issues with the booked items?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setCompletionStep("details");
+                  }}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
+                >
+                  No
+                </button>
+                <button
+                  onClick={handleCompletionSubmit}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
+                >
+                  Yes
+                </button>
+              </div>
+            </>
+          )}
+
+          {completionStep === "details" && (
+            <>
+              <p className="text-gray-300">Please specify the issue:</p>
+              <div className="flex gap-4 mb-3">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="issueType"
+                    value="lost"
+                    checked={issueType === "lost"}
+                    onChange={(e) => setIssueType(e.target.value)}
+                  />
+                  Lost
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="issueType"
+                    value="damaged"
+                    checked={issueType === "damaged"}
+                    onChange={(e) => setIssueType(e.target.value)}
+                  />
+                  Damaged
+                </label>
+              </div>
+
+              <p className="text-gray-300 mb-2">Select affected items:</p>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {selectedBooking.items.map((item, i) => (
+                  <label
+                    key={i}
+                    className="flex items-center gap-2 bg-gray-700 px-3 py-2 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.includes(item.name)}
+                      onChange={() => toggleItemSelection(item.name)}
+                    />
+                    <span className="text-white">
+                      {item.name} x{item.quantity}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => setShowCompleteModal(false)}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCompletionSubmit}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+                  disabled={!issueType || selectedItems.length === 0}
+                >
+                  Submit
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )}
     </Layout>
   );
 };

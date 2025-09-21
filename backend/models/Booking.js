@@ -76,6 +76,19 @@ const BookingSchema = new mongoose.Schema({
   paymentImage: {
     type: String, // base64 string or file path
   },
+  // ✅ New Fields for Completion Issues
+  issueType: {
+    type: String,
+    enum: ["lost", "damaged"],
+    default: null,
+  },
+  affectedItems: [
+    {
+      type: String, 
+      trim: true,
+      default: []
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,
