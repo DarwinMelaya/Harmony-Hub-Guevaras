@@ -67,12 +67,12 @@ const AdminSidebar = ({ onNavigate }) => {
       path: "/admin-refund",
       isActive: location.pathname === "/admin-refund",
     },
-    {
-      icon: MessageCircle,
-      text: "Messages",
-      path: "/admin-chat",
-      isActive: location.pathname === "/admin-chat",
-    },
+    // {
+    //   icon: MessageCircle,
+    //   text: "Messages",
+    //   path: "/admin-chat",
+    //   isActive: location.pathname === "/admin-chat",
+    // },
     {
       icon: HelpCircle,
       text: "Help",

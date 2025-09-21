@@ -69,9 +69,9 @@ const OwnerSidebar = ({ onNavigate }) => {
     },
     {
       icon: MessageCircle,
-      text: "Message",
-      path: "/admin-message",
-      isActive: location.pathname === "/admin-message",
+      text: "Messages",
+      path: "/owner-chat",
+      isActive: location.pathname === "/owner-chat",
     },
     {
       icon: HelpCircle,

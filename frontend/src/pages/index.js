@@ -11,7 +11,6 @@ export { default as User } from "./admin/User";
 export { default as Musician } from "./admin/Musician";
 export { default as Packages } from "./admin/Packages";
 export { default as Booking } from "./admin/Booking";
-export { default as AdminChat } from "./admin/AdminChat";
 
 // User Pages
 export { default as UserBooking } from "./users/UserBooking";
@@ -25,6 +24,7 @@ export { default as OwnerMusician } from "./owner/OwnerMusician";
 export { default as OwnerPackages } from "./owner/OwnerPackages";
 export { default as OwnerUser } from "./owner/OwnerUser";
 export { default as OwnerBooking } from "./owner/OwnerBooking";
+export { default as OwnerChat } from "./owner/OwnerChat";
 
 // Staff Pages
 export { default as StaffDashboard } from "./staff/StaffDashboard";
