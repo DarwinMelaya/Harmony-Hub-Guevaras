@@ -23,8 +23,8 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(
   session({
     secret: "yourSecret",
@@ -42,6 +42,7 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api/inventory", require("./routes/inventory"));
 app.use("/api/packages", require("./routes/packages"));
 app.use("/api/bookings", require("./routes/bookings"));
+app.use("/api/chat", require("./routes/chat"));
 
 // Start server
 const PORT = process.env.PORT || 5000;
