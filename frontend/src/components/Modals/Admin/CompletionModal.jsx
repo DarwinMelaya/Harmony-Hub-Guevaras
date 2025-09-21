@@ -63,16 +63,43 @@ const CompletionModal = ({
                 </h4>
                 <div className="space-y-2">
                   {selectedBooking.items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center py-1"
-                    >
-                      <span className="text-gray-300">
-                        {item.name} x{item.quantity}
-                      </span>
-                      <span className="text-white font-medium">
-                        ₱{Number(item.price * item.quantity).toLocaleString()}
-                      </span>
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-gray-300">
+                          {item.name} x{item.quantity}
+                        </span>
+                        <span className="text-white font-medium">
+                          ₱{Number(item.price * item.quantity).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Show package items if this is a package */}
+                      {item.type === "package" &&
+                        item.itemId &&
+                        item.itemId.items && (
+                          <div className="ml-4 space-y-1">
+                            {item.itemId.items.map((packageItem, pIndex) => (
+                              <div
+                                key={pIndex}
+                                className="flex justify-between items-center py-1 text-sm"
+                              >
+                                <span className="text-gray-400">
+                                  •{" "}
+                                  {packageItem.inventoryItem?.name ||
+                                    "Unknown Item"}{" "}
+                                  x{packageItem.quantity}
+                                </span>
+                                <span className="text-gray-400">
+                                  ₱
+                                  {Number(
+                                    packageItem.inventoryItem?.price *
+                                      packageItem.quantity || 0
+                                  ).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -147,28 +174,78 @@ const CompletionModal = ({
                 </h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {selectedBooking.items.map((item, i) => (
-                    <label
-                      key={i}
-                      className="flex items-center gap-3 p-2 hover:bg-gray-600 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.includes(item.name)}
-                        onChange={() => toggleItemSelection(item.name)}
-                        className="text-red-600"
-                      />
-                      <div className="flex-1">
-                        <span className="text-white font-medium">
-                          {item.name}
+                    <div key={i} className="space-y-2">
+                      {/* Main item */}
+                      <label className="flex items-center gap-3 p-2 hover:bg-gray-600 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item.name)}
+                          onChange={() => toggleItemSelection(item.name)}
+                          className="text-red-600"
+                        />
+                        <div className="flex-1">
+                          <span className="text-white font-medium">
+                            {item.name}
+                          </span>
+                          <span className="text-gray-400 text-sm ml-2">
+                            x{item.quantity}
+                          </span>
+                        </div>
+                        <span className="text-green-400 font-medium">
+                          ₱{Number(item.price * item.quantity).toLocaleString()}
                         </span>
-                        <span className="text-gray-400 text-sm ml-2">
-                          x{item.quantity}
-                        </span>
-                      </div>
-                      <span className="text-green-400 font-medium">
-                        ₱{Number(item.price * item.quantity).toLocaleString()}
-                      </span>
-                    </label>
+                      </label>
+
+                      {/* Package items if this is a package */}
+                      {item.type === "package" &&
+                        item.itemId &&
+                        item.itemId.items && (
+                          <div className="ml-6 space-y-1">
+                            <p className="text-gray-400 text-xs font-medium mb-1">
+                              Package Contents:
+                            </p>
+                            {item.itemId.items.map((packageItem, pIndex) => {
+                              const packageItemName = `${item.name} - ${
+                                packageItem.inventoryItem?.name ||
+                                "Unknown Item"
+                              }`;
+                              return (
+                                <label
+                                  key={pIndex}
+                                  className="flex items-center gap-3 p-2 hover:bg-gray-600 rounded cursor-pointer bg-gray-600/50"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedItems.includes(
+                                      packageItemName
+                                    )}
+                                    onChange={() =>
+                                      toggleItemSelection(packageItemName)
+                                    }
+                                    className="text-red-600"
+                                  />
+                                  <div className="flex-1">
+                                    <span className="text-gray-300 text-sm">
+                                      {packageItem.inventoryItem?.name ||
+                                        "Unknown Item"}
+                                    </span>
+                                    <span className="text-gray-400 text-xs ml-2">
+                                      x{packageItem.quantity}
+                                    </span>
+                                  </div>
+                                  <span className="text-green-400 text-sm font-medium">
+                                    ₱
+                                    {Number(
+                                      packageItem.inventoryItem?.price *
+                                        packageItem.quantity || 0
+                                    ).toLocaleString()}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                    </div>
                   ))}
                 </div>
               </div>

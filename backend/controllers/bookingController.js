@@ -242,6 +242,15 @@ const getUserBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate("user", "fullName email username")
+      .populate({
+        path: "items.itemId",
+        model: "Packages",
+        populate: {
+          path: "items.inventoryItem",
+          model: "Inventory",
+          select: "name price quantity image",
+        },
+      })
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -279,6 +288,15 @@ const getAllBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate("user", "fullName email username")
+      .populate({
+        path: "items.itemId",
+        model: "Packages",
+        populate: {
+          path: "items.inventoryItem",
+          model: "Inventory",
+          select: "name price quantity image",
+        },
+      })
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -311,10 +329,17 @@ const getBookingById = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    const booking = await Booking.findById(id).populate(
-      "user",
-      "fullName email username"
-    );
+    const booking = await Booking.findById(id)
+      .populate("user", "fullName email username")
+      .populate({
+        path: "items.itemId",
+        model: "Packages",
+        populate: {
+          path: "items.inventoryItem",
+          model: "Inventory",
+          select: "name price quantity image",
+        },
+      });
 
     if (!booking) {
       return res.status(404).json({
@@ -539,6 +564,15 @@ const getArtistBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate("user", "fullName email username phoneNumber")
+      .populate({
+        path: "items.itemId",
+        model: "Packages",
+        populate: {
+          path: "items.inventoryItem",
+          model: "Inventory",
+          select: "name price quantity image",
+        },
+      })
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);

@@ -14,6 +14,7 @@ import {
   Filter,
   Search,
   RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import axios from "axios";
 import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
@@ -36,6 +37,14 @@ const Booking = () => {
   const [issueType, setIssueType] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
 
+  const hasIssues = (booking) => {
+    return (
+      booking.issueType &&
+      booking.affectedItems &&
+      booking.affectedItems.length > 0
+    );
+  };
+
   useEffect(() => {
     fetchBookings();
   }, [statusFilter]);
@@ -45,7 +54,7 @@ const Booking = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const url =
-        statusFilter === "all"
+        statusFilter === "all" || statusFilter === "with-issues"
           ? "http://localhost:5000/api/bookings"
           : `http://localhost:5000/api/bookings?status=${statusFilter}`;
 
@@ -56,7 +65,14 @@ const Booking = () => {
       });
 
       if (response.data.success) {
-        setBookings(response.data.data);
+        let bookingsData = response.data.data;
+
+        // Filter for bookings with issues if needed
+        if (statusFilter === "with-issues") {
+          bookingsData = bookingsData.filter((booking) => hasIssues(booking));
+        }
+
+        setBookings(bookingsData);
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch bookings");
@@ -199,6 +215,17 @@ const Booking = () => {
     }
   };
 
+  const getIssueIcon = (issueType) => {
+    switch (issueType) {
+      case "lost":
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      case "damaged":
+        return <AlertTriangle className="w-4 h-4 text-orange-400" />;
+      default:
+        return <AlertCircle className="w-4 h-4 text-yellow-400" />;
+    }
+  };
+
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
       booking.user?.fullName
@@ -300,6 +327,7 @@ const Booking = () => {
                   <option value="confirmed">Confirmed</option>
                   <option value="cancelled">Cancelled</option>
                   <option value="completed">Completed</option>
+                  <option value="with-issues">With Issues</option>
                 </select>
               </div>
             </div>
@@ -420,16 +448,29 @@ const Booking = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
-                              booking.status
-                            )}`}
-                          >
-                            {getStatusIcon(booking.status)}
-                            <span className="ml-1 capitalize">
-                              {booking.status}
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
+                                booking.status
+                              )}`}
+                            >
+                              {getStatusIcon(booking.status)}
+                              <span className="ml-1 capitalize">
+                                {booking.status}
+                              </span>
                             </span>
-                          </span>
+                            {hasIssues(booking) && (
+                              <div
+                                className="flex items-center space-x-1"
+                                title={`${booking.issueType} items reported`}
+                              >
+                                {getIssueIcon(booking.issueType)}
+                                <span className="text-xs text-red-400 font-medium">
+                                  {booking.issueType}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
@@ -688,6 +729,43 @@ const Booking = () => {
                           </p>
                         </div>
                       </div>
+
+                      {/* Display package items if this is a package */}
+                      {item.type === "package" &&
+                        item.itemId &&
+                        item.itemId.items && (
+                          <div className="mt-3 pt-3 border-t border-gray-600">
+                            <p className="text-gray-300 text-sm font-medium mb-2">
+                              Package Contents:
+                            </p>
+                            <div className="space-y-2">
+                              {item.itemId.items.map((packageItem, pIndex) => (
+                                <div
+                                  key={pIndex}
+                                  className="flex items-center justify-between bg-gray-600 p-2 rounded"
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <ShoppingCart className="w-3 h-3 text-gray-400" />
+                                    <span className="text-gray-300 text-sm">
+                                      {packageItem.inventoryItem?.name ||
+                                        "Unknown Item"}
+                                    </span>
+                                    <span className="text-gray-400 text-xs">
+                                      x{packageItem.quantity}
+                                    </span>
+                                  </div>
+                                  <span className="text-green-400 text-sm font-medium">
+                                    ₱
+                                    {Number(
+                                      packageItem.inventoryItem?.price *
+                                        packageItem.quantity || 0
+                                    ).toLocaleString()}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -702,6 +780,38 @@ const Booking = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Issues Section */}
+              {hasIssues(selectedBooking) && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-2 text-red-400" />
+                    Reported Issues
+                  </h3>
+                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                    <div className="flex items-center mb-3">
+                      {getIssueIcon(selectedBooking.issueType)}
+                      <span className="text-red-300 font-medium ml-2 capitalize">
+                        {selectedBooking.issueType} Items
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-gray-300 text-sm mb-2">
+                        Affected Items:
+                      </p>
+                      {selectedBooking.affectedItems.map((itemName, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-2"
+                        >
+                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                          <span className="text-white text-sm">{itemName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-6 border-t border-gray-700 flex-shrink-0">
