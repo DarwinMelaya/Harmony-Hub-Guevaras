@@ -84,9 +84,9 @@ const BookingSchema = new mongoose.Schema({
   },
   affectedItems: [
     {
-      type: String, 
+      type: String,
       trim: true,
-      default: []
+      default: [],
     },
   ],
   createdAt: {

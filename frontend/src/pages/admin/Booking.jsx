@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
+import CompletionModal from "../../components/Modals/Admin/CompletionModal";
 
 const Booking = () => {
   const [bookings, setBookings] = useState([]);
@@ -31,8 +32,8 @@ const Booking = () => {
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [completionStep, setCompletionStep] = useState("confirm"); 
-  const [issueType, setIssueType] = useState(""); 
+  const [completionStep, setCompletionStep] = useState("confirm");
+  const [issueType, setIssueType] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
@@ -115,7 +116,7 @@ const Booking = () => {
       const body = {
         status: newStatus,
         issueType: issueData.issueType || null,
-        affectedItems: issueData.affectedItems || []
+        affectedItems: issueData.affectedItems || [],
       };
 
       const response = await axios.patch(
@@ -139,7 +140,11 @@ const Booking = () => {
         );
 
         if (selectedBooking && selectedBooking._id === bookingId) {
-          setSelectedBooking({ ...selectedBooking, status: newStatus, ...body });
+          setSelectedBooking({
+            ...selectedBooking,
+            status: newStatus,
+            ...body,
+          });
         }
       }
     } catch (err) {
@@ -227,30 +232,15 @@ const Booking = () => {
     setSelectedItems([]);
   };
 
-  const toggleItemSelection = (itemName) => {
-    setSelectedItems((prev) =>
-      prev.includes(itemName)
-        ? prev.filter((i) => i !== itemName)
-        : [...prev, itemName]
-    );
-  };
-
-  const handleCompletionSubmit = () => {
+  const handleCompletionSubmit = (issueData = {}) => {
     if (completionStep === "confirm") {
       updateBookingStatus(selectedBooking._id, "completed");
       setShowCompleteModal(false);
     } else if (completionStep === "details") {
-      const issueData = {
-        issueType,
-        affectedItems: selectedItems
-      };
-
       updateBookingStatus(selectedBooking._id, "completed", issueData);
       setShowCompleteModal(false);
     }
   };
-
-
 
   return (
     <Layout>
@@ -813,100 +803,18 @@ const Booking = () => {
         </div>
       )}
 
-      {showCompleteModal && selectedBooking && (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-        <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6 space-y-4">
-          <h2 className="text-xl font-bold text-white">Complete Booking</h2>
-
-          {completionStep === "confirm" && (
-            <>
-              <p className="text-gray-300">
-                Are there no issues with the booked items?
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setCompletionStep("details");
-                  }}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
-                >
-                  No
-                </button>
-                <button
-                  onClick={handleCompletionSubmit}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
-                >
-                  Yes
-                </button>
-              </div>
-            </>
-          )}
-
-          {completionStep === "details" && (
-            <>
-              <p className="text-gray-300">Please specify the issue:</p>
-              <div className="flex gap-4 mb-3">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="issueType"
-                    value="lost"
-                    checked={issueType === "lost"}
-                    onChange={(e) => setIssueType(e.target.value)}
-                  />
-                  Lost
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="issueType"
-                    value="damaged"
-                    checked={issueType === "damaged"}
-                    onChange={(e) => setIssueType(e.target.value)}
-                  />
-                  Damaged
-                </label>
-              </div>
-
-              <p className="text-gray-300 mb-2">Select affected items:</p>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {selectedBooking.items.map((item, i) => (
-                  <label
-                    key={i}
-                    className="flex items-center gap-2 bg-gray-700 px-3 py-2 rounded"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.includes(item.name)}
-                      onChange={() => toggleItemSelection(item.name)}
-                    />
-                    <span className="text-white">
-                      {item.name} x{item.quantity}
-                    </span>
-                  </label>
-                ))}
-              </div>
-
-              <div className="flex justify-end gap-3 mt-4">
-                <button
-                  onClick={() => setShowCompleteModal(false)}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCompletionSubmit}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
-                  disabled={!issueType || selectedItems.length === 0}
-                >
-                  Submit
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    )}
+      <CompletionModal
+        isOpen={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+        selectedBooking={selectedBooking}
+        onCompletionSubmit={handleCompletionSubmit}
+        completionStep={completionStep}
+        setCompletionStep={setCompletionStep}
+        issueType={issueType}
+        setIssueType={setIssueType}
+        selectedItems={selectedItems}
+        setSelectedItems={setSelectedItems}
+      />
     </Layout>
   );
 };
