@@ -24,6 +24,8 @@ import {
   StaffBooking,
   ArtistDashboard,
   ArtistBooking,
+  AdminChat,
+  UserChat,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -87,6 +89,14 @@ export const Routers = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin-chat"
+          element={
+            <ProtectedRoute requiredRole={["admin", "owner"]}>
+              <AdminChat />
+            </ProtectedRoute>
+          }
+        />
         {/* Protected Client Pages */}
         <Route
           path="/user-home"
@@ -101,6 +111,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute>
               <UserBooking />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-chat"
+          element={
+            <ProtectedRoute>
+              <UserChat />
             </ProtectedRoute>
           }
         />

@@ -69,9 +69,9 @@ const AdminSidebar = ({ onNavigate }) => {
     },
     {
       icon: MessageCircle,
-      text: "Message",
-      path: "/admin-message",
-      isActive: location.pathname === "/admin-message",
+      text: "Messages",
+      path: "/admin-chat",
+      isActive: location.pathname === "/admin-chat",
     },
     {
       icon: HelpCircle,

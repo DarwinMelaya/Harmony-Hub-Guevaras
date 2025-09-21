@@ -4,6 +4,7 @@ import {
   User,
   Settings,
   LogOut,
+  MessageCircle,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -23,6 +24,12 @@ const ClientSidebar = () => {
       text: "My Bookings",
       path: "/my-bookings",
       isActive: location.pathname === "/my-bookings",
+    },
+    {
+      icon: MessageCircle,
+      text: "Messages",
+      path: "/my-chat",
+      isActive: location.pathname === "/my-chat",
     },
     {
       icon: User,
