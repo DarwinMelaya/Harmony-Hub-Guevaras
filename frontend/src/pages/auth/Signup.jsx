@@ -173,9 +173,11 @@ const Signup = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleGoogleSignup = () => {
-    // Redirect to Google OAuth
-    window.location.href = "http://localhost:5000/auth/google";
+  const handleGoogleSignup = (desiredRole) => {
+    const role = desiredRole || formData.role || "client";
+    const base = "http://localhost:5000/auth/google";
+    // Pass the currently selected role to backend (if supported)
+    window.location.href = `${base}?role=${encodeURIComponent(role)}`;
   };
 
   const handleSubmit = async (e) => {
@@ -492,6 +494,29 @@ const Signup = () => {
                       {errors.username}
                     </p>
                   )}
+                </div>
+
+                {/* Google Signup Option (Step 1) */}
+                <div className="pt-2">
+                  <div className="relative mb-3">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-600"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-gray-900/60 text-gray-400">
+                        Or continue with
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleGoogleSignup(formData.role)}
+                    className="w-full flex items-center justify-center gap-3 bg-gray-800/50 backdrop-blur-sm border border-gray-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <FcGoogle className="w-5 h-5" />
+                    Continue with Google
+                    {formData.role ? ` as ${formData.role}` : ""}
+                  </button>
                 </div>
               </div>
             )}

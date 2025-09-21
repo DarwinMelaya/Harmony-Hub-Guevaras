@@ -12,8 +12,8 @@ const ArtistCard = ({
     bookingDate && artistAvailability[`${artist._id}-${bookingDate}`] === false;
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-purple-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/20 group">
-      <div className="p-6">
+    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-purple-500 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/20 group flex flex-col">
+      <div className="p-4 md:p-6 flex-1 flex flex-col">
         <div className="flex items-center mb-4">
           <div
             id={`${artist._id}-img-artist`}
@@ -21,8 +21,8 @@ const ArtistCard = ({
           >
             <Music className="w-6 h-6 text-white" />
           </div>
-          <div>
-            <h3 className="font-bold text-white text-lg group-hover:text-purple-400 transition-colors">
+          <div className="min-w-0">
+            <h3 className="font-bold text-white text-lg group-hover:text-purple-400 transition-colors truncate">
               {artist.fullName || artist.name}
             </h3>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-900/50 text-purple-300 border border-purple-700">
@@ -63,7 +63,7 @@ const ArtistCard = ({
         <button
           onClick={() => onAdd(artist, `${artist._id}-img-artist`)}
           disabled={Boolean(bookingDate && isDateSpecificUnavailable)}
-          className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
+          className="mt-auto w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
         >
           {bookingDate && isDateSpecificUnavailable
             ? "Unavailable on selected date"

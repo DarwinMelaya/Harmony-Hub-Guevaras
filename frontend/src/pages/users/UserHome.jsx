@@ -552,10 +552,10 @@ const UserHome = () => {
 
   return (
     <Layout>
-      <div className="bg-[#30343c] min-h-screen w-full text-white p-8">
+      <div className="bg-[#30343c] min-h-screen w-full text-white p-4 md:p-8">
         <div className="max-w-6xl mx-auto">
           {/* Header with user profile */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
               <h1 className="text-3xl font-bold mb-2">
                 Welcome to Harmony Hub
@@ -574,15 +574,17 @@ const UserHome = () => {
             </div>
 
             {/* Cart and User Profile Section */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto justify-between sm:justify-end">
               {/* Cart Button */}
               <button
                 onClick={() => setShowCart(true)}
                 ref={cartButtonRef}
-                className="relative bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                className="relative bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
               >
                 <ShoppingCart className="w-5 h-5 text-gray-300" />
-                <span className="text-gray-300 font-medium">Cart</span>
+                <span className="text-gray-300 font-medium hidden sm:inline">
+                  Cart
+                </span>
                 {cart.length > 0 && (
                   <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
                     {cart.reduce((total, item) => total + item.quantity, 0)}
@@ -592,12 +594,12 @@ const UserHome = () => {
 
               {/* User Profile Section */}
               {userData && (
-                <div className="flex items-center space-x-3 bg-gray-800 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                <div className="flex items-center space-x-3 bg-gray-800 px-3 sm:px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
                   <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                     <User size={16} className="text-gray-300" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-gray-300 font-medium text-sm">
+                    <span className="text-gray-300 font-medium text-sm truncate max-w-[140px] sm:max-w-none">
                       {userData.fullName || userData.username}
                     </span>
                     <span className="text-gray-500 text-xs capitalize">
@@ -612,8 +614,8 @@ const UserHome = () => {
 
           {/* Search and Filter Section */}
           <div className="mb-8">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="flex flex-col lg:flex-row gap-4">
+            <div className="bg-gray-800 rounded-lg p-4 md:p-6 border border-gray-700">
+              <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
                 {/* Search Input */}
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -622,7 +624,7 @@ const UserHome = () => {
                     placeholder="Search instruments, packages, or services..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   {searchTerm && (
                     <button
@@ -637,7 +639,7 @@ const UserHome = () => {
                 {/* Filter Button */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors"
+                  className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors w-full lg:w-auto justify-center"
                 >
                   <Filter className="w-5 h-5" />
                   Filters
@@ -647,7 +649,7 @@ const UserHome = () => {
               {/* Filter Options */}
               {showFilters && (
                 <div className="mt-4 pt-4 border-t border-gray-700">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                     {/* Category Filter */}
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -748,7 +750,7 @@ const UserHome = () => {
           )}
 
           {/* Mode Toggle */}
-          <div className="mb-6 flex items-center gap-3">
+          <div className="mb-6 flex items-center gap-2 sm:gap-3 flex-wrap">
             <span className="text-gray-300 text-sm">Booking Mode:</span>
             <button
               onClick={() => switchBookingMode("standard")}
@@ -803,7 +805,7 @@ const UserHome = () => {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                   {filteredInventory.map((item) => (
                     <InventoryCard
                       key={item._id}
@@ -848,7 +850,7 @@ const UserHome = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {filteredBandArtists.map((artist) => (
                   <ArtistCard
                     key={artist._id}
@@ -895,7 +897,7 @@ const UserHome = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {filteredPackages.map((pkg) => (
                   <PackagesCard
                     key={pkg._id}

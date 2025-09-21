@@ -2,17 +2,17 @@ import { ShoppingCart, Heart, Eye } from "lucide-react";
 
 const InventoryCard = ({ item, onAdd }) => {
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 group">
+    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 group flex flex-col">
       <div className="relative">
         {item.image ? (
           <img
             src={item.image}
             alt={item.name}
             id={`${item._id}-img-inv`}
-            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+            className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-200"
           />
         ) : (
-          <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
+          <div className="w-full h-40 sm:h-48 bg-gray-700 flex items-center justify-center">
             <ShoppingCart className="w-12 h-12 text-gray-500" />
           </div>
         )}
@@ -29,8 +29,8 @@ const InventoryCard = ({ item, onAdd }) => {
           </div>
         )}
       </div>
-      <div className="p-4">
-        <h3 className="font-medium text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+      <div className="p-4 flex-1 flex flex-col">
+        <h3 className="font-medium text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors min-h-[2.5rem]">
           {item.name}
         </h3>
         <div className="flex items-center justify-between mb-2">
@@ -39,7 +39,7 @@ const InventoryCard = ({ item, onAdd }) => {
           </span>
           <span className="text-gray-400 text-sm">{item.quantity} left</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-auto">
           <button
             onClick={() => onAdd(item, `${item._id}-img-inv`)}
             disabled={item.quantity === 0}

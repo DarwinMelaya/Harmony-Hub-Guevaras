@@ -2,17 +2,17 @@ import { Package, Heart, Star } from "lucide-react";
 
 const PackagesCard = ({ pkg, onAdd }) => {
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-green-500 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20 group">
+    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-green-500 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20 group flex flex-col">
       <div className="relative">
         {pkg.image ? (
           <img
             src={pkg.image}
             alt={pkg.name}
             id={`${pkg._id}-img-pkg`}
-            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+            className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-200"
           />
         ) : (
-          <div className="w-full h-48 bg-gray-700 flex items-center justify-center">
+          <div className="w-full h-40 sm:h-48 bg-gray-700 flex items-center justify-center">
             <Package className="w-12 h-12 text-gray-500" />
           </div>
         )}
@@ -29,8 +29,8 @@ const PackagesCard = ({ pkg, onAdd }) => {
           </div>
         )}
       </div>
-      <div className="p-6">
-        <h3 className="font-bold text-white mb-2 text-lg group-hover:text-green-400 transition-colors">
+      <div className="p-4 md:p-6 flex-1 flex flex-col">
+        <h3 className="font-bold text-white mb-2 text-lg group-hover:text-green-400 transition-colors min-h-[1.75rem]">
           {pkg.name}
         </h3>
         {pkg.description && (
@@ -76,7 +76,7 @@ const PackagesCard = ({ pkg, onAdd }) => {
         <button
           onClick={() => onAdd(pkg, `${pkg._id}-img-pkg`)}
           disabled={!pkg.isAvailable}
-          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
+          className="mt-auto w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
         >
           {pkg.isAvailable ? "Add to Cart" : "Unavailable"}
         </button>
