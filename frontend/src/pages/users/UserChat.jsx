@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "../../components/Layout/Layout";
 import { useAuth } from "../../hooks/useAuth";
+import { io } from "socket.io-client";
 
 const UserChat = () => {
   const { user } = useAuth();
@@ -13,6 +14,11 @@ const UserChat = () => {
   const [selectedOwner, setSelectedOwner] = useState("");
   const messagesEndRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+  const [chatMessages, setChatMessages] = useState({}); // Store messages for each chat
+  const [newMessageNotification, setNewMessageNotification] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,14 +32,122 @@ const UserChat = () => {
     if (user?.role === "client") {
       fetchChats();
       fetchOwners();
+      initializeSocket();
     }
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
   }, [user]);
+
+  const initializeSocket = () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const newSocket = io("http://localhost:5000", {
+      auth: {
+        token: token,
+      },
+    });
+
+    newSocket.on("connect", () => {
+      console.log("Connected to chat server");
+    });
+
+    newSocket.on("disconnect", () => {
+      console.log("Disconnected from chat server");
+    });
+
+    newSocket.on("message_received", (data) => {
+      // Store message in chatMessages for the specific chat
+      setChatMessages((prev) => ({
+        ...prev,
+        [data.chatId]: [...(prev[data.chatId] || []), data.message],
+      }));
+
+      // Update current messages if this is the selected chat
+      if (selectedChat && data.chatId === selectedChat._id) {
+        setMessages((prevMessages) => [...prevMessages, data.message]);
+      }
+
+      // Update chat list in real-time
+      setChats((prevChats) => {
+        return prevChats.map((chat) => {
+          if (chat._id === data.chatId) {
+            // Show notification for new messages from other chats
+            if (chat._id !== selectedChat?._id) {
+              setNewMessageNotification({
+                chatId: data.chatId,
+                sender: data.message.sender?.fullName || "Someone",
+                message: data.message.content,
+              });
+              // Clear notification after 3 seconds
+              setTimeout(() => setNewMessageNotification(null), 3000);
+            }
+
+            return {
+              ...chat,
+              lastMessage: {
+                content: data.message.content,
+                timestamp: data.message.timestamp,
+              },
+              updatedAt: data.message.timestamp,
+              unreadCount:
+                chat._id === selectedChat?._id ? 0 : chat.unreadCount + 1,
+            };
+          }
+          return chat;
+        });
+      });
+    });
+
+    newSocket.on("user_typing", (data) => {
+      if (selectedChat && data.chatId === selectedChat._id) {
+        if (data.isTyping) {
+          setTypingUsers((prev) => {
+            if (!prev.includes(data.userName)) {
+              return [...prev, data.userName];
+            }
+            return prev;
+          });
+        } else {
+          setTypingUsers((prev) =>
+            prev.filter((name) => name !== data.userName)
+          );
+        }
+      }
+    });
+
+    setSocket(newSocket);
+  };
 
   useEffect(() => {
     if (selectedChat) {
-      fetchMessages(selectedChat._id);
+      // Clear typing users when switching chats
+      setTypingUsers([]);
+
+      // Join chat room for real-time updates
+      if (socket) {
+        socket.emit("join_chat", selectedChat._id);
+      }
+
+      // Use stored messages if available, otherwise fetch from API
+      if (chatMessages[selectedChat._id]) {
+        setMessages(chatMessages[selectedChat._id]);
+      } else {
+        fetchMessages(selectedChat._id);
+      }
     }
-  }, [selectedChat]);
+
+    return () => {
+      // Leave chat room when component unmounts or chat changes
+      if (socket && selectedChat) {
+        socket.emit("leave_chat", selectedChat._id);
+      }
+    };
+  }, [selectedChat, socket]);
 
   const fetchChats = async () => {
     try {
@@ -89,6 +203,13 @@ const UserChat = () => {
         const validMessages = data.chat.messages.filter(
           (message) => message.sender
         );
+
+        // Store messages for this chat
+        setChatMessages((prev) => ({
+          ...prev,
+          [chatId]: validMessages,
+        }));
+
         setMessages(validMessages);
       } else {
         setMessages([]);
@@ -145,9 +266,34 @@ const UserChat = () => {
       });
       const data = await response.json();
       if (data.success && data.message && data.message.sender) {
-        setMessages([...messages, data.message]);
+        const newMessages = [...messages, data.message];
+        setMessages(newMessages);
+
+        // Update stored messages for this chat
+        setChatMessages((prev) => ({
+          ...prev,
+          [selectedChat._id]: newMessages,
+        }));
+
+        // Update chat list in real-time
+        setChats((prevChats) => {
+          return prevChats.map((chat) => {
+            if (chat._id === selectedChat._id) {
+              return {
+                ...chat,
+                lastMessage: {
+                  content: data.message.content,
+                  timestamp: data.message.timestamp,
+                },
+                updatedAt: data.message.timestamp,
+                unreadCount: 0, // Reset unread count for current chat
+              };
+            }
+            return chat;
+          });
+        });
+
         setNewMessage("");
-        fetchChats(); // Update last message in chats list
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -161,11 +307,54 @@ const UserChat = () => {
     }
   };
 
+  const handleTyping = (e) => {
+    setNewMessage(e.target.value);
+
+    if (socket && selectedChat) {
+      if (!isTyping) {
+        setIsTyping(true);
+        socket.emit("typing", {
+          chatId: selectedChat._id,
+          isTyping: true,
+        });
+      }
+
+      // Clear typing indicator after 3 seconds of no typing
+      clearTimeout(typingTimeout);
+      const typingTimeout = setTimeout(() => {
+        setIsTyping(false);
+        socket.emit("typing", {
+          chatId: selectedChat._id,
+          isTyping: false,
+        });
+      }, 3000);
+    }
+  };
+
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const formatLastMessageTime = (timestamp) => {
+    if (!timestamp) return "";
+
+    const now = new Date();
+    const messageTime = new Date(timestamp);
+    const diffInMinutes = Math.floor((now - messageTime) / (1000 * 60));
+
+    if (diffInMinutes < 1) return "Just now";
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+
+    return messageTime.toLocaleDateString();
   };
 
   if (user?.role !== "client") {
@@ -198,36 +387,51 @@ const UserChat = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {chats.map((chat) => (
-                <div
-                  key={chat._id}
-                  onClick={() => setSelectedChat(chat)}
-                  className={`p-4 border-b border-gray-600 cursor-pointer hover:bg-[#3a3d45] transition-colors ${
-                    selectedChat?._id === chat._id ? "bg-[#3a3d45]" : ""
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium">
-                        {chat.otherParticipant.fullName.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">
-                        {chat.otherParticipant.fullName}
-                      </h3>
-                      <p className="text-sm text-gray-400 truncate">
-                        {chat.lastMessage?.content || "No messages yet"}
-                      </p>
-                    </div>
-                    {chat.unreadCount > 0 && (
-                      <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                        {chat.unreadCount}
+              {chats
+                .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+                .map((chat) => (
+                  <div
+                    key={chat._id}
+                    onClick={() => setSelectedChat(chat)}
+                    className={`p-4 border-b border-gray-600 cursor-pointer hover:bg-[#3a3d45] transition-all duration-200 ${
+                      selectedChat?._id === chat._id ? "bg-[#3a3d45]" : ""
+                    } ${
+                      chat.unreadCount > 0
+                        ? "bg-[#2d3142] border-l-4 border-l-blue-500"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium">
+                          {chat.otherParticipant.fullName
+                            .charAt(0)
+                            .toUpperCase()}
+                        </span>
                       </div>
-                    )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-medium truncate">
+                            {chat.otherParticipant.fullName}
+                          </h3>
+                          <span className="text-xs text-gray-400 ml-2">
+                            {formatLastMessageTime(
+                              chat.lastMessage?.timestamp || chat.updatedAt
+                            )}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-400 truncate">
+                          {chat.lastMessage?.content || "No messages yet"}
+                        </p>
+                      </div>
+                      {chat.unreadCount > 0 && (
+                        <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {chat.unreadCount}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
 
@@ -286,6 +490,18 @@ const UserChat = () => {
                     );
                   })}
                   <div ref={messagesEndRef} />
+
+                  {/* Typing indicators */}
+                  {typingUsers.length > 0 && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-600 text-white px-4 py-2 rounded-lg">
+                        <p className="text-sm italic">
+                          {typingUsers.join(", ")}{" "}
+                          {typingUsers.length === 1 ? "is" : "are"} typing...
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Message Input */}
@@ -294,7 +510,7 @@ const UserChat = () => {
                     <input
                       type="text"
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={handleTyping}
                       onKeyPress={handleKeyPress}
                       placeholder="Type your message..."
                       className="flex-1 bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
@@ -323,6 +539,21 @@ const UserChat = () => {
             )}
           </div>
         </div>
+
+        {/* New Message Notification */}
+        {newMessageNotification && (
+          <div className="fixed top-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm animate-pulse">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+              <span className="font-medium">
+                {newMessageNotification.sender}
+              </span>
+            </div>
+            <p className="text-sm mt-1 truncate">
+              {newMessageNotification.message}
+            </p>
+          </div>
+        )}
 
         {/* New Chat Modal */}
         {showNewChatModal && (

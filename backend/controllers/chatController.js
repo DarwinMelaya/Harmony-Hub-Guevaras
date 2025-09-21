@@ -1,6 +1,14 @@
 const Chat = require("../models/Chat");
 const User = require("../models/User");
 
+// Socket.IO instance (will be set from server.js)
+let io = null;
+
+// Function to set Socket.IO instance
+const setSocketIO = (socketIO) => {
+  io = socketIO;
+};
+
 // Get all chats for a user
 const getUserChats = async (req, res) => {
   try {
@@ -215,6 +223,15 @@ const sendMessage = async (req, res) => {
       });
     }
 
+    // Emit real-time message to chat participants
+    if (io) {
+      io.to(`chat_${chatId}`).emit("message_received", {
+        chatId: chatId,
+        message: latestMessage,
+        sender: latestMessage.sender,
+      });
+    }
+
     res.json({
       success: true,
       message: latestMessage,
@@ -315,4 +332,5 @@ module.exports = {
   getOwners,
   getClients,
   markMessagesAsRead,
+  setSocketIO,
 };
