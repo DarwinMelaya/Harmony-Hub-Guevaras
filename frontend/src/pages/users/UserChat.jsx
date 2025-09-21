@@ -19,6 +19,7 @@ const UserChat = () => {
   const [typingUsers, setTypingUsers] = useState([]);
   const [chatMessages, setChatMessages] = useState({}); // Store messages for each chat
   const [newMessageNotification, setNewMessageNotification] = useState(null);
+  const typingTimeoutRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,6 +39,9 @@ const UserChat = () => {
     return () => {
       if (socket) {
         socket.disconnect();
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
       }
     };
   }, [user]);
@@ -236,7 +240,18 @@ const UserChat = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setSelectedChat(data.chat);
+        // Format the chat data to match the expected structure
+        const formattedChat = {
+          _id: data.chat._id,
+          otherParticipant: data.chat.participants.find(
+            (participant) => participant._id.toString() !== user._id.toString()
+          ),
+          lastMessage: data.chat.lastMessage,
+          unreadCount: 0,
+          updatedAt: data.chat.updatedAt,
+        };
+
+        setSelectedChat(formattedChat);
         setShowNewChatModal(false);
         setSelectedOwner("");
         fetchChats(); // Refresh chats list
@@ -320,8 +335,10 @@ const UserChat = () => {
       }
 
       // Clear typing indicator after 3 seconds of no typing
-      clearTimeout(typingTimeout);
-      const typingTimeout = setTimeout(() => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
         socket.emit("typing", {
           chatId: selectedChat._id,
@@ -404,15 +421,15 @@ const UserChat = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
                         <span className="text-sm font-medium">
-                          {chat.otherParticipant.fullName
-                            .charAt(0)
-                            .toUpperCase()}
+                          {chat.otherParticipant?.fullName
+                            ?.charAt(0)
+                            ?.toUpperCase() || "?"}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
                           <h3 className="font-medium truncate">
-                            {chat.otherParticipant.fullName}
+                            {chat.otherParticipant?.fullName || "Unknown User"}
                           </h3>
                           <span className="text-xs text-gray-400 ml-2">
                             {formatLastMessageTime(
@@ -444,14 +461,15 @@ const UserChat = () => {
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
                       <span className="text-sm font-medium">
-                        {selectedChat.otherParticipant.fullName
-                          .charAt(0)
-                          .toUpperCase()}
+                        {selectedChat.otherParticipant?.fullName
+                          ?.charAt(0)
+                          ?.toUpperCase() || "?"}
                       </span>
                     </div>
                     <div>
                       <h2 className="font-medium">
-                        {selectedChat.otherParticipant.fullName}
+                        {selectedChat.otherParticipant?.fullName ||
+                          "Unknown User"}
                       </h2>
                       <p className="text-sm text-gray-400">Owner</p>
                     </div>
