@@ -3,14 +3,14 @@ const Service = () => {
     {
       id: 1,
       title: "LIGHTING EQUIPMENT",
-      image: "/images/lighting-equipment.jpg",
+      image: "/images/lighting-equipment.webp",
       description:
         "Professional stage lighting with moving head lights and dramatic effects",
     },
     {
       id: 2,
       title: "SOUND SYSTEM",
-      image: "/images/sound-system.jpg",
+      image: "/images/sound-system.webp",
       description:
         "High-quality audio mixing consoles and professional sound equipment",
     },

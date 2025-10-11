@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   Music,
 } from "lucide-react";
+import { provinces, cities, barangays } from "select-philippines-address";
+import { useState, useEffect } from "react";
 
 const BookingModal = ({
   showBookingModal,
@@ -21,6 +23,44 @@ const BookingModal = ({
   artistAvailability,
   checkArtistAvailability,
 }) => {
+  const [provinceData, setProvince] = useState([]);
+  const [cityData, setCity] = useState([]);
+  const [barangayData, setBarangay] = useState([]);
+
+  const [provinceAddr, setProvinceAddr] = useState("Marinduque");
+  const [cityAddr, setCityAddr] = useState("");
+  const [barangayAddr, setBarangayAddr] = useState("");
+
+  useEffect(() => {
+    provinces("17").then((response) => {
+      setProvince(response);
+      const marinduque = response.find((p) => p.province_name === "Marinduque");
+      if (marinduque) {
+        
+        cities(marinduque.province_code).then((cityList) => setCity(cityList));
+        handleBookingDataChange("contactInfo.province", "Marinduque");
+      }
+    });
+  }, []);
+
+  const handleCityChange = (e) => {
+    const cityCode = e.target.value;
+    const cityName = e.target.selectedOptions[0].text;
+    setCityAddr(cityName);
+    barangays(cityCode).then((response) => setBarangay(response));
+    handleBookingDataChange("contactInfo.city", cityName);
+  };
+
+  const handleBarangayChange = (e) => {
+    const barangayName = e.target.selectedOptions[0].text;
+    setBarangayAddr(barangayName);
+    handleBookingDataChange("contactInfo.barangay", barangayName);
+
+    handleBookingDataChange(
+      "contactInfo.address",
+      `${barangayName}, ${cityAddr}, ${provinceAddr}, ${regionAddr}`
+    );
+  };
   return (
     <>
       {/* Booking Modal */}
@@ -359,18 +399,61 @@ const BookingModal = ({
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Address
                     </label>
-                    <textarea
-                      value={bookingData.contactInfo.address}
-                      onChange={(e) =>
-                        handleBookingDataChange(
-                          "contactInfo.address",
-                          e.target.value
-                        )
-                      }
-                      rows="2"
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Event location or delivery address..."
-                    />
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Province</label>
+                        <input
+                          type="text"
+                          value="Marinduque"
+                          readOnly
+                          className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 cursor-not-allowed"
+                        />
+                      </div>
+
+                      {/* City */}
+                      <select
+                        onChange={handleCityChange}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                        disabled={!cityData.length}
+                        defaultValue=""
+                      >
+                        <option value="" disabled>
+                          Select City
+                        </option>
+                        {cityData.map((item) => (
+                          <option key={item.city_code} value={item.city_code}>
+                            {item.city_name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Barangay */}
+                      <select
+                        onChange={handleBarangayChange}
+                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                        disabled={!barangayData.length}
+                        defaultValue=""
+                      >
+                        <option value="" disabled>
+                          Select Barangay
+                        </option>
+                        {barangayData.map((item) => (
+                          <option key={item.brgy_code} value={item.brgy_code}>
+                            {item.brgy_name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Display selected full address */}
+                      <div className="text-gray-400 text-sm mt-2">
+                        {barangayAddr && (
+                          <>
+                            <span className="font-medium text-white">Full Address:</span>{" "}
+                            {barangayAddr}, {cityAddr}, {provinceAddr}, {regionAddr}
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
