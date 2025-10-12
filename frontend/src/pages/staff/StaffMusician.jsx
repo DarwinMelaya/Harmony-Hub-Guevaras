@@ -28,7 +28,7 @@ const StaffMusician = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      const response = await fetch("http://localhost:5000/api/band-artists", {
+      const response = await fetch("http://localhost:5000/api/users/artists", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -59,7 +59,7 @@ const StaffMusician = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:5000/api/band-artists/${id}/toggle-status`,
+        `http://localhost:5000/api/users/${id}/toggle-status`,
         {
           method: "PUT",
           headers: {
@@ -83,7 +83,7 @@ const StaffMusician = () => {
   // Filter musicians based on search and filters
   const filteredMusicians = musicians.filter((musician) => {
     const matchesSearch =
-      musician.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      musician.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       musician.genre?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesGenre =
@@ -247,11 +247,10 @@ const StaffMusician = () => {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-white">
-                                {musician.name}
+                                {musician.fullName}
                               </div>
                               <div className="text-sm text-gray-400">
-                                Added by{" "}
-                                {musician.createdBy?.fullName || "Unknown"}
+                                Artist
                               </div>
                             </div>
                           </div>
