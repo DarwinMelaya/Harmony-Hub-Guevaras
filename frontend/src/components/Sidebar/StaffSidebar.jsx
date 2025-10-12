@@ -49,30 +49,30 @@ const StaffSidebar = ({ onNavigate }) => {
       path: "/staff-booking",
       isActive: location.pathname === "/staff-booking",
     },
-    {
-      icon: Calendar,
-      text: "Schedule",
-      path: "/staff-schedule",
-      isActive: location.pathname === "/staff-schedule",
-    },
-    {
-      icon: MessageCircle,
-      text: "Message",
-      path: "/admin-message",
-      isActive: location.pathname === "/admin-message",
-    },
-    {
-      icon: HelpCircle,
-      text: "Help",
-      path: "/admin-help",
-      isActive: location.pathname === "/admin-help",
-    },
-    {
-      icon: Settings,
-      text: "Setting",
-      path: "/admin-setting",
-      isActive: location.pathname === "/admin-setting",
-    },
+    // {
+    //   icon: Calendar,
+    //   text: "Schedule",
+    //   path: "/staff-schedule",
+    //   isActive: location.pathname === "/staff-schedule",
+    // },
+    // {
+    //   icon: MessageCircle,
+    //   text: "Message",
+    //   path: "/admin-message",
+    //   isActive: location.pathname === "/admin-message",
+    // },
+    // {
+    //   icon: HelpCircle,
+    //   text: "Help",
+    //   path: "/admin-help",
+    //   isActive: location.pathname === "/admin-help",
+    // },
+    // {
+    //   icon: Settings,
+    //   text: "Setting",
+    //   path: "/admin-setting",
+    //   isActive: location.pathname === "/admin-setting",
+    // },
   ];
 
   const handleNavigation = (path) => {
