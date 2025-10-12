@@ -6,6 +6,7 @@ const {
   authorizeAdmin,
   authorizeOwnerOrAdmin,
   authorizeStaffOrAdmin,
+  authorizeOwnerAdminOrStaff,
   authorizeRoles,
 } = require("../middleware/auth");
 const {
@@ -38,7 +39,12 @@ router.put("/change-password", authenticateToken, changePassword);
 router.delete("/account", authenticateToken, deleteUser);
 
 // Artist-specific routes
-router.get("/artists", authenticateToken, authorizeStaffOrAdmin, getArtists);
+router.get(
+  "/artists",
+  authenticateToken,
+  authorizeOwnerAdminOrStaff,
+  getArtists
+);
 router.get("/artists/public", getArtistsPublic);
 router.put(
   "/profile/availability",

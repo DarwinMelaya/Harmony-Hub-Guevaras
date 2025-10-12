@@ -31,18 +31,18 @@ const ClientSidebar = () => {
       path: "/my-chat",
       isActive: location.pathname === "/my-chat",
     },
-    {
-      icon: User,
-      text: "Profile",
-      path: "/profile",
-      isActive: location.pathname === "/profile",
-    },
-    {
-      icon: Settings,
-      text: "Settings",
-      path: "/settings",
-      isActive: location.pathname === "/settings",
-    },
+    // {
+    //   icon: User,
+    //   text: "Profile",
+    //   path: "/profile",
+    //   isActive: location.pathname === "/profile",
+    // },
+    // {
+    //   icon: Settings,
+    //   text: "Settings",
+    //   path: "/settings",
+    //   isActive: location.pathname === "/settings",
+    // },
   ];
 
   const handleNavigation = (path) => {

@@ -55,36 +55,36 @@ const AdminSidebar = ({ onNavigate }) => {
       path: "/admin-booking",
       isActive: location.pathname === "/admin-booking",
     },
-    {
-      icon: Calendar,
-      text: "Schedule",
-      path: "/admin-schedule",
-      isActive: location.pathname === "/admin-schedule",
-    },
-    {
-      icon: HandCoins,
-      text: "Refund",
-      path: "/admin-refund",
-      isActive: location.pathname === "/admin-refund",
-    },
+    // {
+    //   icon: Calendar,
+    //   text: "Schedule",
+    //   path: "/admin-schedule",
+    //   isActive: location.pathname === "/admin-schedule",
+    // },
+    // {
+    //   icon: HandCoins,
+    //   text: "Refund",
+    //   path: "/admin-refund",
+    //   isActive: location.pathname === "/admin-refund",
+    // },
     // {
     //   icon: MessageCircle,
     //   text: "Messages",
     //   path: "/admin-chat",
     //   isActive: location.pathname === "/admin-chat",
     // },
-    {
-      icon: HelpCircle,
-      text: "Help",
-      path: "/admin-help",
-      isActive: location.pathname === "/admin-help",
-    },
-    {
-      icon: Settings,
-      text: "Setting",
-      path: "/admin-setting",
-      isActive: location.pathname === "/admin-setting",
-    },
+    // {
+    //   icon: HelpCircle,
+    //   text: "Help",
+    //   path: "/admin-help",
+    //   isActive: location.pathname === "/admin-help",
+    // },
+    // {
+    //   icon: Settings,
+    //   text: "Setting",
+    //   path: "/admin-setting",
+    //   isActive: location.pathname === "/admin-setting",
+    // },
   ];
 
   const handleNavigation = (path) => {
