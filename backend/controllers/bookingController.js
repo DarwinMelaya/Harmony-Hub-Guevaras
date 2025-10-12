@@ -564,15 +564,6 @@ const getArtistBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate("user", "fullName email username phoneNumber")
-      .populate({
-        path: "items.itemId",
-        model: "Packages",
-        populate: {
-          path: "items.inventoryItem",
-          model: "Inventory",
-          select: "name price quantity image",
-        },
-      })
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);

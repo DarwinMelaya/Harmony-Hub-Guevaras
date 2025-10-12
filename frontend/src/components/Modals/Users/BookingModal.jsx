@@ -58,7 +58,7 @@ const BookingModal = ({
 
     handleBookingDataChange(
       "contactInfo.address",
-      `${barangayName}, ${cityAddr}, ${provinceAddr}, ${regionAddr}`
+      `${barangayName}, ${cityAddr}, ${provinceAddr}`
     );
   };
   return (
@@ -449,7 +449,7 @@ const BookingModal = ({
                         {barangayAddr && (
                           <>
                             <span className="font-medium text-white">Full Address:</span>{" "}
-                            {barangayAddr}, {cityAddr}, {provinceAddr}, {regionAddr}
+                            {barangayAddr}, {cityAddr}, {provinceAddr}
                           </>
                         )}
                       </div>
