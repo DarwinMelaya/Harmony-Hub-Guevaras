@@ -14,10 +14,12 @@ import {
   Filter,
   X,
   Music,
+  Calendar,
 } from "lucide-react";
 import InventoryCard from "../../components/User/Dashboard/InventoryCard";
 import ArtistCard from "../../components/User/Dashboard/ArtistCard";
 import PackagesCard from "../../components/User/Dashboard/PackagesCard";
+import UserCalendar from "../../components/User/Dashboard/UserCalendar";
 import axios from "axios";
 
 const UserHome = () => {
@@ -38,6 +40,7 @@ const UserHome = () => {
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [bookingData, setBookingData] = useState({
     bookingDate: "",
     bookingTime: "",
@@ -575,6 +578,17 @@ const UserHome = () => {
 
             {/* Cart and User Profile Section */}
             <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+              {/* Calendar Button */}
+              <button
+                onClick={() => setShowCalendar(true)}
+                className="bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Calendar className="w-5 h-5 text-gray-300" />
+                <span className="text-gray-300 font-medium hidden sm:inline">
+                  Calendar
+                </span>
+              </button>
+
               {/* Cart Button */}
               <button
                 onClick={() => setShowCart(true)}
@@ -955,6 +969,36 @@ const UserHome = () => {
         artistAvailability={artistAvailability}
         checkArtistAvailability={checkArtistAvailability}
       />
+
+      {/* Calendar Modal */}
+      {showCalendar && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowCalendar(false)}
+        >
+          <div
+            className="bg-[#30343c] rounded-lg p-6 max-w-7xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-blue-400" />
+                My Booking Calendar
+              </h2>
+              <button
+                onClick={() => setShowCalendar(false)}
+                className="text-gray-400 hover:text-white text-3xl leading-none transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Calendar Component */}
+            <UserCalendar />
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
