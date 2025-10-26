@@ -76,6 +76,26 @@ const BookingSchema = new mongoose.Schema({
   paymentImage: {
     type: String, // base64 string or file path
   },
+  downpaymentType: {
+    type: String,
+    enum: ["full", "percentage"],
+    default: "full",
+  },
+  downpaymentPercentage: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 100,
+  },
+  downpaymentAmount: {
+    type: Number,
+    min: 0,
+  },
+  remainingBalance: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
   // ✅ New Fields for Completion Issues
   issueType: {
     type: String,

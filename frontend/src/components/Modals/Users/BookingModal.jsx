@@ -32,18 +32,31 @@ const BookingModal = ({
   const [barangayAddr, setBarangayAddr] = useState("");
 
   const [showPolicyReminder, setShowPolicyReminder] = useState(false);
+  const [downpaymentType, setDownpaymentType] = useState("percentage"); // 'percentage' or 'full'
+  const [downpaymentPercentage, setDownpaymentPercentage] = useState(50); // Default 50%
 
   useEffect(() => {
     provinces("17").then((response) => {
       setProvince(response);
       const marinduque = response.find((p) => p.province_name === "Marinduque");
       if (marinduque) {
-        
         cities(marinduque.province_code).then((cityList) => setCity(cityList));
         handleBookingDataChange("contactInfo.province", "Marinduque");
       }
     });
   }, []);
+
+  // Calculate downpayment amount
+  const calculateDownpayment = () => {
+    const total = getCartTotal();
+    if (downpaymentType === "full") {
+      return total;
+    }
+    return (total * downpaymentPercentage) / 100;
+  };
+
+  const downpaymentAmount = calculateDownpayment();
+  const remainingBalance = getCartTotal() - downpaymentAmount;
 
   const handleCityChange = (e) => {
     const cityCode = e.target.value;
@@ -273,8 +286,14 @@ const BookingModal = ({
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Select Payment Method
                       </label>
-                      <div className="flex space-x-4">
-                        <label className="flex items-center">
+                      <div className="grid grid-cols-2 gap-3">
+                        <label
+                          className={`flex items-center justify-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            bookingData.paymentMethod === "cash"
+                              ? "border-blue-500 bg-blue-500/10"
+                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                          }`}
+                        >
                           <input
                             type="radio"
                             name="paymentMethod"
@@ -286,11 +305,19 @@ const BookingModal = ({
                                 e.target.value
                               )
                             }
-                            className="mr-2 text-blue-600"
+                            className="mr-2"
                           />
-                          <span className="text-white">Cash</span>
+                          <span className="text-white font-medium">
+                            💵 Cash
+                          </span>
                         </label>
-                        <label className="flex items-center">
+                        <label
+                          className={`flex items-center justify-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            bookingData.paymentMethod === "gcash"
+                              ? "border-blue-500 bg-blue-500/10"
+                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                          }`}
+                        >
                           <input
                             type="radio"
                             name="paymentMethod"
@@ -302,67 +329,306 @@ const BookingModal = ({
                                 e.target.value
                               )
                             }
-                            className="mr-2 text-blue-600"
+                            className="mr-2"
                           />
-                          <span className="text-white">GCash</span>
+                          <span className="text-white font-medium">
+                            📱 GCash
+                          </span>
                         </label>
                       </div>
                     </div>
 
                     {bookingData.paymentMethod === "gcash" && (
-                      <>
+                      <div className="space-y-4 bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
+                        {/* GCash Account Information */}
+                        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+                          <h5 className="text-white font-semibold mb-3 flex items-center">
+                            <span className="text-2xl mr-2">📱</span>
+                            GCash Payment Details
+                          </h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between items-center py-2 border-b border-gray-700">
+                              <span className="text-gray-400">
+                                Account Name:
+                              </span>
+                              <span className="text-white font-medium">
+                                Harmony Hub Guevara
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-gray-700">
+                              <span className="text-gray-400">
+                                GCash Number:
+                              </span>
+                              <span className="text-white font-mono font-medium">
+                                09XX-XXX-XXXX
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2">
+                              <span className="text-gray-400">
+                                Account Type:
+                              </span>
+                              <span className="text-green-400 font-medium">
+                                ✓ Verified Business
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Downpayment Options */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-3">
+                            Payment Option
+                          </label>
+                          <div className="grid grid-cols-1 gap-3">
+                            <label
+                              className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                downpaymentType === "percentage"
+                                  ? "border-green-500 bg-green-500/10"
+                                  : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="downpaymentType"
+                                value="percentage"
+                                checked={downpaymentType === "percentage"}
+                                onChange={(e) =>
+                                  setDownpaymentType(e.target.value)
+                                }
+                                className="mr-3"
+                              />
+                              <div className="flex-1">
+                                <span className="text-white font-medium block">
+                                  Downpayment
+                                </span>
+                                <span className="text-gray-400 text-xs">
+                                  Pay a percentage now, rest on service day
+                                </span>
+                              </div>
+                            </label>
+                            <label
+                              className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                downpaymentType === "full"
+                                  ? "border-green-500 bg-green-500/10"
+                                  : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="downpaymentType"
+                                value="full"
+                                checked={downpaymentType === "full"}
+                                onChange={(e) =>
+                                  setDownpaymentType(e.target.value)
+                                }
+                                className="mr-3"
+                              />
+                              <div className="flex-1">
+                                <span className="text-white font-medium block">
+                                  Full Payment
+                                </span>
+                                <span className="text-gray-400 text-xs">
+                                  Pay the total amount now
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Downpayment Percentage Selector */}
+                        {downpaymentType === "percentage" && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-3">
+                              Select Downpayment Percentage
+                            </label>
+                            <div className="grid grid-cols-4 gap-2">
+                              {[20, 30, 50, 100].map((percentage) => (
+                                <button
+                                  key={percentage}
+                                  type="button"
+                                  onClick={() => {
+                                    setDownpaymentPercentage(percentage);
+                                    if (percentage === 100) {
+                                      setDownpaymentType("full");
+                                    }
+                                  }}
+                                  className={`py-2 px-3 rounded-lg font-medium transition-all ${
+                                    downpaymentPercentage === percentage
+                                      ? "bg-green-600 text-white"
+                                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                  }`}
+                                >
+                                  {percentage}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Payment Breakdown */}
+                        <div className="bg-gray-800/70 p-4 rounded-lg border border-gray-700">
+                          <h5 className="text-white font-semibold mb-3">
+                            Payment Breakdown
+                          </h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between py-1">
+                              <span className="text-gray-400">
+                                Total Amount:
+                              </span>
+                              <span className="text-white">
+                                ₱{Number(getCartTotal()).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between py-1 border-t border-gray-700 pt-2">
+                              <span className="text-gray-400">
+                                {downpaymentType === "full"
+                                  ? "Full Payment:"
+                                  : `Downpayment (${downpaymentPercentage}%):`}
+                              </span>
+                              <span className="text-green-400 font-bold text-lg">
+                                ₱{Number(downpaymentAmount).toLocaleString()}
+                              </span>
+                            </div>
+                            {downpaymentType === "percentage" && (
+                              <div className="flex justify-between py-1">
+                                <span className="text-gray-400">
+                                  Remaining Balance:
+                                </span>
+                                <span className="text-orange-400 font-medium">
+                                  ₱{Number(remainingBalance).toLocaleString()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {downpaymentType === "percentage" && (
+                            <div className="mt-3 p-2 bg-orange-900/20 border border-orange-700/50 rounded text-xs text-orange-300">
+                              💡 Remaining balance (₱
+                              {Number(remainingBalance).toLocaleString()}) to be
+                              paid on service day
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Payment Instructions */}
+                        <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
+                          <h5 className="text-blue-300 font-semibold text-sm mb-2">
+                            Payment Instructions:
+                          </h5>
+                          <ol className="text-xs text-gray-300 space-y-1 list-decimal list-inside">
+                            <li>Open your GCash app</li>
+                            <li>
+                              Send ₱{Number(downpaymentAmount).toLocaleString()}{" "}
+                              to the account above
+                            </li>
+                            <li>Take a screenshot of the confirmation</li>
+                            <li>Enter the reference number below</li>
+                            <li>Upload the screenshot</li>
+                          </ol>
+                        </div>
+
+                        {/* Reference Number Input */}
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Payment Reference Number
+                            GCash Reference Number *
                           </label>
                           <input
                             type="text"
                             value={bookingData.paymentReference}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const value = e.target.value.toUpperCase();
                               handleBookingDataChange(
                                 "paymentReference",
-                                e.target.value
-                              )
-                            }
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Enter GCash reference number (e.g., GCASH123456789)"
+                                value
+                              );
+                            }}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                            placeholder="e.g., 1234567890123"
+                            pattern="[0-9]{13}"
+                            title="Please enter a 13-digit reference number"
                             required
                           />
+                          <p className="text-xs text-gray-400 mt-1">
+                            Enter the 13-digit reference number from your GCash
+                            transaction
+                          </p>
                         </div>
+
+                        {/* Screenshot Upload */}
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Payment Screenshot
+                            Payment Screenshot *
                           </label>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  handleBookingDataChange(
-                                    "paymentImage",
-                                    event.target.result
-                                  );
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                          />
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  // Validate file size (max 5MB)
+                                  if (file.size > 5 * 1024 * 1024) {
+                                    alert("File size must be less than 5MB");
+                                    e.target.value = "";
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    handleBookingDataChange(
+                                      "paymentImage",
+                                      event.target.result
+                                    );
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
+                              required
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Max file size: 5MB. Accepted formats: JPG, PNG, JPEG
+                          </p>
                           {bookingData.paymentImage && (
-                            <div className="mt-2">
+                            <div className="mt-3 relative">
                               <img
                                 src={bookingData.paymentImage}
                                 alt="Payment screenshot"
-                                className="w-32 h-32 object-cover rounded-lg border border-gray-600"
+                                className="w-full max-w-xs h-48 object-cover rounded-lg border-2 border-green-600"
                               />
+                              <div className="absolute top-2 right-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleBookingDataChange(
+                                      "paymentImage",
+                                      null
+                                    )
+                                  }
+                                  className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                              <div className="mt-2 flex items-center text-green-400 text-sm">
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Screenshot uploaded successfully
+                              </div>
                             </div>
                           )}
                         </div>
-                      </>
+
+                        {/* Security Note */}
+                        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex items-start">
+                          <AlertTriangle className="w-5 h-5 text-yellow-400 mr-2 flex-shrink-0 mt-0.5" />
+                          <div className="text-xs text-gray-300">
+                            <span className="font-semibold text-yellow-400">
+                              Security Note:
+                            </span>{" "}
+                            Your payment information is secure. We'll verify
+                            your payment before confirming your booking.
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -414,7 +680,9 @@ const BookingModal = ({
                     </label>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Province</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Province
+                        </label>
                         <input
                           type="text"
                           value="Marinduque"
@@ -461,7 +729,9 @@ const BookingModal = ({
                       <div className="text-gray-400 text-sm mt-2">
                         {barangayAddr && (
                           <>
-                            <span className="font-medium text-white">Full Address:</span>{" "}
+                            <span className="font-medium text-white">
+                              Full Address:
+                            </span>{" "}
                             {barangayAddr}, {cityAddr}, {provinceAddr}
                           </>
                         )}
@@ -470,7 +740,7 @@ const BookingModal = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* Policy Agreement */}
               <div className="mb-6 bg-gray-700 p-4 rounded-lg">
                 <label className="flex items-start space-x-3">
@@ -478,7 +748,10 @@ const BookingModal = ({
                     type="checkbox"
                     checked={bookingData.policyAccepted || false}
                     onChange={(e) =>
-                      handleBookingDataChange("policyAccepted", e.target.checked)
+                      handleBookingDataChange(
+                        "policyAccepted",
+                        e.target.checked
+                      )
                     }
                     className="mt-1"
                   />
@@ -499,7 +772,8 @@ const BookingModal = ({
                 {showPolicyReminder && (
                   <div className="mt-3 p-3 bg-red-900/30 border border-red-700 text-red-400 rounded-lg text-sm flex items-center">
                     <AlertTriangle className="w-4 h-4 mr-2 text-red-400" />
-                    Please read and agree to the Policy / Contract before confirming your booking.
+                    Please read and agree to the Policy / Contract before
+                    confirming your booking.
                   </div>
                 )}
               </div>

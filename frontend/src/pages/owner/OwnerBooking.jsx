@@ -593,6 +593,64 @@ const OwnerBooking = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Downpayment Information for GCash */}
+                  {selectedBooking.paymentMethod === "gcash" && (
+                    <div className="mt-4 pt-4 border-t border-gray-600">
+                      <h4 className="text-white font-medium mb-3">
+                        Payment Breakdown
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-gray-400 text-sm">Payment Type</p>
+                          <p className="text-white capitalize">
+                            {selectedBooking.downpaymentType === "full"
+                              ? "Full Payment"
+                              : `Downpayment (${
+                                  selectedBooking.downpaymentPercentage || 50
+                                }%)`}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400 text-sm">Amount Paid</p>
+                          <p className="text-green-400 font-bold">
+                            ₱
+                            {Number(
+                              selectedBooking.downpaymentAmount ||
+                                selectedBooking.totalAmount
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                        {selectedBooking.downpaymentType === "percentage" &&
+                          selectedBooking.remainingBalance > 0 && (
+                            <div>
+                              <p className="text-gray-400 text-sm">
+                                Remaining Balance
+                              </p>
+                              <p className="text-orange-400 font-bold">
+                                ₱
+                                {Number(
+                                  selectedBooking.remainingBalance || 0
+                                ).toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                      </div>
+                      {selectedBooking.downpaymentType === "percentage" &&
+                        selectedBooking.remainingBalance > 0 && (
+                          <div className="mt-3 p-3 bg-orange-900/20 border border-orange-700/50 rounded-lg">
+                            <p className="text-orange-300 text-sm">
+                              ⚠️ Remaining balance of ₱
+                              {Number(
+                                selectedBooking.remainingBalance || 0
+                              ).toLocaleString()}{" "}
+                              to be collected on service day
+                            </p>
+                          </div>
+                        )}
+                    </div>
+                  )}
+
                   {selectedBooking.paymentImage && (
                     <div className="mt-4">
                       <p className="text-gray-400 text-sm mb-2">

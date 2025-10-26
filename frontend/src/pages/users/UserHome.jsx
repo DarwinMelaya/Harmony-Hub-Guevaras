@@ -54,6 +54,10 @@ const UserHome = () => {
     paymentMethod: "cash",
     paymentReference: "",
     paymentImage: null,
+    downpaymentType: "percentage",
+    downpaymentPercentage: 50,
+    downpaymentAmount: 0,
+    remainingBalance: 0,
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -470,6 +474,17 @@ const UserHome = () => {
 
     try {
       const token = localStorage.getItem("token");
+
+      // Calculate downpayment amounts
+      const total = getCartTotal();
+      const downpaymentAmount =
+        bookingData.paymentMethod === "gcash"
+          ? bookingData.downpaymentType === "full"
+            ? total
+            : (total * bookingData.downpaymentPercentage) / 100
+          : 0;
+      const remainingBalance = total - downpaymentAmount;
+
       const bookingPayload = {
         items: cart.map((item) => ({
           type: item.type,
@@ -486,6 +501,10 @@ const UserHome = () => {
         paymentMethod: bookingData.paymentMethod,
         paymentReference: bookingData.paymentReference,
         paymentImage: bookingData.paymentImage,
+        downpaymentType: bookingData.downpaymentType,
+        downpaymentPercentage: bookingData.downpaymentPercentage,
+        downpaymentAmount: downpaymentAmount,
+        remainingBalance: remainingBalance,
       };
 
       const response = await axios.post(
@@ -518,6 +537,10 @@ const UserHome = () => {
           paymentMethod: "cash",
           paymentReference: "",
           paymentImage: null,
+          downpaymentType: "percentage",
+          downpaymentPercentage: 50,
+          downpaymentAmount: 0,
+          remainingBalance: 0,
         });
       }
     } catch (err) {

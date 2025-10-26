@@ -9,7 +9,9 @@ exports.addPackage = async (req, res) => {
     for (const item of items) {
       const inventoryItem = await Inventory.findById(item.inventoryItem);
       if (!inventoryItem) {
-        return res.status(400).json({ error: `Inventory item not found: ${item.inventoryItem}` });
+        return res
+          .status(400)
+          .json({ error: `Inventory item not found: ${item.inventoryItem}` });
       }
     }
 
@@ -40,7 +42,7 @@ exports.getAllPackages = async (req, res) => {
     const packages = await Package.find()
       .populate("items.inventoryItem", "name price quantity image")
       .sort({ createdAt: -1 })
-      .lean(); 
+      .lean();
 
     res.status(200).json(packages);
   } catch (error) {
@@ -61,6 +63,7 @@ exports.getPublicPackages = async (req, res) => {
         price: 1,
         image: 1,
         items: 1,
+        isAvailable: 1,
         createdAt: 1,
         updatedAt: 1,
       }
@@ -77,12 +80,10 @@ exports.getPublicPackages = async (req, res) => {
     res.status(200).json({ success: true, packages });
   } catch (error) {
     console.error("Error fetching public packages:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Server error while fetching packages",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Server error while fetching packages",
+    });
   }
 };
 
@@ -97,7 +98,12 @@ exports.updatePackage = async (req, res) => {
       for (const item of items) {
         const inventoryItem = await Inventory.findById(item.inventoryItem);
         if (!inventoryItem) {
-          return res.status(400).json({ success: false, error: `Inventory item not found: ${item.inventoryItem}` });
+          return res
+            .status(400)
+            .json({
+              success: false,
+              error: `Inventory item not found: ${item.inventoryItem}`,
+            });
         }
       }
     }
@@ -116,13 +122,23 @@ exports.updatePackage = async (req, res) => {
     }).populate("items.inventoryItem", "name price quantity image");
 
     if (!updated) {
-      return res.status(404).json({ success: false, message: "Package not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Package not found" });
     }
 
-    res.status(200).json({ success: true, message: "Package updated successfully", package: updated });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Package updated successfully",
+        package: updated,
+      });
   } catch (error) {
     console.error("Error updating package:", error);
-    res.status(500).json({ success: false, error: "Server error while updating package" });
+    res
+      .status(500)
+      .json({ success: false, error: "Server error while updating package" });
   }
 };
 
@@ -132,11 +148,17 @@ exports.deletePackage = async (req, res) => {
     const { id } = req.params;
     const deleted = await Package.findByIdAndDelete(id);
     if (!deleted) {
-      return res.status(404).json({ success: false, message: "Package not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Package not found" });
     }
-    res.status(200).json({ success: true, message: "Package deleted successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Package deleted successfully" });
   } catch (error) {
     console.error("Error deleting package:", error);
-    res.status(500).json({ success: false, error: "Server error while deleting package" });
+    res
+      .status(500)
+      .json({ success: false, error: "Server error while deleting package" });
   }
 };

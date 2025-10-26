@@ -16,6 +16,10 @@ const createBooking = async (req, res) => {
       paymentMethod = "cash",
       paymentReference,
       paymentImage,
+      downpaymentType = "full",
+      downpaymentPercentage = 100,
+      downpaymentAmount,
+      remainingBalance,
     } = req.body;
 
     const userId = req.user.id;
@@ -186,6 +190,26 @@ const createBooking = async (req, res) => {
       totalAmount += price * normalizedQuantity;
     }
 
+    // Calculate downpayment if not provided
+    let calculatedDownpayment = downpaymentAmount;
+    let calculatedRemainingBalance = remainingBalance;
+
+    if (paymentMethod === "gcash") {
+      if (!calculatedDownpayment) {
+        calculatedDownpayment =
+          downpaymentType === "full"
+            ? totalAmount
+            : (totalAmount * downpaymentPercentage) / 100;
+      }
+      if (!calculatedRemainingBalance) {
+        calculatedRemainingBalance = totalAmount - calculatedDownpayment;
+      }
+    } else {
+      // For cash payment, no downpayment concept
+      calculatedDownpayment = 0;
+      calculatedRemainingBalance = totalAmount;
+    }
+
     // Create the booking
     // Parse bookingDate to avoid timezone issues
     const [bookingYear, bookingMonth, bookingDay] = bookingDate
@@ -203,6 +227,10 @@ const createBooking = async (req, res) => {
       paymentMethod,
       paymentReference,
       paymentImage,
+      downpaymentType,
+      downpaymentPercentage,
+      downpaymentAmount: calculatedDownpayment,
+      remainingBalance: calculatedRemainingBalance,
     });
 
     await booking.save();
