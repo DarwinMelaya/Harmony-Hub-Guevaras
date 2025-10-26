@@ -44,6 +44,8 @@ const UserHome = () => {
   const [bookingData, setBookingData] = useState({
     bookingDate: "",
     bookingTime: "",
+    setupDate: "",
+    setupTime: "",
     duration: 1,
     notes: "",
     contactInfo: {
@@ -459,6 +461,11 @@ const UserHome = () => {
       return;
     }
 
+    if (!bookingData.setupDate || !bookingData.setupTime) {
+      setError("Please select setup date and time for advance arrival.");
+      return;
+    }
+
     // Validate GCash payment requirements
     if (bookingData.paymentMethod === "gcash") {
       if (!bookingData.paymentReference || !bookingData.paymentImage) {
@@ -495,6 +502,8 @@ const UserHome = () => {
         })),
         bookingDate: bookingData.bookingDate,
         bookingTime: bookingData.bookingTime,
+        setupDate: bookingData.setupDate,
+        setupTime: bookingData.setupTime,
         duration: bookingData.duration,
         notes: bookingData.notes,
         contactInfo: bookingData.contactInfo,
@@ -527,6 +536,8 @@ const UserHome = () => {
         setBookingData({
           bookingDate: "",
           bookingTime: "",
+          setupDate: "",
+          setupTime: "",
           duration: 1,
           notes: "",
           contactInfo: {

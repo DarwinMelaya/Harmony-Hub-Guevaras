@@ -11,6 +11,8 @@ const createBooking = async (req, res) => {
       bookingDate,
       bookingTime,
       duration = 1,
+      setupDate,
+      setupTime,
       notes,
       contactInfo,
       paymentMethod = "cash",
@@ -32,10 +34,10 @@ const createBooking = async (req, res) => {
       });
     }
 
-    if (!bookingDate || !bookingTime) {
+    if (!bookingDate || !bookingTime || !setupDate || !setupTime) {
       return res.status(400).json({
         success: false,
-        message: "Booking date and time are required",
+        message: "Booking date, time, setup date, and setup time are required",
       });
     }
 
@@ -58,7 +60,7 @@ const createBooking = async (req, res) => {
       }
     }
 
-    // Validate booking date is not in the past
+    // Validate booking date is not in the past and validate setup date
     // Parse date components to avoid timezone issues
     const [yearCheck, monthCheck, dayCheck] = bookingDate
       .split("-")
@@ -76,6 +78,33 @@ const createBooking = async (req, res) => {
         success: false,
         message: "Booking date and time cannot be in the past",
       });
+    }
+
+    // Parse setup date
+    const [setupYear, setupMonth, setupDay] = setupDate.split("-").map(Number);
+    const setupDateObj = new Date(setupYear, setupMonth - 1, setupDay);
+    const bookingDateObj = new Date(yearCheck, monthCheck - 1, dayCheck);
+
+    // Validate setup date is before or equal to booking date
+    if (setupDateObj > bookingDateObj) {
+      return res.status(400).json({
+        success: false,
+        message: "Setup date must be before or equal to the booking date",
+      });
+    }
+
+    // If same date, validate setup time is before booking time
+    if (setupDateObj.getTime() === bookingDateObj.getTime()) {
+      const [setupHours, setupMinutes] = setupTime.split(":").map(Number);
+      if (
+        setupHours > hours ||
+        (setupHours === hours && setupMinutes >= minutes)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Setup time must be before the booking time",
+        });
+      }
     }
 
     let totalAmount = 0;
@@ -211,17 +240,15 @@ const createBooking = async (req, res) => {
     }
 
     // Create the booking
-    // Parse bookingDate to avoid timezone issues
-    const [bookingYear, bookingMonth, bookingDay] = bookingDate
-      .split("-")
-      .map(Number);
     const booking = new Booking({
       user: userId,
       items: validatedItems,
       totalAmount,
-      bookingDate: new Date(bookingYear, bookingMonth - 1, bookingDay),
+      bookingDate: bookingDateObj,
       bookingTime,
       duration,
+      setupDate: setupDateObj,
+      setupTime,
       notes,
       contactInfo,
       paymentMethod,

@@ -34,6 +34,7 @@ const BookingModal = ({
   const [showPolicyReminder, setShowPolicyReminder] = useState(false);
   const [downpaymentType, setDownpaymentType] = useState("percentage"); // 'percentage' or 'full'
   const [downpaymentPercentage, setDownpaymentPercentage] = useState(50); // Default 50%
+  const [setupDateError, setSetupDateError] = useState("");
 
   useEffect(() => {
     provinces("17").then((response) => {
@@ -57,6 +58,50 @@ const BookingModal = ({
 
   const downpaymentAmount = calculateDownpayment();
   const remainingBalance = getCartTotal() - downpaymentAmount;
+
+  // Validate setup date and time
+  const validateSetupDateTime = () => {
+    if (!bookingData.setupDate || !bookingData.bookingDate) {
+      setSetupDateError("");
+      return true;
+    }
+
+    const setupDate = new Date(bookingData.setupDate);
+    const bookingDate = new Date(bookingData.bookingDate);
+
+    if (setupDate > bookingDate) {
+      setSetupDateError(
+        "⚠️ Setup date must be before or equal to the booking date"
+      );
+      return false;
+    }
+
+    // If same date, check times
+    if (setupDate.getTime() === bookingDate.getTime()) {
+      if (
+        bookingData.setupTime &&
+        bookingData.bookingTime &&
+        bookingData.setupTime >= bookingData.bookingTime
+      ) {
+        setSetupDateError("⚠️ Setup time must be before the booking time");
+        return false;
+      }
+    }
+
+    setSetupDateError("");
+    return true;
+  };
+
+  // Validate whenever relevant fields change
+  useEffect(() => {
+    validateSetupDateTime();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    bookingData.setupDate,
+    bookingData.setupTime,
+    bookingData.bookingDate,
+    bookingData.bookingTime,
+  ]);
 
   const handleCityChange = (e) => {
     const cityCode = e.target.value;
@@ -101,6 +146,11 @@ const BookingModal = ({
                 // Check if policy is accepted before submitting
                 if (!bookingData.policyAccepted) {
                   setShowPolicyReminder(true);
+                  return;
+                }
+
+                // Validate setup date and time
+                if (!validateSetupDateTime()) {
                   return;
                 }
 
@@ -240,6 +290,58 @@ const BookingModal = ({
                       required
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    ⏰ Advance Setup (Date & Time)
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-2">
+                        Setup Date
+                      </label>
+                      <input
+                        type="date"
+                        value={bookingData.setupDate}
+                        onChange={(e) =>
+                          handleBookingDataChange("setupDate", e.target.value)
+                        }
+                        min={new Date().toISOString().split("T")[0]}
+                        max={bookingData.bookingDate || undefined}
+                        className={`w-full px-3 py-2 bg-gray-700 border ${
+                          setupDateError ? "border-red-500" : "border-gray-600"
+                        } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-2">
+                        Setup Time
+                      </label>
+                      <input
+                        type="time"
+                        value={bookingData.setupTime}
+                        onChange={(e) =>
+                          handleBookingDataChange("setupTime", e.target.value)
+                        }
+                        className={`w-full px-3 py-2 bg-gray-700 border ${
+                          setupDateError ? "border-red-500" : "border-gray-600"
+                        } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        required
+                      />
+                    </div>
+                  </div>
+                  {setupDateError && (
+                    <div className="p-3 bg-red-900/20 border border-red-700 text-red-300 rounded-lg text-sm flex items-center">
+                      <AlertTriangle className="w-4 h-4 mr-2 text-red-400" />
+                      {setupDateError}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    💡 Specify when our team should arrive for equipment setup.
+                    This should be before your booking date and time.
+                  </p>
                 </div>
 
                 <div>

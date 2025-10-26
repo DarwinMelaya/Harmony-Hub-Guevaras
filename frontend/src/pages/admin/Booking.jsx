@@ -250,7 +250,12 @@ const Booking = () => {
   };
 
   const formatTime = (timeString) => {
-    return timeString;
+    if (!timeString) return "-";
+    const [hours, minutes] = timeString.split(":");
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
   };
 
   const handleMarkAsCompleted = (booking) => {
@@ -409,6 +414,9 @@ const Booking = () => {
                         Date & Time
                       </th>
                       <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">
+                        Setup Date & Time
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">
                         Total
                       </th>
                       <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">
@@ -472,6 +480,22 @@ const Booking = () => {
                             <Clock className="w-4 h-4 text-gray-400" />
                             <span className="text-gray-400">
                               {formatTime(booking.bookingTime)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Calendar className="w-4 h-4 text-purple-400" />
+                            <span className="text-gray-300">
+                              {booking.setupDate
+                                ? formatDate(booking.setupDate)
+                                : "-"}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm mt-1">
+                            <Clock className="w-4 h-4 text-purple-400" />
+                            <span className="text-gray-400">
+                              {booking.setupTime || "-"}
                             </span>
                           </div>
                         </td>
@@ -589,7 +613,7 @@ const Booking = () => {
                   Booking Information
                 </h3>
                 <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div>
                       <p className="text-gray-400 text-sm">Date</p>
                       <p className="text-white font-medium">
@@ -600,6 +624,22 @@ const Booking = () => {
                       <p className="text-gray-400 text-sm">Time</p>
                       <p className="text-white">
                         {formatTime(selectedBooking.bookingTime)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">⏰ Setup Date</p>
+                      <p className="text-white">
+                        {selectedBooking.setupDate
+                          ? formatDate(selectedBooking.setupDate)
+                          : "Not specified"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">⏰ Setup Time</p>
+                      <p className="text-white">
+                        {selectedBooking.setupTime
+                          ? formatTime(selectedBooking.setupTime)
+                          : "Not specified"}
                       </p>
                     </div>
                     <div>
