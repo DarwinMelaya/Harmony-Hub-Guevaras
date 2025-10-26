@@ -1,16 +1,47 @@
+import { useState, useEffect } from "react";
 import { FcGoogle } from "react-icons/fc";
-import { useState } from "react";
-import {
-  FaEye,
-  FaEyeSlash,
-  FaArrowLeft,
-  FaArrowRight,
-  FaCheck,
-} from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaArrowLeft, FaArrowRight, FaCheck } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { provinces, cities, barangays } from "select-philippines-address";
 
 const Signup = () => {
+  const [provinceData, setProvince] = useState([]);
+  const [cityData, setCity] = useState([]);
+  const [barangayData, setBarangay] = useState([]);
+
+  const [provinceAddr, setProvinceAddr] = useState("Marinduque");
+  const [cityAddr, setCityAddr] = useState("");
+  const [barangayAddr, setBarangayAddr] = useState("");
+
+  useEffect(() => {
+    provinces("17").then((response) => {
+      setProvince(response);
+      const marinduque = response.find((p) => p.province_name === "Marinduque");
+      if (marinduque) {
+        cities(marinduque.province_code).then((cityList) => setCity(cityList));
+        setProvinceAddr("Marinduque");
+      }
+    });
+  }, []);
+  
+  const handleCityChange = (e) => {
+    const cityCode = e.target.value;
+    const cityName = e.target.selectedOptions[0].text;
+    setCityAddr(cityName);
+
+    barangays(cityCode).then((response) => setBarangay(response));
+  };
+
+
+  const handleBarangayChange = (e) => {
+    const barangayName = e.target.selectedOptions[0].text;
+    setBarangayAddr(barangayName);
+
+    const locationValue = `${barangayName}, ${cityAddr}, ${provinceAddr}`;
+    handleInputChange("location", locationValue);
+  };
+
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: "",
@@ -438,28 +469,50 @@ const Signup = () => {
 
                   {/* Location */}
                   <div className="relative">
-                    <input
-                      type="text"
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) =>
-                        handleInputChange("location", e.target.value)
-                      }
-                      onFocus={() => handleFocus("location")}
-                      onBlur={() => handleBlur("location")}
-                      className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
-                      placeholder="Enter your location"
-                    />
-                    <label
-                      htmlFor="location"
-                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                        focusedFields.location || formData.location
-                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                          : "text-gray-400 text-sm top-4"
-                      }`}
+                    <div className="space-y-4">
+                    {/* City Select */}
+                    <select
+                      onChange={handleCityChange}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:ring-2 focus:ring-blue-500"
                     >
-                      Location
-                    </label>
+                      <option value="">Select City</option>
+                      {cityData.map((city) => (
+                        <option key={city.city_code} value={city.city_code}>
+                          {city.city_name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Barangay Select */}
+                    <select
+                      onChange={handleBarangayChange}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Barangay</option>
+                      {barangayData.map((barangay) => (
+                        <option key={barangay.brgy_code} value={barangay.brgy_code}>
+                          {barangay.brgy_name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Auto-filled Location */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="location"
+                        value={formData.location}
+                        readOnly
+                        className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm transition-all duration-300 peer"
+                      />
+                      <label
+                        htmlFor="location"
+                        className="absolute left-4 -top-2 text-blue-400 text-xs bg-gray-900/60 px-2"
+                      >
+                        Location
+                      </label>
+                    </div>
+                  </div>
                   </div>
                 </div>
 

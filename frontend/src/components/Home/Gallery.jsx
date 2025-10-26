@@ -2,35 +2,35 @@ const Gallery = () => {
   const galleryImages = [
     {
       id: 1,
-      image: "/images/gallery/engweek-event.jpg",
+      image: "/images/gallery/engweek-event.webp",
       description:
         "Indoor stage setup with illuminated 'ENGWEEK' letters and professional lighting",
     },
     {
       id: 2,
-      image: "/images/gallery/guevarra-presentation.jpg",
+      image: "/images/gallery/guevarra-presentation.webp",
       description:
         "Formal event with speaker and LED screen displaying 'GUEVARRA'",
     },
     {
       id: 3,
-      image: "/images/gallery/dancing-event.jpg",
+      image: "/images/gallery/dancing-event.webp",
       description: "Energetic outdoor social event with people dancing",
     },
     {
       id: 4,
-      image: "/images/gallery/technical-crew.jpg",
+      image: "/images/gallery/technical-crew.webp",
       description: "Event technicians operating sound and video equipment",
     },
     {
       id: 5,
-      image: "/images/gallery/control-panel.jpg",
+      image: "/images/gallery/control-panel.webp",
       description:
         "Close-up of sound/lighting control panel with illuminated buttons",
     },
     {
       id: 6,
-      image: "/images/gallery/live-band.jpg",
+      image: "/images/gallery/live-band.webp",
       description:
         "Live band performance with female vocalist and stage decorations",
     },

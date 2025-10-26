@@ -62,7 +62,7 @@ const Contact = () => {
             <div className="space-y-8">
               <div className="bg-black/20 backdrop-blur-sm rounded-lg p-6 border border-white/10">
                 <h3 className="text-white text-xl font-bold uppercase mb-6 tracking-wider border-b border-white/20 pb-2">
-                  BIRTHDAY
+                  EVENTS
                 </h3>
                 <ul className="space-y-3 text-gray-300 uppercase text-sm">
                   <li className="hover:text-white transition-colors duration-200 cursor-pointer">
@@ -73,6 +73,9 @@ const Contact = () => {
                   </li>
                   <li className="hover:text-white transition-colors duration-200 cursor-pointer">
                     CORPORATE
+                  </li>
+                  <li className="hover:text-white transition-colors duration-200 cursor-pointer">
+                    BIRTHDAY
                   </li>
                 </ul>
               </div>

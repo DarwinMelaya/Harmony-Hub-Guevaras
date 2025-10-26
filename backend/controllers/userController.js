@@ -77,6 +77,23 @@ const registerUser = async (req, res) => {
 
     await user.save();
 
+    // Send confirmation email
+  const sendEmail = require("../utils/sendEmail");
+
+  await sendEmail(
+    user.email,
+    "Welcome to Harmony Hub 🎉",
+    `Hi ${user.fullName}, you just signed up on Harmony Hub using this email.`,
+    `
+      <h2>Welcome to Harmony Hub!</h2>
+      <p>Hi <strong>${user.fullName}</strong>,</p>
+      <p>We’re excited to have you join our community! You successfully signed up on <strong>Harmony Hub</strong> using this email address: <b>${user.email}</b>.</p>
+      <p>If this wasn’t you, please ignore this message.</p>
+      <br/>
+      <p>With love,<br/>The Harmony Hub Team</p>
+    `
+  );
+
     // Generate JWT token
     const token = jwt.sign(
       { userId: user._id },
