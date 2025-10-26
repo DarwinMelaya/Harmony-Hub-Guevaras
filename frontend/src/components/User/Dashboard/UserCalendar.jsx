@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Music, Package, ShoppingCart, Check, X } from "lucide-react";
+import { API_BASE_URL } from "../../../config/api";
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const monthNames = [
@@ -34,6 +35,7 @@ const UserCalendar = () => {
   const [showModal, setShowModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [viewMode, setViewMode] = useState("myBookings"); // myBookings, artists, equipment, packages
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // Fetch all data
   useEffect(() => {
@@ -48,12 +50,12 @@ const UserCalendar = () => {
 
       const [myBookingsRes, artistsRes, inventoryRes, packagesRes] =
         await Promise.all([
-          axios.get("http://localhost:5000/api/bookings/my-bookings", {
+          axios.get(`${API_BASE_URL}/bookings/my-bookings`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          axios.get("http://localhost:5000/api/users/artists/public"),
-          axios.get("http://localhost:5000/api/inventory/public"),
-          axios.get("http://localhost:5000/api/packages/public"),
+          axios.get(`${API_BASE_URL}/users/artists/public`),
+          axios.get(`${API_BASE_URL}/inventory/public`),
+          axios.get(`${API_BASE_URL}/packages/public`),
         ]);
 
       setBookings(myBookingsRes.data?.data || []);
@@ -154,9 +156,14 @@ const UserCalendar = () => {
   const checkArtistAvailability = async (artistId, date) => {
     if (!date) return true;
     try {
-      const dateStr = date.toISOString().split("T")[0];
+      // Format date using local timezone to avoid timezone shift issues
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
+
       const response = await axios.get(
-        `http://localhost:5000/api/bookings/check-availability?artistId=${artistId}&bookingDate=${dateStr}`
+        `${API_BASE_URL}/bookings/check-availability?artistId=${artistId}&bookingDate=${dateStr}`
       );
       return response.data?.available || false;
     } catch (err) {
@@ -203,6 +210,20 @@ const UserCalendar = () => {
       // Show availability for the date
       setSelectedDate(date);
       setShowAvailabilityModal(true);
+
+      // If viewing artists, fetch real-time availability
+      if (viewMode === "artists") {
+        setCheckingAvailability(true);
+        try {
+          const availabilityData = await getDateAvailability(date);
+          setSelectedDate({ date, availabilityData });
+        } catch (error) {
+          console.error("Error checking availability:", error);
+          setSelectedDate({ date, availabilityData: null });
+        } finally {
+          setCheckingAvailability(false);
+        }
+      }
     }
   };
 
@@ -571,12 +592,15 @@ const UserCalendar = () => {
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold text-white">
                 Availability for{" "}
-                {selectedDate.toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {(selectedDate.date || selectedDate).toLocaleDateString(
+                  "en-US",
+                  {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  }
+                )}
               </h3>
               <button
                 onClick={() => setShowAvailabilityModal(false)}
@@ -594,47 +618,129 @@ const UserCalendar = () => {
                   Artists & Musicians
                 </h4>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {artists.map((artist) => (
-                    <div
-                      key={artist._id}
-                      className="bg-gray-900 rounded-lg p-4 border border-gray-700"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h5 className="text-white font-medium">
-                            {artist.fullName}
-                          </h5>
-                          <p className="text-gray-400 text-sm">
-                            {artist.genre}
-                          </p>
-                        </div>
-                        <div className="text-xs">
-                          {artist.isAvailable !== false ? (
-                            <span className="flex items-center gap-1 text-green-400">
-                              <Check className="w-4 h-4" />
-                              Available
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-red-400">
-                              <X className="w-4 h-4" />
-                              Unavailable
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-green-400 font-semibold">
-                        ₱{Number(artist.booking_fee || 0).toLocaleString()}
+                {/* Loading State */}
+                {checkingAvailability && (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+                    <span className="ml-3 text-gray-400">
+                      Checking availability...
+                    </span>
+                  </div>
+                )}
+
+                {/* Available Artists */}
+                {!checkingAvailability &&
+                  selectedDate.availabilityData?.artists?.available?.length >
+                    0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-green-400 font-medium flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        Available Artists (
+                        {selectedDate.availabilityData.artists.available.length}
+                        )
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {selectedDate.availabilityData.artists.available.map(
+                          (artist) => (
+                            <div
+                              key={artist._id}
+                              className="bg-gray-900 rounded-lg p-4 border border-green-700"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h5 className="text-white font-medium">
+                                    {artist.fullName}
+                                  </h5>
+                                  <p className="text-gray-400 text-sm">
+                                    {artist.genre}
+                                  </p>
+                                </div>
+                                <div className="text-xs">
+                                  <span className="flex items-center gap-1 text-green-400">
+                                    <Check className="w-4 h-4" />
+                                    Available
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-green-400 font-semibold">
+                                ₱
+                                {Number(
+                                  artist.booking_fee || 0
+                                ).toLocaleString()}
+                              </div>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  )}
 
-                {artists.length === 0 && (
+                {/* Unavailable Artists */}
+                {!checkingAvailability &&
+                  selectedDate.availabilityData?.artists?.unavailable?.length >
+                    0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-red-400 font-medium flex items-center gap-2">
+                        <X className="w-4 h-4" />
+                        Unavailable Artists (
+                        {
+                          selectedDate.availabilityData.artists.unavailable
+                            .length
+                        }
+                        )
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {selectedDate.availabilityData.artists.unavailable.map(
+                          (artist) => (
+                            <div
+                              key={artist._id}
+                              className="bg-gray-900 rounded-lg p-4 border border-red-700 opacity-60"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h5 className="text-white font-medium">
+                                    {artist.fullName}
+                                  </h5>
+                                  <p className="text-gray-400 text-sm">
+                                    {artist.genre}
+                                  </p>
+                                </div>
+                                <div className="text-xs">
+                                  <span className="flex items-center gap-1 text-red-400">
+                                    <X className="w-4 h-4" />
+                                    Booked
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="text-gray-500 font-semibold">
+                                ₱
+                                {Number(
+                                  artist.booking_fee || 0
+                                ).toLocaleString()}
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                {!checkingAvailability && artists.length === 0 && (
                   <p className="text-gray-400 text-center py-8">
                     No artists available
                   </p>
                 )}
+
+                {!checkingAvailability &&
+                  selectedDate.availabilityData &&
+                  selectedDate.availabilityData.artists?.available?.length ===
+                    0 &&
+                  selectedDate.availabilityData.artists?.unavailable?.length ===
+                    0 && (
+                    <p className="text-gray-400 text-center py-8">
+                      No artists found
+                    </p>
+                  )}
               </div>
             )}
 

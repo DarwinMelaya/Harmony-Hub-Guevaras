@@ -55,7 +55,18 @@ const createBooking = async (req, res) => {
     }
 
     // Validate booking date is not in the past
-    const bookingDateTime = new Date(`${bookingDate}T${bookingTime}`);
+    // Parse date components to avoid timezone issues
+    const [yearCheck, monthCheck, dayCheck] = bookingDate
+      .split("-")
+      .map(Number);
+    const [hours, minutes] = bookingTime.split(":").map(Number);
+    const bookingDateTime = new Date(
+      yearCheck,
+      monthCheck - 1,
+      dayCheck,
+      hours,
+      minutes
+    );
     if (bookingDateTime < new Date()) {
       return res.status(400).json({
         success: false,
@@ -116,10 +127,10 @@ const createBooking = async (req, res) => {
             itemExists = true;
 
             // Check if artist is already booked on the same date
-            const startOfDay = new Date(bookingDate);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(bookingDate);
-            endOfDay.setHours(23, 59, 59, 999);
+            // Parse date components to avoid timezone issues
+            const [year, month, day] = bookingDate.split("-").map(Number);
+            const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+            const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
             const existingBooking = await Booking.findOne({
               "items.type": "bandArtist",
@@ -176,11 +187,15 @@ const createBooking = async (req, res) => {
     }
 
     // Create the booking
+    // Parse bookingDate to avoid timezone issues
+    const [bookingYear, bookingMonth, bookingDay] = bookingDate
+      .split("-")
+      .map(Number);
     const booking = new Booking({
       user: userId,
       items: validatedItems,
       totalAmount,
-      bookingDate: new Date(bookingDate),
+      bookingDate: new Date(bookingYear, bookingMonth - 1, bookingDay),
       bookingTime,
       duration,
       notes,
@@ -636,11 +651,10 @@ const checkArtistAvailability = async (req, res) => {
     }
 
     // Check if artist is already booked on the specific date
-    // Convert bookingDate to start and end of day for proper comparison
-    const startOfDay = new Date(bookingDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(bookingDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Parse date components to avoid timezone issues
+    const [year, month, day] = bookingDate.split("-").map(Number);
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
 
     const existingBooking = await Booking.findOne({
       "items.type": "bandArtist",
