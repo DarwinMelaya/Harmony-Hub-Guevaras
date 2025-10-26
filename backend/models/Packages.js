@@ -41,4 +41,8 @@ const PackageSchema = new mongoose.Schema(
   { timestamps: true } 
 );
 
+// Add indexes for better query performance
+PackageSchema.index({ isAvailable: 1, createdAt: -1 }); // For public packages queries
+PackageSchema.index({ createdAt: -1 }); // For sorting by creation date
+
 module.exports = mongoose.model("Packages", PackageSchema);

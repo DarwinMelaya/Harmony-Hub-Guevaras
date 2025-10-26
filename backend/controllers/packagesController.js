@@ -36,8 +36,11 @@ exports.addPackage = async (req, res) => {
 // Get all packages
 exports.getAllPackages = async (req, res) => {
   try {
+    // Optimized query with lean() for better performance
     const packages = await Package.find()
-      .populate("items.inventoryItem", "name price quantity image"); 
+      .populate("items.inventoryItem", "name price quantity image")
+      .sort({ createdAt: -1 })
+      .lean(); 
 
     res.status(200).json(packages);
   } catch (error) {
@@ -49,13 +52,37 @@ exports.getAllPackages = async (req, res) => {
 // Get all packages (public - for clients)
 exports.getPublicPackages = async (req, res) => {
   try {
-    const packages = await Package.find()
-      .populate("items.inventoryItem", "name price quantity image"); 
+    // Optimized query: use lean() and limit populated fields for better performance
+    const packages = await Package.find(
+      { isAvailable: true },
+      {
+        name: 1,
+        description: 1,
+        price: 1,
+        image: 1,
+        items: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      }
+    )
+      .populate({
+        path: "items.inventoryItem",
+        select: "name price quantity", // Exclude images from populated inventory items
+      })
+      .sort({ createdAt: -1 })
+      .lean(); // Convert to plain JavaScript objects for faster JSON serialization
 
+    // Set cache headers for 5 minutes
+    res.set("Cache-Control", "public, max-age=300");
     res.status(200).json({ success: true, packages });
   } catch (error) {
     console.error("Error fetching public packages:", error);
-    res.status(500).json({ success: false, error: "Server error while fetching packages" });
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: "Server error while fetching packages",
+      });
   }
 };
 

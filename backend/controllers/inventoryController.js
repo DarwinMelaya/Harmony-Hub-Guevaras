@@ -55,7 +55,8 @@ exports.addInventory = async (req, res) => {
 // Get all inventory items
 exports.getAllInventory = async (req, res) => {
   try {
-    const inventory = await Inventory.find().sort({ createdAt: -1 });
+    // Optimized query with lean() for better performance
+    const inventory = await Inventory.find().sort({ createdAt: -1 }).lean();
     res.status(200).json({ success: true, inventory });
   } catch (error) {
     console.error("Get Inventory Error:", error);
@@ -66,9 +67,24 @@ exports.getAllInventory = async (req, res) => {
 // Get all inventory items (public - for clients)
 exports.getPublicInventory = async (req, res) => {
   try {
-    const inventory = await Inventory.find({ quantity: { $gt: 0 } }).sort({
-      createdAt: -1,
-    });
+    // Optimized query: select only necessary fields and use lean() for better performance
+    const inventory = await Inventory.find(
+      { quantity: { $gt: 0 }, status: { $ne: "retired" } },
+      {
+        name: 1,
+        price: 1,
+        quantity: 1,
+        image: 1,
+        condition: 1,
+        status: 1,
+        createdAt: 1,
+      }
+    )
+      .sort({ createdAt: -1 })
+      .lean(); // Convert to plain JavaScript objects for faster JSON serialization
+
+    // Set cache headers for 5 minutes
+    res.set("Cache-Control", "public, max-age=300");
     res.status(200).json({ success: true, inventory });
   } catch (error) {
     console.error("Get Public Inventory Error:", error);

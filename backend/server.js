@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const session = require("express-session");
 const passport = require("passport");
 const cors = require("cors");
+const compression = require("compression");
 const http = require("http");
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
@@ -22,6 +23,9 @@ mongoose
   .catch((err) => console.log(err));
 
 // Middleware
+// Enable gzip compression for all responses
+app.use(compression());
+
 app.use(
   cors({
     origin: "http://localhost:5173", // Frontend URL

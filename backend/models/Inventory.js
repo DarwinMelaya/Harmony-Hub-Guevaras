@@ -132,4 +132,10 @@ InventorySchema.methods.calculateNextMaintenance = function () {
 InventorySchema.set("toJSON", { virtuals: true });
 InventorySchema.set("toObject", { virtuals: true });
 
+// Add indexes for better query performance
+InventorySchema.index({ quantity: 1, status: 1 }); // For public inventory queries
+InventorySchema.index({ status: 1 }); // For status filtering
+InventorySchema.index({ createdAt: -1 }); // For sorting by creation date
+InventorySchema.index({ nextMaintenanceDate: 1, status: 1 }); // For maintenance queries
+
 module.exports = mongoose.model("Inventory", InventorySchema);

@@ -357,7 +357,11 @@ const deleteUser = async (req, res) => {
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    // Optimized query with lean() for better performance
+    const users = await User.find()
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -617,14 +621,28 @@ const getArtists = async (req, res) => {
 // Get all artists for public display (no auth required)
 const getArtistsPublic = async (req, res) => {
   try {
-    const artists = await User.find({
-      role: "artist",
-      isActive: true,
-      isAvailable: true,
-    })
-      .select("-password -email -phoneNumber -location -username")
-      .sort({ createdAt: -1 });
+    // Optimized query: select only necessary fields and use lean() for better performance
+    const artists = await User.find(
+      {
+        role: "artist",
+        isActive: true,
+        isAvailable: true,
+      },
+      {
+        fullName: 1,
+        displayName: 1,
+        genre: 1,
+        booking_fee: 1,
+        profilePhoto: 1,
+        isAvailable: 1,
+        createdAt: 1,
+      }
+    )
+      .sort({ createdAt: -1 })
+      .lean(); // Convert to plain JavaScript objects for faster JSON serialization
 
+    // Set cache headers for 5 minutes
+    res.set("Cache-Control", "public, max-age=300");
     res.status(200).json({
       success: true,
       data: artists,

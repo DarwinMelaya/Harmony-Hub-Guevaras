@@ -121,4 +121,10 @@ UserSchema.methods.isClient = function () {
   return this.role === "client";
 };
 
+// Add indexes for better query performance
+// Note: email and username already have indexes due to unique: true
+UserSchema.index({ role: 1, isActive: 1, isAvailable: 1 }); // For artist queries
+UserSchema.index({ role: 1, isActive: 1 }); // For role-based queries
+UserSchema.index({ createdAt: -1 }); // For sorting by creation date
+
 module.exports = mongoose.model("User", UserSchema);
