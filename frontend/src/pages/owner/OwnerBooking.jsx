@@ -30,6 +30,8 @@ const OwnerBooking = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [balanceAmount, setBalanceAmount] = useState("");
 
   useEffect(() => {
     fetchBookings();
@@ -206,6 +208,42 @@ const OwnerBooking = () => {
 
   const formatTime = (timeString) => {
     return timeString;
+  };
+
+  const handleMarkAsCompleted = (booking) => {
+    setSelectedBooking(booking);
+
+    // Check if there's a remaining balance
+    if (booking.remainingBalance && booking.remainingBalance > 0) {
+      setShowBalanceModal(true);
+      setBalanceAmount("");
+    } else {
+      // Directly update status if no remaining balance
+      updateBookingStatus(booking._id, "completed");
+      setShowDetailsModal(false);
+    }
+  };
+
+  const handleBalanceSubmit = () => {
+    const enteredAmount = parseFloat(balanceAmount);
+    const expectedBalance = selectedBooking.remainingBalance;
+
+    if (!balanceAmount || isNaN(enteredAmount)) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    if (enteredAmount !== expectedBalance) {
+      alert(
+        `Please enter the exact remaining balance amount: ₱${expectedBalance.toLocaleString()}`
+      );
+      return;
+    }
+
+    // Close balance modal and complete the booking
+    setShowBalanceModal(false);
+    updateBookingStatus(selectedBooking._id, "completed");
+    setShowDetailsModal(false);
   };
 
   return (
@@ -398,74 +436,17 @@ const OwnerBooking = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setShowDetailsModal(true);
-                              }}
-                              className="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded transition-colors"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-
-                            {booking.status === "pending" && (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    updateBookingStatus(
-                                      booking._id,
-                                      "confirmed"
-                                    )
-                                  }
-                                  disabled={updatingStatus === booking._id}
-                                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white p-2 rounded transition-colors"
-                                  title="Confirm Booking"
-                                >
-                                  {updatingStatus === booking._id ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                  ) : (
-                                    <CheckCircle className="w-4 h-4" />
-                                  )}
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    updateBookingStatus(
-                                      booking._id,
-                                      "cancelled"
-                                    )
-                                  }
-                                  disabled={updatingStatus === booking._id}
-                                  className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white p-2 rounded transition-colors"
-                                  title="Cancel Booking"
-                                >
-                                  {updatingStatus === booking._id ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                  ) : (
-                                    <XCircle className="w-4 h-4" />
-                                  )}
-                                </button>
-                              </>
-                            )}
-
-                            {booking.status === "confirmed" && (
-                              <button
-                                onClick={() =>
-                                  updateBookingStatus(booking._id, "completed")
-                                }
-                                disabled={updatingStatus === booking._id}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white p-2 rounded transition-colors"
-                                title="Mark as Completed"
-                              >
-                                {updatingStatus === booking._id ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                ) : (
-                                  <CheckCircle className="w-4 h-4" />
-                                )}
-                              </button>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowDetailsModal(true);
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors flex items-center gap-2"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="text-sm">View Details</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -748,10 +729,7 @@ const OwnerBooking = () => {
                 )}
                 {selectedBooking.status === "confirmed" && (
                   <button
-                    onClick={() => {
-                      updateBookingStatus(selectedBooking._id, "completed");
-                      setShowDetailsModal(false);
-                    }}
+                    onClick={() => handleMarkAsCompleted(selectedBooking)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                   >
                     Mark as Completed
@@ -789,6 +767,62 @@ const OwnerBooking = () => {
                 selectedVenue={null}
                 isLightText
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remaining Balance Modal */}
+      {showBalanceModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Collect Remaining Balance
+            </h2>
+            <div className="mb-6">
+              <div className="bg-orange-900/20 border border-orange-700 rounded-lg p-4 mb-4">
+                <p className="text-orange-300 text-sm mb-2">
+                  This booking has a remaining balance that must be collected
+                  before marking as completed.
+                </p>
+                <p className="text-white font-bold text-lg">
+                  Remaining Balance: ₱
+                  {Number(selectedBooking.remainingBalance).toLocaleString()}
+                </p>
+              </div>
+
+              <label className="block text-gray-300 mb-2">
+                Enter Collected Amount <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="number"
+                value={balanceAmount}
+                onChange={(e) => setBalanceAmount(e.target.value)}
+                placeholder="Enter exact amount collected"
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-gray-400 text-sm mt-2">
+                Please enter the exact remaining balance amount to confirm
+                collection.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowBalanceModal(false);
+                  setBalanceAmount("");
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBalanceSubmit}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+              >
+                Confirm Collection
+              </button>
             </div>
           </div>
         </div>

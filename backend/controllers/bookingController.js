@@ -447,6 +447,10 @@ const updateBookingStatus = async (req, res) => {
       if (affectedItems && Array.isArray(affectedItems)) {
         booking.affectedItems = affectedItems;
       }
+
+      // Clear remaining balance when marking as completed
+      // This means the balance has been collected from the client
+      booking.remainingBalance = 0;
     }
 
     await booking.save();
