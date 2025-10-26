@@ -8,6 +8,10 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
     price: "",
     quantity: "",
     image: "",
+    condition: "excellent",
+    status: "available",
+    maintenanceIntervalDays: "90",
+    notes: "",
   });
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState(null);
@@ -38,6 +42,10 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
           price: formData.price,
           quantity: formData.quantity,
           image: formData.image,
+          condition: formData.condition,
+          status: formData.status,
+          maintenanceIntervalDays: formData.maintenanceIntervalDays,
+          notes: formData.notes,
         },
         {
           headers: {
@@ -46,7 +54,16 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
           },
         }
       );
-      setFormData({ name: "", price: "", quantity: "", image: "" });
+      setFormData({
+        name: "",
+        price: "",
+        quantity: "",
+        image: "",
+        condition: "excellent",
+        status: "available",
+        maintenanceIntervalDays: "90",
+        notes: "",
+      });
       setImagePreview(null);
       onSuccess();
       onClose();
@@ -58,7 +75,16 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleClose = () => {
-    setFormData({ name: "", price: "", quantity: "", image: "" });
+    setFormData({
+      name: "",
+      price: "",
+      quantity: "",
+      image: "",
+      condition: "excellent",
+      status: "available",
+      maintenanceIntervalDays: "90",
+      notes: "",
+    });
     setImagePreview(null);
     setError(null);
     onClose();
@@ -67,13 +93,16 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-gray-800/95 backdrop-blur-md rounded-lg p-6 w-full max-w-md mx-4 border border-gray-700/50 shadow-2xl">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto">
+      <div className="bg-gray-800/95 backdrop-blur-md rounded-lg p-6 w-full max-w-2xl mx-4 my-8 border border-gray-700/50 shadow-2xl">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <Plus className="w-5 h-5 text-blue-400" />
           Add New Inventory
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 max-h-[70vh] overflow-y-auto pr-2"
+        >
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Name
@@ -138,6 +167,80 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
                 className="mt-2 h-24 rounded border border-gray-600"
               />
             )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Condition
+              </label>
+              <select
+                value={formData.condition}
+                onChange={(e) =>
+                  setFormData({ ...formData, condition: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-200"
+              >
+                <option value="excellent">Excellent</option>
+                <option value="good">Good</option>
+                <option value="fair">Fair</option>
+                <option value="poor">Poor</option>
+                <option value="needs-repair">Needs Repair</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({ ...formData, status: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-200"
+              >
+                <option value="available">Available</option>
+                <option value="in-use">In Use</option>
+                <option value="under-maintenance">Under Maintenance</option>
+                <option value="needs-repair">Needs Repair</option>
+                <option value="retired">Retired</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Maintenance Interval (days)
+            </label>
+            <input
+              type="number"
+              required
+              min="1"
+              value={formData.maintenanceIntervalDays}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  maintenanceIntervalDays: e.target.value,
+                })
+              }
+              className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
+              placeholder="90"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              How often maintenance should be performed (default: 90 days)
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Notes
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              rows="3"
+              className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
+              placeholder="Additional notes or specifications..."
+            />
           </div>
           {error && (
             <div className="bg-red-900/50 backdrop-blur-sm text-red-100 px-3 py-2 rounded-lg border border-red-700/50 flex items-center gap-2">
