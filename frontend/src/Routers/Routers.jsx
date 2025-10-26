@@ -26,6 +26,7 @@ import {
   ArtistBooking,
   UserChat,
   OwnerChat,
+  Policy,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -35,6 +36,7 @@ export const Routers = () => {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/policy" element={<Policy />} />
         {/* Auth Pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

@@ -65,7 +65,25 @@ module.exports = function (passport) {
             // Note: password field is not included since it's not required for Google OAuth users
           });
 
+          // Send confirmation email
+          const sendEmail = require("../utils/sendEmail");
+
+          await sendEmail(
+            newUser.email,
+            "Welcome to Harmony Hub 🎉",
+            `Hi ${newUser.fullName}, you just signed up on Harmony Hub using Google.`,
+            `
+              <h2>Welcome to Harmony Hub!</h2>
+              <p>Hi <strong>${newUser.fullName}</strong>,</p>
+              <p>You just signed up on <strong>Harmony Hub</strong> using your Google account (${newUser.email}).</p>
+              <p>If this wasn’t you, please ignore this message.</p>
+              <br/>
+              <p>With love,<br/>The Harmony Hub Team</p>
+            `
+          );
+
           return done(null, newUser);
+          
         } catch (err) {
           console.error("Google OAuth error:", err);
           done(err, null);

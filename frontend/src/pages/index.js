@@ -3,6 +3,7 @@ export { default as Login } from "./auth/Login";
 export { default as Signup } from "./auth/Signup";
 // Pages
 export { default as Home } from "./home/HomePage";
+export { default as Policy } from "./home/Policy";
 
 // Admin Pages
 export { default as AdminDashboard } from "./admin/AdminDashboard";

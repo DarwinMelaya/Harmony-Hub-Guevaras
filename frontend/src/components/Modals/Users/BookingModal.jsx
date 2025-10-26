@@ -31,6 +31,8 @@ const BookingModal = ({
   const [cityAddr, setCityAddr] = useState("");
   const [barangayAddr, setBarangayAddr] = useState("");
 
+  const [showPolicyReminder, setShowPolicyReminder] = useState(false);
+
   useEffect(() => {
     provinces("17").then((response) => {
       setProvince(response);
@@ -80,7 +82,18 @@ const BookingModal = ({
             </div>
 
             <form
-              onSubmit={handleBookingSubmit}
+              onSubmit={(e) => {
+                e.preventDefault();
+
+                // Check if policy is accepted before submitting
+                if (!bookingData.policyAccepted) {
+                  setShowPolicyReminder(true);
+                  return;
+                }
+
+                setShowPolicyReminder(false);
+                handleBookingSubmit(e);
+              }}
               className="p-6 overflow-y-auto max-h-[70vh]"
             >
               {/* Cart Summary */}
@@ -456,6 +469,39 @@ const BookingModal = ({
                     </div>
                   </div>
                 </div>
+              </div>
+              
+              {/* Policy Agreement */}
+              <div className="mb-6 bg-gray-700 p-4 rounded-lg">
+                <label className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={bookingData.policyAccepted || false}
+                    onChange={(e) =>
+                      handleBookingDataChange("policyAccepted", e.target.checked)
+                    }
+                    className="mt-1"
+                  />
+                  <span className="text-gray-300 text-sm leading-relaxed">
+                    I have read and agree to the{" "}
+                    <button
+                      type="button"
+                      onClick={() => window.open("/policy", "_blank")}
+                      className="text-blue-400 hover:underline"
+                    >
+                      Policy / Contract
+                    </button>{" "}
+                    before proceeding with the booking.
+                  </span>
+                </label>
+
+                {/* Policy reminder message */}
+                {showPolicyReminder && (
+                  <div className="mt-3 p-3 bg-red-900/30 border border-red-700 text-red-400 rounded-lg text-sm flex items-center">
+                    <AlertTriangle className="w-4 h-4 mr-2 text-red-400" />
+                    Please read and agree to the Policy / Contract before confirming your booking.
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 mt-6">
