@@ -131,7 +131,7 @@ const BookingSchema = new mongoose.Schema({
 BookingSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
   next();
-});
+});   
 
 // Index for better query performance
 BookingSchema.index({ user: 1, bookingDate: 1 });
