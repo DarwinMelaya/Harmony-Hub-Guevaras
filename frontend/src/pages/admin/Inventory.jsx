@@ -17,6 +17,10 @@ import {
   History,
   Edit,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 // Helper functions moved outside component for better performance
@@ -231,6 +235,10 @@ const Inventory = () => {
   const [maintenanceHistory, setMaintenanceHistory] = useState(null);
   const [showMaintenanceHistory, setShowMaintenanceHistory] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   // Fetch inventory from backend
   const fetchInventory = async () => {
     try {
@@ -401,6 +409,54 @@ const Inventory = () => {
     return inventory.filter((item) => isMaintenanceDue(item)).length;
   }, [inventory]);
 
+  // Pagination calculations
+  const paginationData = useMemo(() => {
+    const totalItems = inventory.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentItems = inventory.slice(startIndex, endIndex);
+
+    return {
+      currentItems,
+      totalPages,
+      totalItems,
+      startIndex,
+      endIndex: Math.min(endIndex, totalItems),
+    };
+  }, [inventory, currentPage, itemsPerPage]);
+
+  // Reset to first page when inventory changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [inventory.length]);
+
+  // Pagination handlers
+  const goToPage = useCallback((page) => {
+    setCurrentPage(page);
+  }, []);
+
+  const goToFirstPage = useCallback(() => {
+    setCurrentPage(1);
+  }, []);
+
+  const goToLastPage = useCallback(() => {
+    setCurrentPage(paginationData.totalPages);
+  }, [paginationData.totalPages]);
+
+  const goToPreviousPage = useCallback(() => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((prev) => Math.min(paginationData.totalPages, prev + 1));
+  }, [paginationData.totalPages]);
+
+  const handleItemsPerPageChange = useCallback((value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  }, []);
+
   return (
     <Layout>
       <div className="bg-[#30343c] min-h-screen w-full text-white p-8">
@@ -502,7 +558,7 @@ const Inventory = () => {
                       </td>
                     </tr>
                   ) : (
-                    inventory.map((item) => (
+                    paginationData.currentItems.map((item) => (
                       <InventoryRow
                         key={item._id}
                         item={item}
@@ -518,11 +574,165 @@ const Inventory = () => {
             </div>
           </div>
 
-          {/* Results Summary */}
+          {/* Pagination Controls */}
           {inventory.length > 0 && !loading && (
-            <div className="mt-4 text-sm text-gray-400 text-center">
-              Showing {inventory.length} inventory item
-              {inventory.length > 1 ? "s" : ""}
+            <div className="mt-6 bg-gray-800 rounded-lg border border-gray-700 p-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                {/* Items per page selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-400">Items per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) =>
+                      handleItemsPerPageChange(Number(e.target.value))
+                    }
+                    className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-md text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+
+                {/* Results info */}
+                <div className="text-sm text-gray-400">
+                  Showing {paginationData.startIndex + 1} to{" "}
+                  {paginationData.endIndex} of {paginationData.totalItems} items
+                </div>
+
+                {/* Pagination buttons */}
+                <div className="flex items-center gap-1">
+                  {/* First page */}
+                  <button
+                    onClick={goToFirstPage}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="First page"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Previous page */}
+                  <button
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1 mx-2">
+                    {(() => {
+                      const pages = [];
+                      const totalPages = paginationData.totalPages;
+                      const maxVisiblePages = 5;
+
+                      let startPage = Math.max(
+                        1,
+                        currentPage - Math.floor(maxVisiblePages / 2)
+                      );
+                      let endPage = Math.min(
+                        totalPages,
+                        startPage + maxVisiblePages - 1
+                      );
+
+                      // Adjust start if we're near the end
+                      if (endPage - startPage < maxVisiblePages - 1) {
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+
+                      // Add first page and ellipsis if needed
+                      if (startPage > 1) {
+                        pages.push(
+                          <button
+                            key={1}
+                            onClick={() => goToPage(1)}
+                            className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors"
+                          >
+                            1
+                          </button>
+                        );
+                        if (startPage > 2) {
+                          pages.push(
+                            <span
+                              key="ellipsis-start"
+                              className="px-2 text-gray-500"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                      }
+
+                      // Add visible page numbers
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => goToPage(i)}
+                            className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                              currentPage === i
+                                ? "bg-blue-600 text-white font-medium"
+                                : "bg-gray-700 hover:bg-gray-600 text-white"
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+
+                      // Add ellipsis and last page if needed
+                      if (endPage < totalPages) {
+                        if (endPage < totalPages - 1) {
+                          pages.push(
+                            <span
+                              key="ellipsis-end"
+                              className="px-2 text-gray-500"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                        pages.push(
+                          <button
+                            key={totalPages}
+                            onClick={() => goToPage(totalPages)}
+                            className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors"
+                          >
+                            {totalPages}
+                          </button>
+                        );
+                      }
+
+                      return pages;
+                    })()}
+                  </div>
+
+                  {/* Next page */}
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === paginationData.totalPages}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  {/* Last page */}
+                  <button
+                    onClick={goToLastPage}
+                    disabled={currentPage === paginationData.totalPages}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Last page"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
