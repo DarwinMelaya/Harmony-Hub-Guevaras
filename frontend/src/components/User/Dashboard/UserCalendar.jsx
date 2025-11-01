@@ -23,18 +23,15 @@ const UserCalendar = () => {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [bookings, setBookings] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
   const [artists, setArtists] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [showModal, setShowModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-  const [viewMode, setViewMode] = useState("myBookings"); // myBookings, artists, equipment, packages
+  const [viewMode, setViewMode] = useState("allBookings"); // allBookings, artists, equipment, packages
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // Fetch all data
@@ -46,19 +43,16 @@ const UserCalendar = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("token");
 
-      const [myBookingsRes, artistsRes, inventoryRes, packagesRes] =
+      const [allBookingsRes, artistsRes, inventoryRes, packagesRes] =
         await Promise.all([
-          axios.get(`${API_BASE_URL}/bookings/my-bookings`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          axios.get(`${API_BASE_URL}/bookings/calendar`), // Public endpoint
           axios.get(`${API_BASE_URL}/users/artists/public`),
           axios.get(`${API_BASE_URL}/inventory/public`),
           axios.get(`${API_BASE_URL}/packages/public`),
         ]);
 
-      setBookings(myBookingsRes.data?.data || []);
+      setAllBookings(allBookingsRes.data?.data || []);
       setArtists(artistsRes.data?.data || []);
       setInventory(inventoryRes.data?.inventory || []);
       setPackages(packagesRes.data?.packages || []);
@@ -69,15 +63,15 @@ const UserCalendar = () => {
     }
   };
 
-  // Format bookings by date
-  const schedulesByDate = {};
-  bookings.forEach((booking) => {
+  // Format all bookings by date (from all users)
+  const allSchedulesByDate = {};
+  allBookings.forEach((booking) => {
     const bookingDate = new Date(booking.bookingDate);
     const dateKey = bookingDate.toDateString();
-    if (!schedulesByDate[dateKey]) {
-      schedulesByDate[dateKey] = [];
+    if (!allSchedulesByDate[dateKey]) {
+      allSchedulesByDate[dateKey] = [];
     }
-    schedulesByDate[dateKey].push(booking);
+    allSchedulesByDate[dateKey].push(booking);
   });
 
   // Get status color
@@ -145,13 +139,6 @@ const UserCalendar = () => {
     }
   };
 
-  // Handle booking click
-  const handleBookingClick = (e, booking) => {
-    e.stopPropagation();
-    setSelectedBooking(booking);
-    setShowModal(true);
-  };
-
   // Check if artist is available on a specific date
   const checkArtistAvailability = async (artistId, date) => {
     if (!date) return true;
@@ -200,11 +187,13 @@ const UserCalendar = () => {
   const handleDateClick = async (date) => {
     if (!date) return;
 
-    if (viewMode === "myBookings") {
+    if (viewMode === "allBookings") {
       const dateKey = date.toDateString();
-      if (schedulesByDate[dateKey] && schedulesByDate[dateKey].length > 0) {
-        setSelectedBooking(schedulesByDate[dateKey][0]);
-        setShowModal(true);
+      const bookingsOnDate = allSchedulesByDate[dateKey] || [];
+      if (bookingsOnDate.length > 0) {
+        // Show a modal with all bookings on this date
+        setSelectedDate({ date, bookings: bookingsOnDate });
+        setShowAvailabilityModal(true);
       }
     } else {
       // Show availability for the date
@@ -248,15 +237,15 @@ const UserCalendar = () => {
       {/* View Mode Switcher */}
       <div className="mb-4 flex flex-wrap gap-2">
         <button
-          onClick={() => setViewMode("myBookings")}
+          onClick={() => setViewMode("allBookings")}
           className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-            viewMode === "myBookings"
-              ? "bg-blue-600 text-white"
+            viewMode === "allBookings"
+              ? "bg-indigo-600 text-white"
               : "bg-gray-700 text-gray-300 hover:bg-gray-600"
           }`}
         >
           <ShoppingCart className="w-4 h-4" />
-          My Bookings
+          All Bookings
         </button>
         <button
           onClick={() => setViewMode("artists")}
@@ -336,7 +325,9 @@ const UserCalendar = () => {
             date.getFullYear() === today.getFullYear();
 
           const dateKey = date ? date.toDateString() : null;
-          const dayBookings = dateKey ? schedulesByDate[dateKey] || [] : [];
+          const allDayBookings = dateKey
+            ? allSchedulesByDate[dateKey] || []
+            : [];
 
           return (
             <div
@@ -359,12 +350,12 @@ const UserCalendar = () => {
               </div>
 
               {/* Display content based on view mode */}
-              {viewMode === "myBookings" && dayBookings.length > 0 && (
+              {/* Show all bookings from all users */}
+              {viewMode === "allBookings" && allDayBookings.length > 0 && (
                 <div className="space-y-1 overflow-y-auto max-h-[90px] hide-scrollbar">
-                  {dayBookings.map((booking, idx) => (
+                  {allDayBookings.map((booking, idx) => (
                     <div
                       key={idx}
-                      onClick={(e) => handleBookingClick(e, booking)}
                       className={`${getStatusColor(
                         booking.status
                       )} rounded p-1.5 text-xs hover:opacity-80 transition-all cursor-pointer`}
@@ -376,7 +367,7 @@ const UserCalendar = () => {
                         </span>
                       </div>
                       <div className="truncate text-xs opacity-90">
-                        {booking.items?.length || 0} item(s)
+                        {booking.itemsCount || 0} item(s)
                       </div>
                       <div className="truncate text-xs font-medium">
                         ₱{Number(booking.totalAmount || 0).toLocaleString()}
@@ -419,165 +410,6 @@ const UserCalendar = () => {
         })}
       </div>
 
-      {/* Booking Details Modal */}
-      {showModal && selectedBooking && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-white">Booking Details</h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Booking Status */}
-            <div className="mb-4">
-              <span
-                className={`${getStatusColor(
-                  selectedBooking.status
-                )} px-3 py-1 rounded-lg text-sm font-medium`}
-              >
-                {selectedBooking.status.toUpperCase()}
-              </span>
-            </div>
-
-            {/* Booking Information */}
-            <div className="space-y-3 text-gray-300">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-400 text-sm">Date</p>
-                  <p className="text-white font-medium">
-                    {new Date(selectedBooking.bookingDate).toLocaleDateString(
-                      "en-US",
-                      {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Time</p>
-                  <p className="text-white font-medium">
-                    {formatTime(selectedBooking.bookingTime)}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-gray-400 text-sm">Duration</p>
-                <p className="text-white font-medium">
-                  {selectedBooking.duration || 1} hour(s)
-                </p>
-              </div>
-
-              {/* Items */}
-              <div>
-                <p className="text-gray-400 text-sm mb-2">Booked Items</p>
-                <div className="bg-gray-900 rounded-lg p-3 space-y-2">
-                  {selectedBooking.items?.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex justify-between items-center border-b border-gray-700 pb-2 last:border-b-0 last:pb-0"
-                    >
-                      <div>
-                        <p className="text-white font-medium">{item.name}</p>
-                        <p className="text-gray-400 text-xs">
-                          {item.type === "inventory"
-                            ? `Quantity: ${item.quantity}`
-                            : item.type === "package"
-                            ? "Package"
-                            : "Artist/Band"}
-                        </p>
-                      </div>
-                      <p className="text-green-400 font-semibold">
-                        ₱{Number(item.price).toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Total Amount */}
-              <div className="border-t border-gray-700 pt-3">
-                <div className="flex justify-between items-center">
-                  <p className="text-gray-400 text-lg">Total Amount</p>
-                  <p className="text-green-400 font-bold text-xl">
-                    ₱{Number(selectedBooking.totalAmount || 0).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              {/* Payment Method */}
-              <div>
-                <p className="text-gray-400 text-sm">Payment Method</p>
-                <p className="text-white font-medium">
-                  {selectedBooking.paymentMethod?.toUpperCase() || "CASH"}
-                </p>
-              </div>
-
-              {/* Notes */}
-              {selectedBooking.notes && (
-                <div>
-                  <p className="text-gray-400 text-sm">Notes</p>
-                  <p className="text-white">{selectedBooking.notes}</p>
-                </div>
-              )}
-
-              {/* Contact Info */}
-              {selectedBooking.contactInfo && (
-                <div className="bg-gray-900 rounded-lg p-3">
-                  <p className="text-gray-400 text-sm mb-2">Contact Info</p>
-                  {selectedBooking.contactInfo.phone && (
-                    <p className="text-white text-sm">
-                      Phone: {selectedBooking.contactInfo.phone}
-                    </p>
-                  )}
-                  {selectedBooking.contactInfo.email && (
-                    <p className="text-white text-sm">
-                      Email: {selectedBooking.contactInfo.email}
-                    </p>
-                  )}
-                  {selectedBooking.contactInfo.address && (
-                    <p className="text-white text-sm">
-                      Address: {selectedBooking.contactInfo.address}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Created At */}
-              <div className="text-xs text-gray-500">
-                Booked on:{" "}
-                {new Date(selectedBooking.createdAt).toLocaleString()}
-              </div>
-            </div>
-
-            {/* Close Button */}
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowModal(false)}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Availability Modal */}
       {showAvailabilityModal && selectedDate && (
         <div
@@ -591,7 +423,7 @@ const UserCalendar = () => {
             {/* Modal Header */}
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold text-white">
-                Availability for{" "}
+                {viewMode === "allBookings" ? "Bookings" : "Availability"} for{" "}
                 {(selectedDate.date || selectedDate).toLocaleDateString(
                   "en-US",
                   {
@@ -609,6 +441,82 @@ const UserCalendar = () => {
                 ×
               </button>
             </div>
+
+            {/* All Bookings View */}
+            {viewMode === "allBookings" && selectedDate.bookings && (
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-indigo-400 flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5" />
+                  All Bookings ({selectedDate.bookings.length})
+                </h4>
+                <p className="text-gray-400 text-sm">
+                  Showing all confirmed and pending bookings for this date. Use
+                  this to check availability before making your booking.
+                </p>
+
+                <div className="space-y-3">
+                  {selectedDate.bookings.map((booking, idx) => (
+                    <div
+                      key={booking._id || idx}
+                      className="bg-gray-900 rounded-lg p-4 border border-indigo-700"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-white font-medium text-lg">
+                              {formatTime(booking.bookingTime)}
+                            </span>
+                            <span
+                              className={`${getStatusColor(
+                                booking.status
+                              )} px-2 py-0.5 rounded text-xs`}
+                            >
+                              {booking.status}
+                            </span>
+                          </div>
+                          <p className="text-gray-400 text-sm">
+                            Duration: {booking.duration || 1} hour(s)
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-green-400 font-semibold text-lg">
+                            ₱{Number(booking.totalAmount || 0).toLocaleString()}
+                          </p>
+                          <p className="text-gray-500 text-xs">
+                            {booking.itemsCount} item(s)
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Items List */}
+                      {booking.items && booking.items.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-700">
+                          <p className="text-gray-400 text-xs mb-2">
+                            Booked Items:
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {booking.items.map((item, itemIdx) => (
+                              <span
+                                key={itemIdx}
+                                className="bg-gray-800 text-gray-300 px-2 py-1 rounded text-xs"
+                              >
+                                {item.name || item.type}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {selectedDate.bookings.length === 0 && (
+                  <p className="text-gray-400 text-center py-8">
+                    No bookings found for this date
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Artists Availability */}
             {viewMode === "artists" && (
@@ -868,7 +776,7 @@ const UserCalendar = () => {
       )}
 
       {/* Legend */}
-      {viewMode === "myBookings" && (
+      {viewMode === "allBookings" && (
         <div className="mt-4 flex flex-wrap gap-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-yellow-600 rounded"></div>

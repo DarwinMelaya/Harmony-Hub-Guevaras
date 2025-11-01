@@ -137,6 +137,10 @@ const AdminCalendar = ({
                           {schedule.event_name}
                         </div>
                         <div className="truncate">
+                          <span className="font-medium">User:</span>{" "}
+                          {schedule.users?.name || schedule.user_name || "N/A"}
+                        </div>
+                        <div className="truncate">
                           <span className="font-medium">Dept:</span>{" "}
                           {schedule.department}
                         </div>

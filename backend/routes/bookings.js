@@ -9,12 +9,17 @@ const {
   cancelBooking,
   getArtistBookings,
   checkArtistAvailability,
+  getPublicCalendarBookings,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
 
-// Check artist availability for specific date (public endpoint - no auth required)
+// Public endpoints (no auth required)
+// Check artist availability for specific date
 router.get("/check-availability", checkArtistAvailability);
+
+// Get all bookings for calendar view (limited info for privacy)
+router.get("/calendar", getPublicCalendarBookings);
 
 // All other routes require authentication
 router.use(authenticateToken);

@@ -747,6 +747,62 @@ const checkArtistAvailability = async (req, res) => {
   }
 };
 
+// Get all bookings for calendar view (public - limited info for privacy)
+const getPublicCalendarBookings = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    // Build query for date range
+    const query = {
+      status: { $in: ["pending", "confirmed"] }, // Only show active bookings
+    };
+
+    // If date range is provided, filter by it
+    if (startDate && endDate) {
+      query.bookingDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    // Fetch bookings with limited information for privacy
+    const bookings = await Booking.find(query)
+      .select(
+        "bookingDate bookingTime duration status totalAmount items.type items.name items.itemId"
+      )
+      .sort({ bookingDate: 1 });
+
+    // Format bookings to hide sensitive information
+    const publicBookings = bookings.map((booking) => ({
+      _id: booking._id,
+      bookingDate: booking.bookingDate,
+      bookingTime: booking.bookingTime,
+      duration: booking.duration,
+      status: booking.status,
+      totalAmount: booking.totalAmount,
+      itemsCount: booking.items?.length || 0,
+      items: booking.items?.map((item) => ({
+        type: item.type,
+        name: item.name,
+        itemId: item.itemId, // Include itemId to check artist bookings
+      })),
+    }));
+
+    res.json({
+      success: true,
+      data: publicBookings,
+      total: publicBookings.length,
+    });
+  } catch (error) {
+    console.error("Error fetching public calendar bookings:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -756,4 +812,5 @@ module.exports = {
   cancelBooking,
   getArtistBookings,
   checkArtistAvailability,
+  getPublicCalendarBookings,
 };
