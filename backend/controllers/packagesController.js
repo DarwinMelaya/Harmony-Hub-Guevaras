@@ -1,11 +1,17 @@
 const Package = require("../models/Packages");
 const Inventory = require("../models/Inventory");
+const {
+  uploadImageToFirebase,
+  deleteImageFromFirebase,
+  replaceImageInFirebase,
+} = require("../utils/firebaseImageUpload");
 
 // Add new package
 exports.addPackage = async (req, res) => {
   try {
     const { name, description, items, price, image } = req.body;
 
+    // Validate inventory items
     for (const item of items) {
       const inventoryItem = await Inventory.findById(item.inventoryItem);
       if (!inventoryItem) {
@@ -15,14 +21,27 @@ exports.addPackage = async (req, res) => {
       }
     }
 
-    const newPackage = new Package({
+    const packageData = {
       name,
       description,
       items,
       price,
-      image,
-    });
+    };
 
+    // Upload image to Firebase Storage if provided
+    if (image) {
+      try {
+        const imageUrl = await uploadImageToFirebase(image, "packages");
+        packageData.image = imageUrl;
+      } catch (error) {
+        console.error("Image upload error:", error);
+        return res.status(500).json({
+          error: "Failed to upload image to Firebase Storage.",
+        });
+      }
+    }
+
+    const newPackage = new Package(packageData);
     await newPackage.save();
 
     res.status(201).json({
@@ -93,6 +112,14 @@ exports.updatePackage = async (req, res) => {
     const { id } = req.params;
     const { name, description, items, price, image, isAvailable } = req.body;
 
+    // Find the existing package
+    const existingPackage = await Package.findById(id);
+    if (!existingPackage) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Package not found" });
+    }
+
     // Optionally validate items' inventory references
     if (Array.isArray(items)) {
       for (const item of items) {
@@ -113,19 +140,39 @@ exports.updatePackage = async (req, res) => {
     if (description !== undefined) update.description = description;
     if (items !== undefined) update.items = items;
     if (price !== undefined) update.price = price;
-    if (image !== undefined) update.image = image;
     if (isAvailable !== undefined) update.isAvailable = isAvailable;
+
+    // Handle image update - replace in Firebase Storage if new image provided
+    if (image !== undefined) {
+      if (image) {
+        // New image provided - upload to Firebase and delete old image
+        try {
+          const newImageUrl = await replaceImageInFirebase(
+            existingPackage.image,
+            image,
+            "packages"
+          );
+          update.image = newImageUrl;
+        } catch (error) {
+          console.error("Image update error:", error);
+          return res.status(500).json({
+            success: false,
+            error: "Failed to update image in Firebase Storage.",
+          });
+        }
+      } else {
+        // Image set to null/empty - delete old image from Firebase
+        if (existingPackage.image) {
+          await deleteImageFromFirebase(existingPackage.image);
+        }
+        update.image = null;
+      }
+    }
 
     const updated = await Package.findByIdAndUpdate(id, update, {
       new: true,
       runValidators: true,
     }).populate("items.inventoryItem", "name price quantity image");
-
-    if (!updated) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Package not found" });
-    }
 
     res
       .status(200)
@@ -152,6 +199,12 @@ exports.deletePackage = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Package not found" });
     }
+
+    // Delete image from Firebase Storage if exists
+    if (deleted.image) {
+      await deleteImageFromFirebase(deleted.image);
+    }
+
     res
       .status(200)
       .json({ success: true, message: "Package deleted successfully" });

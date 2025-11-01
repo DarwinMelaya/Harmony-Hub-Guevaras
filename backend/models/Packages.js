@@ -35,7 +35,7 @@ const PackageSchema = new mongoose.Schema(
       default: true,
     },
     image: {
-      type: String, 
+      type: String, // Firebase Storage URL
     },
   },
   { timestamps: true } 
