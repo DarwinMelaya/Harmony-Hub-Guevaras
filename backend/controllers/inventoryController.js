@@ -100,12 +100,16 @@ exports.getPublicInventory = async (req, res) => {
         name: 1,
         price: 1,
         quantity: 1,
+        unit: 1,
+        category: 1,
         image: 1,
         condition: 1,
         status: 1,
         createdAt: 1,
       }
     )
+      .populate('unit', 'name symbol')
+      .populate('category', 'name description')
       .sort({ createdAt: -1 })
       .lean(); // Convert to plain JavaScript objects for faster JSON serialization
 

@@ -33,11 +33,20 @@ const InventoryCard = ({ item, onAdd }) => {
         <h3 className="font-medium text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors min-h-[2.5rem]">
           {item.name}
         </h3>
+        {item.category && (
+          <div className="mb-2">
+            <span className="inline-block px-2 py-0.5 bg-purple-600/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
+              {item.category.name}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-2">
           <span className="text-green-400 font-bold text-lg">
             ₱{Number(item.price).toLocaleString()}
           </span>
-          <span className="text-gray-400 text-sm">{item.quantity} left</span>
+          <span className="text-gray-400 text-sm">
+            {item.quantity} {item.unit ? item.unit.symbol : 'left'}
+          </span>
         </div>
         <div className="flex gap-2 mt-auto">
           <button

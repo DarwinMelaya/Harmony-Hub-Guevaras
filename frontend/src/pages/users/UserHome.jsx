@@ -235,6 +235,8 @@ const UserHome = () => {
       image: item.image,
       genre: item.genre,
       description: item.description,
+      unit: item.unit,
+      category: item.category,
     };
 
     if (type === "inventory") {

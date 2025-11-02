@@ -55,15 +55,27 @@ const CartModal = ({
                           <h3 className="text-white font-medium">
                             {item.name}
                           </h3>
-                          <p className="text-gray-400 text-sm">
-                            {item.type === "bandArtist" &&
-                              item.genre &&
-                              `Genre: ${item.genre}`}
-                            {item.type === "package" && "Service Package"}
-                            {item.type === "inventory" && "Musical Instrument"}
-                          </p>
-                          <p className="text-blue-400 font-bold">
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            {item.type === "inventory" && item.category && (
+                              <span className="inline-block px-2 py-0.5 bg-purple-600/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
+                                {item.category.name}
+                              </span>
+                            )}
+                            <p className="text-gray-400 text-sm">
+                              {item.type === "bandArtist" &&
+                                item.genre &&
+                                `Genre: ${item.genre}`}
+                              {item.type === "package" && "Service Package"}
+                              {item.type === "inventory" && "Musical Instrument"}
+                            </p>
+                          </div>
+                          <p className="text-blue-400 font-bold mt-1">
                             ₱{Number(item.price).toLocaleString()}
+                            {item.type === "inventory" && item.unit && (
+                              <span className="text-gray-400 text-xs ml-1">
+                                / {item.unit.symbol}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>

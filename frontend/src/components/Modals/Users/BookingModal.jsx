@@ -175,15 +175,29 @@ const BookingModal = ({
                   {cart.map((item, index) => (
                     <div
                       key={`${item.id}-${item.type}`}
-                      className="flex justify-between items-center py-2"
+                      className="flex justify-between items-start py-2"
                     >
-                      <span className="text-gray-300">
-                        {item.name} x
-                        {item.type === "package" || item.type === "bandArtist"
-                          ? 1
-                          : item.quantity}
-                      </span>
-                      <span className="text-white font-medium">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-gray-300">
+                            {item.name} x
+                            {item.type === "package" || item.type === "bandArtist"
+                              ? 1
+                              : item.quantity}
+                            {item.type === "inventory" && item.unit && (
+                              <span className="text-gray-500 text-xs ml-1">
+                                {item.unit.symbol}
+                              </span>
+                            )}
+                          </span>
+                          {item.type === "inventory" && item.category && (
+                            <span className="inline-block px-2 py-0.5 bg-purple-600/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
+                              {item.category.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-white font-medium ml-2">
                         ₱
                         {Number(
                           item.price *
