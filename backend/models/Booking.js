@@ -117,6 +117,28 @@ const BookingSchema = new mongoose.Schema({
       default: [],
     },
   ],
+  // ✅ Agreement Fields
+  agreement: {
+    signature: {
+      type: String, // Base64 encoded signature image
+    },
+    agreedAt: {
+      type: Date,
+    },
+    agreedToTerms: {
+      type: Boolean,
+      default: false,
+    },
+    ipAddress: {
+      type: String,
+    },
+    clientName: {
+      type: String,
+    },
+    clientEmail: {
+      type: String,
+    },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

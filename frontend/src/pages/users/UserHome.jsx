@@ -448,27 +448,30 @@ const UserHome = () => {
   };
 
   // Booking functions
-  const handleBookingSubmit = async (e) => {
+  const handleBookingSubmit = async (e, customBookingData = null) => {
     e.preventDefault();
+    
+    // Use custom booking data if provided (from agreement modal), otherwise use state
+    const dataToUse = customBookingData || bookingData;
 
     if (cart.length === 0) {
       setError("Cart is empty. Please add items to book.");
       return;
     }
 
-    if (!bookingData.bookingDate || !bookingData.bookingTime) {
+    if (!dataToUse.bookingDate || !dataToUse.bookingTime) {
       setError("Please select booking date and time.");
       return;
     }
 
-    if (!bookingData.setupDate || !bookingData.setupTime) {
+    if (!dataToUse.setupDate || !dataToUse.setupTime) {
       setError("Please select setup date and time for advance arrival.");
       return;
     }
 
     // Validate GCash payment requirements
-    if (bookingData.paymentMethod === "gcash") {
-      if (!bookingData.paymentReference || !bookingData.paymentImage) {
+    if (dataToUse.paymentMethod === "gcash") {
+      if (!dataToUse.paymentReference || !dataToUse.paymentImage) {
         setError(
           "Payment reference and image are required for GCash payments."
         );
@@ -485,10 +488,10 @@ const UserHome = () => {
       // Calculate downpayment amounts
       const total = getCartTotal();
       const downpaymentAmount =
-        bookingData.paymentMethod === "gcash"
-          ? bookingData.downpaymentType === "full"
+        dataToUse.paymentMethod === "gcash"
+          ? dataToUse.downpaymentType === "full"
             ? total
-            : (total * bookingData.downpaymentPercentage) / 100
+            : (total * dataToUse.downpaymentPercentage) / 100
           : 0;
       const remainingBalance = total - downpaymentAmount;
 
@@ -500,20 +503,21 @@ const UserHome = () => {
           price: item.price,
           name: item.name,
         })),
-        bookingDate: bookingData.bookingDate,
-        bookingTime: bookingData.bookingTime,
-        setupDate: bookingData.setupDate,
-        setupTime: bookingData.setupTime,
-        duration: bookingData.duration,
-        notes: bookingData.notes,
-        contactInfo: bookingData.contactInfo,
-        paymentMethod: bookingData.paymentMethod,
-        paymentReference: bookingData.paymentReference,
-        paymentImage: bookingData.paymentImage,
-        downpaymentType: bookingData.downpaymentType,
-        downpaymentPercentage: bookingData.downpaymentPercentage,
+        bookingDate: dataToUse.bookingDate,
+        bookingTime: dataToUse.bookingTime,
+        setupDate: dataToUse.setupDate,
+        setupTime: dataToUse.setupTime,
+        duration: dataToUse.duration,
+        notes: dataToUse.notes,
+        contactInfo: dataToUse.contactInfo,
+        paymentMethod: dataToUse.paymentMethod,
+        paymentReference: dataToUse.paymentReference,
+        paymentImage: dataToUse.paymentImage,
+        downpaymentType: dataToUse.downpaymentType,
+        downpaymentPercentage: dataToUse.downpaymentPercentage,
         downpaymentAmount: downpaymentAmount,
         remainingBalance: remainingBalance,
+        agreement: dataToUse.agreement, // Add agreement data
       };
 
       const response = await axios.post(
@@ -1002,6 +1006,8 @@ const UserHome = () => {
         setBookingSuccess={setBookingSuccess}
         artistAvailability={artistAvailability}
         checkArtistAvailability={checkArtistAvailability}
+        userName={userData?.fullName || userData?.username || "Guest"}
+        userEmail={userData?.email || ""}
       />
 
       {/* Calendar Modal */}

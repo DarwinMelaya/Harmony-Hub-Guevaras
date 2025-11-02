@@ -10,6 +10,7 @@ const {
   getArtistBookings,
   checkArtistAvailability,
   getPublicCalendarBookings,
+  downloadBookingAgreement,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
@@ -48,5 +49,8 @@ router.patch(
 
 // Cancel booking (user can cancel their own)
 router.patch("/:id/cancel", cancelBooking);
+
+// Download booking agreement PDF (user can download their own, admin can download any)
+router.get("/:id/agreement/download", downloadBookingAgreement);
 
 module.exports = router;

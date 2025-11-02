@@ -26,6 +26,7 @@
     "nodemailer": "^6.9.7",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "pdfkit": "^0.17.2",
     "socket.io": "^4.8.1",
     "uuid": "^9.0.1"
   },

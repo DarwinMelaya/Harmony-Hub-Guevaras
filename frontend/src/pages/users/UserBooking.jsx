@@ -1,6 +1,7 @@
 import Layout from "../../components/Layout/Layout";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { FileText, Download } from "lucide-react";
 
 const statusClasses = {
   pending: "bg-yellow-900/40 text-yellow-300 border border-yellow-700",
@@ -14,6 +15,7 @@ const UserBooking = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancelling, setCancelling] = useState(null);
+  const [downloadingAgreement, setDownloadingAgreement] = useState(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -54,10 +56,10 @@ const UserBooking = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      
+
       // Update the booking status in the local state
-      setBookings(prevBookings =>
-        prevBookings.map(booking =>
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
           booking._id === bookingId
             ? { ...booking, status: "cancelled" }
             : booking
@@ -67,6 +69,41 @@ const UserBooking = () => {
       setError(err.response?.data?.message || err.message);
     } finally {
       setCancelling(null);
+    }
+  };
+
+  const handleDownloadAgreement = async (bookingId) => {
+    try {
+      setDownloadingAgreement(bookingId);
+      setError(null);
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/${bookingId}/agreement/download`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob", // Important for file download
+        }
+      );
+
+      // Create a blob URL and trigger download
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `booking-agreement-${bookingId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to download agreement"
+      );
+    } finally {
+      setDownloadingAgreement(null);
     }
   };
 
@@ -114,6 +151,23 @@ const UserBooking = () => {
                       <div className="text-green-400 font-semibold">
                         ₱{Number(b.totalAmount || 0).toLocaleString()}
                       </div>
+                      {b.agreement && b.agreement.signature && (
+                        <button
+                          onClick={() => handleDownloadAgreement(b._id)}
+                          disabled={downloadingAgreement === b._id}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors flex items-center gap-1"
+                          title="Download Agreement"
+                        >
+                          {downloadingAgreement === b._id ? (
+                            "Downloading..."
+                          ) : (
+                            <>
+                              <FileText className="w-3 h-3" />
+                              Agreement
+                            </>
+                          )}
+                        </button>
+                      )}
                       {(b.status === "pending" || b.status === "confirmed") && (
                         <button
                           onClick={() => handleCancelBooking(b._id)}

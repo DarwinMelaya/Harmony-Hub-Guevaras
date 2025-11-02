@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { provinces, cities, barangays } from "select-philippines-address";
 import { useState, useEffect } from "react";
+import BookingAgreement from "../../Agreement/BookingAgreement";
 
 const BookingModal = ({
   showBookingModal,
@@ -22,6 +23,8 @@ const BookingModal = ({
   setBookingSuccess,
   artistAvailability,
   checkArtistAvailability,
+  userName,
+  userEmail,
 }) => {
   const [provinceData, setProvince] = useState([]);
   const [cityData, setCity] = useState([]);
@@ -35,6 +38,8 @@ const BookingModal = ({
   const [downpaymentType, setDownpaymentType] = useState("percentage"); // 'percentage' or 'full'
   const [downpaymentPercentage, setDownpaymentPercentage] = useState(50); // Default 50%
   const [setupDateError, setSetupDateError] = useState("");
+  const [showAgreement, setShowAgreement] = useState(false);
+  const [agreementData, setAgreementData] = useState(null);
 
   useEffect(() => {
     provinces("17").then((response) => {
@@ -155,7 +160,9 @@ const BookingModal = ({
                 }
 
                 setShowPolicyReminder(false);
-                handleBookingSubmit(e);
+                
+                // Show agreement modal instead of directly submitting
+                setShowAgreement(true);
               }}
               className="p-6 overflow-y-auto max-h-[70vh]"
             >
@@ -931,6 +938,45 @@ const BookingModal = ({
           </div>
         </div>
       )}
+
+      {/* Booking Agreement Modal */}
+      <BookingAgreement
+        isOpen={showAgreement}
+        onClose={() => setShowAgreement(false)}
+        onAgree={(agreementInfo) => {
+          setAgreementData(agreementInfo);
+          setShowAgreement(false);
+          
+          // Add agreement data to booking data
+          const eventWithAgreement = {
+            ...bookingData,
+            agreement: agreementInfo,
+            downpaymentType,
+            downpaymentPercentage,
+          };
+          
+          // Create a synthetic event to pass to handleBookingSubmit
+          const syntheticEvent = {
+            preventDefault: () => {},
+            target: { checkValidity: () => true },
+          };
+          
+          // Submit the booking with agreement data
+          handleBookingSubmit(syntheticEvent, eventWithAgreement);
+        }}
+        bookingData={{
+          ...bookingData,
+          downpaymentType,
+          downpaymentPercentage,
+          remainingBalance: downpaymentType === "percentage" 
+            ? getCartTotal() - ((getCartTotal() * downpaymentPercentage) / 100)
+            : 0,
+        }}
+        cart={cart}
+        totalAmount={getCartTotal()}
+        userName={userName}
+        userEmail={userEmail}
+      />
     </>
   );
 };

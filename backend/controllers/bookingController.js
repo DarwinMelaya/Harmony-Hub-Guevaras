@@ -2,6 +2,7 @@ const Booking = require("../models/Booking");
 const Inventory = require("../models/Inventory");
 const Packages = require("../models/Packages");
 const User = require("../models/User");
+const { generateBookingAgreementPDF } = require("../utils/pdfGenerator");
 
 // Create a new booking
 const createBooking = async (req, res) => {
@@ -22,9 +23,19 @@ const createBooking = async (req, res) => {
       downpaymentPercentage = 100,
       downpaymentAmount,
       remainingBalance,
+      agreement,
     } = req.body;
 
     const userId = req.user.id;
+    
+    // Get user details for agreement
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -239,6 +250,16 @@ const createBooking = async (req, res) => {
       calculatedRemainingBalance = totalAmount;
     }
 
+    // Prepare agreement data with client information
+    let agreementData = null;
+    if (agreement) {
+      agreementData = {
+        ...agreement,
+        clientName: user.fullName || user.username,
+        clientEmail: user.email,
+      };
+    }
+
     // Create the booking
     const booking = new Booking({
       user: userId,
@@ -258,6 +279,7 @@ const createBooking = async (req, res) => {
       downpaymentPercentage,
       downpaymentAmount: calculatedDownpayment,
       remainingBalance: calculatedRemainingBalance,
+      agreement: agreementData,
     });
 
     await booking.save();
@@ -803,6 +825,63 @@ const getPublicCalendarBookings = async (req, res) => {
   }
 };
 
+// Download booking agreement as PDF
+const downloadBookingAgreement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const booking = await Booking.findById(id)
+      .populate("user", "fullName email username")
+      .populate({
+        path: "items.itemId",
+        model: "Packages",
+        populate: {
+          path: "items.inventoryItem",
+          model: "Inventory",
+          select: "name price quantity image",
+        },
+      });
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // Check if user can access this booking agreement
+    if (
+      !["admin", "owner", "staff"].includes(userRole) &&
+      booking.user._id.toString() !== userId
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    // Check if booking has agreement
+    if (!booking.agreement || !booking.agreement.signature) {
+      return res.status(400).json({
+        success: false,
+        message: "No signed agreement found for this booking",
+      });
+    }
+
+    // Generate and send PDF
+    generateBookingAgreementPDF(booking, res);
+  } catch (error) {
+    console.error("Error downloading booking agreement:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -813,4 +892,5 @@ module.exports = {
   getArtistBookings,
   checkArtistAvailability,
   getPublicCalendarBookings,
+  downloadBookingAgreement,
 };

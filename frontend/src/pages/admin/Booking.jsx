@@ -15,6 +15,8 @@ import {
   Search,
   RefreshCw,
   AlertTriangle,
+  FileText,
+  Download,
 } from "lucide-react";
 import axios from "axios";
 import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
@@ -38,6 +40,7 @@ const Booking = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [balanceAmount, setBalanceAmount] = useState("");
+  const [downloadingAgreement, setDownloadingAgreement] = useState(null);
 
   const hasIssues = (booking) => {
     return (
@@ -304,6 +307,35 @@ const Booking = () => {
     } else if (completionStep === "details") {
       updateBookingStatus(selectedBooking._id, "completed", issueData);
       setShowCompleteModal(false);
+    }
+  };
+
+  const handleDownloadAgreement = async (bookingId) => {
+    try {
+      setDownloadingAgreement(bookingId);
+      const token = localStorage.getItem("token");
+      
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/${bookingId}/agreement/download`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob',
+        }
+      );
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `booking-agreement-${bookingId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to download agreement");
+    } finally {
+      setDownloadingAgreement(null);
     }
   };
 
@@ -657,6 +689,70 @@ const Booking = () => {
                   )}
                 </div>
               </div>
+
+              {/* Agreement Section */}
+              {selectedBooking.agreement && selectedBooking.agreement.signature && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-blue-400" />
+                    Signed Agreement
+                  </h3>
+                  <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium mb-1">
+                          Client has signed the booking agreement
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          Signed on:{" "}
+                          {new Date(
+                            selectedBooking.agreement.agreedAt
+                          ).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          Signed by: {selectedBooking.agreement.clientName}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadAgreement(selectedBooking._id)}
+                        disabled={downloadingAgreement === selectedBooking._id}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                      >
+                        {downloadingAgreement === selectedBooking._id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            Download PDF
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    {/* Preview signature */}
+                    <div className="mt-4 pt-4 border-t border-blue-700/30">
+                      <p className="text-gray-400 text-sm mb-2">
+                        Signature Preview:
+                      </p>
+                      <div className="bg-white rounded-lg p-3">
+                        <img
+                          src={selectedBooking.agreement.signature}
+                          alt="Client Signature"
+                          className="h-24 object-contain mx-auto"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Payment Information */}
               <div className="mb-6">
