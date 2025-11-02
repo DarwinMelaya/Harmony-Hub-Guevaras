@@ -56,6 +56,7 @@ app.use("/api/packages", require("./routes/packages"));
 app.use("/api/bookings", require("./routes/bookings"));
 app.use("/api/chat", require("./routes/chat"));
 app.use("/api/units", require("./routes/units"));
+app.use("/api/categories", require("./routes/categories"));
 
 // Socket.IO setup
 const io = socketIo(server, {
