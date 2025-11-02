@@ -1,0 +1,205 @@
+=====================================
+🚀 SUPABASE STORAGE SETUP GUIDE
+=====================================
+
+Follow these steps to integrate Supabase Storage for inventory and package images:
+
+=====================================
+STEP 1: Install Required Packages
+=====================================
+
+Run this command in your backend directory:
+
+npm install @supabase/supabase-js
+
+(Note: uuid package is already installed)
+
+=====================================
+STEP 2: Create Supabase Project
+=====================================
+
+1. Go to https://supabase.com/
+2. Sign up or log in to your account
+3. Create a new project (or use existing one)
+4. Wait for the project to be set up (takes a few minutes)
+
+=====================================
+STEP 3: Set Up Storage Bucket
+=====================================
+
+1. In your Supabase Dashboard, go to "Storage" in the left sidebar
+2. Click "New bucket"
+3. Name your bucket: "harmony-hub"
+4. Set bucket to "Public bucket" (turned ON)
+5. Click "Create bucket"
+
+=====================================
+STEP 4: Configure Storage Policies (Optional)
+=====================================
+
+For production, you can set up storage policies:
+
+1. In Storage > harmony-hub bucket
+2. Click "New policy"
+3. Set policy to allow public read access and backend write access
+
+IMPORTANT: In Supabase UI, create policies ONE AT A TIME, not together!
+
+Policy 1 - Public Read Access:
+1. Click "New policy" in the harmony-hub bucket
+2. Choose "Create a policy from scratch" or "Allow public read access"
+3. Policy Name: "Public Access"
+4. Allowed operations: SELECT
+5. Policy definition (USING expression):
+   bucket_id = 'harmony-hub'
+
+Policy 2 - Service Role Upload:
+1. Click "New policy" again
+2. Choose "Create a policy from scratch"
+3. Policy Name: "Service role upload"
+4. Allowed operations: INSERT
+5. Policy definition (WITH CHECK expression):
+   bucket_id = 'harmony-hub'
+
+Policy 3 - Service Role Delete (optional):
+1. Click "New policy" again
+2. Choose "Create a policy from scratch"
+3. Policy Name: "Service role delete"
+4. Allowed operations: DELETE
+5. Policy definition (USING expression):
+   bucket_id = 'harmony-hub'
+
+NOTE: Do NOT copy-paste SQL statements with comments into Supabase UI.
+Each policy must be created separately through the visual policy editor.
+
+ALTERNATIVE: If you want to use SQL directly, go to SQL Editor in Supabase dashboard
+and run these statements ONE AT A TIME (no comments):
+
+CREATE POLICY "Public Access"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'harmony-hub');
+
+CREATE POLICY "Service role upload"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'harmony-hub');
+
+CREATE POLICY "Service role delete"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'harmony-hub');
+
+=====================================
+STEP 5: Get API Credentials
+=====================================
+
+1. In Supabase Dashboard, go to:
+   Settings > API
+2. Note down:
+   - Project URL (e.g., https://xxxxx.supabase.co)
+   - Service Role Key (keep this secret!)
+
+=====================================
+STEP 6: Configure Backend Environment
+=====================================
+
+Add these variables to your backend .env file:
+
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+
+IMPORTANT: 
+- Never commit .env to version control
+- Service role key has full access - keep it secure!
+- Use different keys for development and production
+
+=====================================
+STEP 7: Test the Integration
+=====================================
+
+1. Start your backend server:
+   npm run dev
+
+2. Look for this message in the console:
+   ✅ Supabase client initialized successfully
+
+3. Try adding an inventory item or package with an image
+4. Check Supabase Storage console to see the uploaded image
+
+=====================================
+TROUBLESHOOTING
+=====================================
+
+Error: "Supabase environment variables not set!"
+- Check if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are in .env
+- Restart your backend server after adding variables
+
+Error: "Failed to upload image to Supabase Storage"
+- Check bucket name is exactly "harmony-hub"
+- Verify the bucket is set to "Public"
+- Check storage policies allow uploads
+
+Error: "Invalid Supabase URL format"
+- Verify SUPABASE_URL is correct in .env
+- Make sure it starts with https:// and ends with .supabase.co
+
+Error: "Permission denied"
+- Check storage bucket is set to "Public"
+- Verify service role key is correct
+- Check storage policies in Supabase dashboard
+
+=====================================
+WHAT CHANGED IN YOUR CODE
+=====================================
+
+✅ backend/config/supabase.js - Supabase client initialization
+✅ backend/utils/supabaseImageUpload.js - Image upload/delete utilities
+✅ backend/controllers/inventoryController.js - Handles Supabase uploads
+✅ backend/controllers/packagesController.js - Handles Supabase uploads
+✅ backend/models/Inventory.js - Image field stores Supabase URL
+✅ backend/models/Packages.js - Image field stores Supabase URL
+
+=====================================
+HOW IT WORKS
+=====================================
+
+1. Frontend sends base64 image to backend (no changes needed)
+2. Backend uploads base64 image to Supabase Storage
+3. Supabase returns a public URL
+4. Backend stores the URL in MongoDB (not the base64)
+5. Frontend displays images using the Supabase URL
+
+Benefits:
+- Faster database queries (no large base64 strings)
+- Better performance and scalability
+- CDN-backed image delivery
+- Reduced MongoDB storage costs
+- Automatic image optimization available
+- File organization by folders (inventory/, packages/)
+
+=====================================
+NEXT STEPS
+=====================================
+
+1. Install dependencies: npm install @supabase/supabase-js
+2. Set up Supabase project and storage bucket
+3. Add credentials to .env file
+4. Restart your backend server
+5. Test by adding a new inventory item or package with an image
+
+=====================================
+FILE STRUCTURE
+=====================================
+
+Images are organized in your Supabase storage bucket:
+
+harmony-hub/
+├── inventory/
+│   ├── uuid-image-1.jpg
+│   ├── uuid-image-2.png
+│   └── ...
+└── packages/
+    ├── uuid-image-1.jpg
+    ├── uuid-image-2.png
+    └── ...
+
+=====================================
+

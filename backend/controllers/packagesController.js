@@ -1,5 +1,9 @@
 const Package = require("../models/Packages");
 const Inventory = require("../models/Inventory");
+const {
+  uploadImageToSupabase,
+  deleteImageFromSupabase,
+} = require("../utils/supabaseImageUpload");
 
 // Add new package
 exports.addPackage = async (req, res) => {
@@ -15,14 +19,26 @@ exports.addPackage = async (req, res) => {
       }
     }
 
-    const newPackage = new Package({
+    const packageData = {
       name,
       description,
       items,
       price,
-      image,
-    });
+    };
 
+    // Upload image to Supabase Storage if provided
+    if (image) {
+      const uploadResult = await uploadImageToSupabase(image, "packages");
+      if (uploadResult.success) {
+        packageData.image = uploadResult.url;
+      } else {
+        return res.status(400).json({
+          error: `Failed to upload image: ${uploadResult.error}`,
+        });
+      }
+    }
+
+    const newPackage = new Package(packageData);
     await newPackage.save();
 
     res.status(201).json({
@@ -93,6 +109,14 @@ exports.updatePackage = async (req, res) => {
     const { id } = req.params;
     const { name, description, items, price, image, isAvailable } = req.body;
 
+    // Find existing package to check for old image
+    const existingPackage = await Package.findById(id);
+    if (!existingPackage) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Package not found" });
+    }
+
     // Optionally validate items' inventory references
     if (Array.isArray(items)) {
       for (const item of items) {
@@ -111,8 +135,26 @@ exports.updatePackage = async (req, res) => {
     if (description !== undefined) update.description = description;
     if (items !== undefined) update.items = items;
     if (price !== undefined) update.price = price;
-    if (image !== undefined) update.image = image;
     if (isAvailable !== undefined) update.isAvailable = isAvailable;
+
+    // Handle image upload if new image is provided
+    if (image !== undefined) {
+      // Delete old image from Supabase if exists
+      if (existingPackage.image) {
+        await deleteImageFromSupabase(existingPackage.image);
+      }
+
+      // Upload new image to Supabase Storage
+      const uploadResult = await uploadImageToSupabase(image, "packages");
+      if (uploadResult.success) {
+        update.image = uploadResult.url;
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: `Failed to upload image: ${uploadResult.error}`,
+        });
+      }
+    }
 
     const updated = await Package.findByIdAndUpdate(id, update, {
       new: true,
@@ -148,6 +190,12 @@ exports.deletePackage = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Package not found" });
     }
+
+    // Delete image from Supabase Storage if exists
+    if (deleted.image) {
+      await deleteImageFromSupabase(deleted.image);
+    }
+
     res
       .status(200)
       .json({ success: true, message: "Package deleted successfully" });

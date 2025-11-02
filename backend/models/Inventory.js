@@ -53,7 +53,7 @@ const InventorySchema = new mongoose.Schema({
     min: 0,
   },
   image: {
-    type: String, // base64 string
+    type: String, // Supabase Storage URL
     required: false,
   },
   // Equipment condition tracking

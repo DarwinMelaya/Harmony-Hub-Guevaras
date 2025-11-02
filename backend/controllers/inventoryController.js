@@ -1,4 +1,8 @@
 const Inventory = require("../models/Inventory");
+const {
+  uploadImageToSupabase,
+  deleteImageFromSupabase,
+} = require("../utils/supabaseImageUpload");
 
 // Add new inventory item (admin only)
 exports.addInventory = async (req, res) => {
@@ -23,12 +27,24 @@ exports.addInventory = async (req, res) => {
       name,
       price,
       quantity,
-      image,
       condition: condition || "excellent",
       status: status || "available",
       maintenanceIntervalDays: maintenanceIntervalDays || 90,
       notes,
     };
+
+    // Upload image to Supabase Storage if provided
+    if (image) {
+      const uploadResult = await uploadImageToSupabase(image, "inventory");
+      if (uploadResult.success) {
+        inventoryData.image = uploadResult.url;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Failed to upload image: ${uploadResult.error}`,
+        });
+      }
+    }
 
     // If maintenance interval is set, calculate next maintenance date
     if (inventoryData.maintenanceIntervalDays) {
@@ -107,16 +123,42 @@ exports.updateInventory = async (req, res) => {
       notes,
     } = req.body;
 
+    // Find existing inventory item to check for old image
+    const existingItem = await Inventory.findById(id);
+    if (!existingItem) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Inventory item not found." });
+    }
+
     const update = {};
     if (name !== undefined) update.name = name;
     if (price !== undefined) update.price = price;
     if (quantity !== undefined) update.quantity = quantity;
-    if (image !== undefined) update.image = image;
     if (condition !== undefined) update.condition = condition;
     if (status !== undefined) update.status = status;
     if (maintenanceIntervalDays !== undefined)
       update.maintenanceIntervalDays = maintenanceIntervalDays;
     if (notes !== undefined) update.notes = notes;
+
+    // Handle image upload if new image is provided
+    if (image !== undefined) {
+      // Delete old image from Supabase if exists
+      if (existingItem.image) {
+        await deleteImageFromSupabase(existingItem.image);
+      }
+
+      // Upload new image to Supabase Storage
+      const uploadResult = await uploadImageToSupabase(image, "inventory");
+      if (uploadResult.success) {
+        update.image = uploadResult.url;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Failed to upload image: ${uploadResult.error}`,
+        });
+      }
+    }
 
     const updated = await Inventory.findByIdAndUpdate(id, update, {
       new: true,
@@ -150,6 +192,12 @@ exports.deleteInventory = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Inventory item not found." });
     }
+
+    // Delete image from Supabase Storage if exists
+    if (deleted.image) {
+      await deleteImageFromSupabase(deleted.image);
+    }
+
     res
       .status(200)
       .json({ success: true, message: "Inventory item deleted successfully." });

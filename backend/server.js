@@ -13,6 +13,9 @@ require("dotenv").config();
 // Import passport configuration
 require("./config/passport")(passport);
 
+// Initialize Supabase Storage
+require("./config/supabase");
+
 const app = express();
 const server = http.createServer(app);
 
