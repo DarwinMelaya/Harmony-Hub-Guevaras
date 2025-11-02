@@ -7,6 +7,7 @@ import {
   FolderOpen,
   X,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
 const CategoryTab = () => {
@@ -15,12 +16,15 @@ const CategoryTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
 
   // Fetch categories from backend
@@ -144,16 +148,15 @@ const CategoryTab = () => {
   };
 
   // Handle delete category
-  const handleDeleteCategory = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this category?")) {
-      return;
-    }
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
 
     try {
+      setDeleting(true);
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        `http://localhost:5000/api/categories/${id}`,
+        `http://localhost:5000/api/categories/${categoryToDelete._id}`,
         {
           method: "DELETE",
           headers: {
@@ -169,11 +172,23 @@ const CategoryTab = () => {
         throw new Error(data.message || "Failed to delete category");
       }
 
-      setCategories(categories.filter((category) => category._id !== id));
+      setCategories(
+        categories.filter((category) => category._id !== categoryToDelete._id)
+      );
+      setShowDeleteModal(false);
+      setCategoryToDelete(null);
     } catch (err) {
       setError(err.message);
       console.error("Error deleting category:", err);
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  // Open delete modal
+  const openDeleteModal = (category) => {
+    setCategoryToDelete(category);
+    setShowDeleteModal(true);
   };
 
   // Open edit modal
@@ -311,7 +326,7 @@ const CategoryTab = () => {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteCategory(category._id)}
+                          onClick={() => openDeleteModal(category)}
                           className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                           title="Delete category"
                         >
@@ -517,6 +532,81 @@ const CategoryTab = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && categoryToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full border border-gray-700">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold text-white">
+                  Delete Category
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setCategoryToDelete(null);
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+                disabled={deleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <p className="text-gray-300 mb-4">
+                Are you sure you want to delete the category{" "}
+                <span className="font-semibold text-white">
+                  {categoryToDelete.name}
+                </span>
+                ?
+              </p>
+              <p className="text-sm text-gray-400">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center gap-3 p-6 border-t border-gray-700">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setCategoryToDelete(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteCategory}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Category
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

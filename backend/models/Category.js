@@ -29,7 +29,7 @@ CategorySchema.pre("save", function (next) {
 });
 
 // Add indexes for better query performance
-CategorySchema.index({ name: 1 });
+// Note: name field already has an index due to unique: true
 CategorySchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Category", CategorySchema);

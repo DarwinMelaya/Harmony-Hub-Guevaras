@@ -7,6 +7,7 @@ import {
   PackageOpen,
   X,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 
 const UnitsTab = () => {
@@ -15,12 +16,15 @@ const UnitsTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState(null);
+  const [unitToDelete, setUnitToDelete] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     symbol: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
 
   // Fetch units from backend
@@ -142,21 +146,23 @@ const UnitsTab = () => {
   };
 
   // Handle delete unit
-  const handleDeleteUnit = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this unit?")) {
-      return;
-    }
+  const handleDeleteUnit = async () => {
+    if (!unitToDelete) return;
 
     try {
+      setDeleting(true);
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`http://localhost:5000/api/units/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `http://localhost:5000/api/units/${unitToDelete._id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data = await response.json();
 
@@ -164,11 +170,21 @@ const UnitsTab = () => {
         throw new Error(data.message || "Failed to delete unit");
       }
 
-      setUnits(units.filter((unit) => unit._id !== id));
+      setUnits(units.filter((unit) => unit._id !== unitToDelete._id));
+      setShowDeleteModal(false);
+      setUnitToDelete(null);
     } catch (err) {
       setError(err.message);
       console.error("Error deleting unit:", err);
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  // Open delete modal
+  const openDeleteModal = (unit) => {
+    setUnitToDelete(unit);
+    setShowDeleteModal(true);
   };
 
   // Open edit modal
@@ -302,7 +318,7 @@ const UnitsTab = () => {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteUnit(unit._id)}
+                          onClick={() => openDeleteModal(unit)}
                           className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                           title="Delete unit"
                         >
@@ -510,6 +526,79 @@ const UnitsTab = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && unitToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full border border-gray-700">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Delete Unit</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setUnitToDelete(null);
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+                disabled={deleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <p className="text-gray-300 mb-4">
+                Are you sure you want to delete the unit{" "}
+                <span className="font-semibold text-white">
+                  {unitToDelete.name}
+                </span>{" "}
+                ({unitToDelete.symbol})?
+              </p>
+              <p className="text-sm text-gray-400">
+                This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center gap-3 p-6 border-t border-gray-700">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setUnitToDelete(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors font-medium"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteUnit}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Unit
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
