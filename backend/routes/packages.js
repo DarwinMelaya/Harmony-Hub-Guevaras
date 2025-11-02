@@ -1,26 +1,48 @@
-const express = require("express");
-const router = express.Router();
-const {
-  authenticateToken,
-  authorizeOwnerOrAdmin,
-} = require("../middleware/auth");
-const {
-  addPackage,
-  getAllPackages,
-  getPublicPackages,
-  updatePackage,
-  deletePackage,
-} = require("../controllers/packagesController");
+const mongoose = require("mongoose");
 
-// POST /api/package - Add new package (owner/admin/staff only)
-router.post("/", authenticateToken, authorizeOwnerOrAdmin, addPackage);
-// GET /api/packages - Get all packages (owner/admin/staff only)
-router.get("/", authenticateToken, authorizeOwnerOrAdmin, getAllPackages);
-// GET /api/packages/public - Get all packages (public for clients)
-router.get("/public", getPublicPackages);
-// PUT /api/packages/:id - Update package (owner/admin/staff only)
-router.put("/:id", authenticateToken, authorizeOwnerOrAdmin, updatePackage);
-// DELETE /api/packages/:id - Delete package (owner/admin/staff only)
-router.delete("/:id", authenticateToken, authorizeOwnerOrAdmin, deletePackage);
+const PackageSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    items: [
+      {
+        inventoryItem: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Inventory",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+      },
+    ],
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
+    image: {
+      type: String,
+    },
+  },
+  { timestamps: true }
+);
 
-module.exports = router;
+// Add indexes for better query performance
+PackageSchema.index({ isAvailable: 1, createdAt: -1 }); // For public packages queries
+PackageSchema.index({ createdAt: -1 }); // For sorting by creation date
+
+module.exports = mongoose.model("Packages", PackageSchema);

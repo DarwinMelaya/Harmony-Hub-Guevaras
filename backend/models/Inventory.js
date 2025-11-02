@@ -53,7 +53,7 @@ const InventorySchema = new mongoose.Schema({
     min: 0,
   },
   image: {
-    type: String, // Firebase Storage URL
+    type: String, // base64 string
     required: false,
   },
   // Equipment condition tracking

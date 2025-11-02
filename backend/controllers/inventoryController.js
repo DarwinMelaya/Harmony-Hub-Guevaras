@@ -1,9 +1,4 @@
 const Inventory = require("../models/Inventory");
-const {
-  uploadImageToFirebase,
-  deleteImageFromFirebase,
-  replaceImageInFirebase,
-} = require("../utils/firebaseImageUpload");
 
 // Add new inventory item (admin only)
 exports.addInventory = async (req, res) => {
@@ -28,25 +23,12 @@ exports.addInventory = async (req, res) => {
       name,
       price,
       quantity,
+      image,
       condition: condition || "excellent",
       status: status || "available",
       maintenanceIntervalDays: maintenanceIntervalDays || 90,
       notes,
     };
-
-    // Upload image to Firebase Storage if provided
-    if (image) {
-      try {
-        const imageUrl = await uploadImageToFirebase(image, "inventory");
-        inventoryData.image = imageUrl;
-      } catch (error) {
-        console.error("Image upload error:", error);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to upload image to Firebase Storage.",
-        });
-      }
-    }
 
     // If maintenance interval is set, calculate next maintenance date
     if (inventoryData.maintenanceIntervalDays) {
@@ -125,55 +107,27 @@ exports.updateInventory = async (req, res) => {
       notes,
     } = req.body;
 
-    // Find the existing inventory item
-    const existingItem = await Inventory.findById(id);
-    if (!existingItem) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Inventory item not found." });
-    }
-
     const update = {};
     if (name !== undefined) update.name = name;
     if (price !== undefined) update.price = price;
     if (quantity !== undefined) update.quantity = quantity;
+    if (image !== undefined) update.image = image;
     if (condition !== undefined) update.condition = condition;
     if (status !== undefined) update.status = status;
     if (maintenanceIntervalDays !== undefined)
       update.maintenanceIntervalDays = maintenanceIntervalDays;
     if (notes !== undefined) update.notes = notes;
 
-    // Handle image update - replace in Firebase Storage if new image provided
-    if (image !== undefined) {
-      if (image) {
-        // New image provided - upload to Firebase and delete old image
-        try {
-          const newImageUrl = await replaceImageInFirebase(
-            existingItem.image,
-            image,
-            "inventory"
-          );
-          update.image = newImageUrl;
-        } catch (error) {
-          console.error("Image update error:", error);
-          return res.status(500).json({
-            success: false,
-            message: "Failed to update image in Firebase Storage.",
-          });
-        }
-      } else {
-        // Image set to null/empty - delete old image from Firebase
-        if (existingItem.image) {
-          await deleteImageFromFirebase(existingItem.image);
-        }
-        update.image = null;
-      }
-    }
-
     const updated = await Inventory.findByIdAndUpdate(id, update, {
       new: true,
       runValidators: true,
     });
+
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Inventory item not found." });
+    }
 
     res.status(200).json({
       success: true,
@@ -196,12 +150,6 @@ exports.deleteInventory = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Inventory item not found." });
     }
-
-    // Delete image from Firebase Storage if exists
-    if (deleted.image) {
-      await deleteImageFromFirebase(deleted.image);
-    }
-
     res
       .status(200)
       .json({ success: true, message: "Inventory item deleted successfully." });
