@@ -12,6 +12,7 @@ export { default as User } from "./admin/User";
 export { default as Musician } from "./admin/Musician";
 export { default as Packages } from "./admin/Packages";
 export { default as Booking } from "./admin/Booking";
+export { default as Maintenance } from "./admin/Maintenance";
 
 // User Pages
 export { default as UserBooking } from "./users/UserBooking";

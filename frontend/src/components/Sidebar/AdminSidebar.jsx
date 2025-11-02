@@ -11,6 +11,7 @@ import {
   LogOut,
   Package,
   Gift,
+  Wrench,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -54,6 +55,12 @@ const AdminSidebar = ({ onNavigate }) => {
       text: "Booking Details",
       path: "/admin-booking",
       isActive: location.pathname === "/admin-booking",
+    },
+    {
+      icon: Wrench,
+      text: "Maintenance",
+      path: "/admin-maintenance",
+      isActive: location.pathname === "/admin-maintenance",
     },
     // {
     //   icon: Calendar,
