@@ -15,7 +15,7 @@ const PackageSchema = new mongoose.Schema(
       {
         inventoryItem: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Inventory", 
+          ref: "Inventory",
           required: true,
         },
         quantity: {
@@ -35,10 +35,10 @@ const PackageSchema = new mongoose.Schema(
       default: true,
     },
     image: {
-      type: String, // Firebase Storage URL
+      type: String,
     },
   },
-  { timestamps: true } 
+  { timestamps: true }
 );
 
 // Add indexes for better query performance
