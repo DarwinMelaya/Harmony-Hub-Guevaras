@@ -52,6 +52,16 @@ const InventorySchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  unit: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Unit",
+    required: false,
+  },
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Category",
+    required: false,
+  },
   image: {
     type: String, // Supabase Storage URL
     required: false,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, AlertCircle } from "lucide-react";
 import axios from "axios";
 
@@ -7,6 +7,8 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
     name: "",
     price: "",
     quantity: "",
+    unit: "",
+    category: "",
     image: "",
     condition: "excellent",
     status: "available",
@@ -16,6 +18,37 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [units, setUnits] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+
+  // Fetch units and categories when modal opens
+  useEffect(() => {
+    const fetchOptions = async () => {
+      if (!isOpen) return;
+      
+      try {
+        setLoadingOptions(true);
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [unitsRes, categoriesRes] = await Promise.all([
+          axios.get("http://localhost:5000/api/units", { headers }),
+          axios.get("http://localhost:5000/api/categories", { headers }),
+        ]);
+
+        setUnits(unitsRes.data.data || unitsRes.data.units || []);
+        setCategories(categoriesRes.data.data || categoriesRes.data.categories || []);
+      } catch (err) {
+        console.error("Error fetching options:", err);
+        setError("Failed to load units and categories");
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    fetchOptions();
+  }, [isOpen]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -35,18 +68,24 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
     setError(null);
     try {
       const token = localStorage.getItem("token");
+      const payload = {
+        name: formData.name,
+        price: formData.price,
+        quantity: formData.quantity,
+        image: formData.image,
+        condition: formData.condition,
+        status: formData.status,
+        maintenanceIntervalDays: formData.maintenanceIntervalDays,
+        notes: formData.notes,
+      };
+
+      // Only include unit and category if they're selected
+      if (formData.unit) payload.unit = formData.unit;
+      if (formData.category) payload.category = formData.category;
+
       const response = await axios.post(
         "http://localhost:5000/api/inventory",
-        {
-          name: formData.name,
-          price: formData.price,
-          quantity: formData.quantity,
-          image: formData.image,
-          condition: formData.condition,
-          status: formData.status,
-          maintenanceIntervalDays: formData.maintenanceIntervalDays,
-          notes: formData.notes,
-        },
+        payload,
         {
           headers: {
             "Content-Type": "application/json",
@@ -58,6 +97,8 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
         name: "",
         price: "",
         quantity: "",
+        unit: "",
+        category: "",
         image: "",
         condition: "excellent",
         status: "available",
@@ -79,6 +120,8 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
       name: "",
       price: "",
       quantity: "",
+      unit: "",
+      category: "",
       image: "",
       condition: "excellent",
       status: "available",
@@ -126,6 +169,7 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
               type="number"
               required
               min="0"
+              step="0.01"
               value={formData.price}
               onChange={(e) =>
                 setFormData({ ...formData, price: e.target.value })
@@ -149,6 +193,48 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
               className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 transition-all duration-200"
               placeholder="0.00"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Unit
+              </label>
+              <select
+                value={formData.unit}
+                onChange={(e) =>
+                  setFormData({ ...formData, unit: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-200"
+                disabled={loadingOptions}
+              >
+                <option value="">Select Unit</option>
+                {units.map((unit) => (
+                  <option key={unit._id} value={unit._id}>
+                    {unit.name} ({unit.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Category
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) =>
+                  setFormData({ ...formData, category: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-200"
+                disabled={loadingOptions}
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">

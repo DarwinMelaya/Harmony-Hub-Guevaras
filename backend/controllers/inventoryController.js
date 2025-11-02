@@ -11,6 +11,8 @@ exports.addInventory = async (req, res) => {
       name,
       price,
       quantity,
+      unit,
+      category,
       image,
       condition,
       status,
@@ -32,6 +34,10 @@ exports.addInventory = async (req, res) => {
       maintenanceIntervalDays: maintenanceIntervalDays || 90,
       notes,
     };
+
+    // Add unit and category if provided
+    if (unit) inventoryData.unit = unit;
+    if (category) inventoryData.category = category;
 
     // Upload image to Supabase Storage if provided
     if (image) {
@@ -71,8 +77,12 @@ exports.addInventory = async (req, res) => {
 // Get all inventory items
 exports.getAllInventory = async (req, res) => {
   try {
-    // Optimized query with lean() for better performance
-    const inventory = await Inventory.find().sort({ createdAt: -1 }).lean();
+    // Optimized query with lean() for better performance and populate unit and category
+    const inventory = await Inventory.find()
+      .populate('unit', 'name symbol')
+      .populate('category', 'name description')
+      .sort({ createdAt: -1 })
+      .lean();
     res.status(200).json({ success: true, inventory });
   } catch (error) {
     console.error("Get Inventory Error:", error);
@@ -116,6 +126,8 @@ exports.updateInventory = async (req, res) => {
       name,
       price,
       quantity,
+      unit,
+      category,
       image,
       condition,
       status,
@@ -135,6 +147,8 @@ exports.updateInventory = async (req, res) => {
     if (name !== undefined) update.name = name;
     if (price !== undefined) update.price = price;
     if (quantity !== undefined) update.quantity = quantity;
+    if (unit !== undefined) update.unit = unit || null;
+    if (category !== undefined) update.category = category || null;
     if (condition !== undefined) update.condition = condition;
     if (status !== undefined) update.status = status;
     if (maintenanceIntervalDays !== undefined)
@@ -163,7 +177,9 @@ exports.updateInventory = async (req, res) => {
     const updated = await Inventory.findByIdAndUpdate(id, update, {
       new: true,
       runValidators: true,
-    });
+    })
+      .populate('unit', 'name symbol')
+      .populate('category', 'name description');
 
     if (!updated) {
       return res

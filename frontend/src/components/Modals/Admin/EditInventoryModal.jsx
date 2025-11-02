@@ -7,7 +7,9 @@ const EditInventoryModal = memo(({
   onSave, 
   onChange,
   onImageChange,
-  error 
+  error,
+  units = [],
+  categories = []
 }) => {
   if (!editingItem) return null;
 
@@ -55,6 +57,42 @@ const EditInventoryModal = memo(({
               onChange={(e) => onChange({ quantity: Number(e.target.value) })}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                Unit
+              </label>
+              <select
+                value={editingItem.unit?._id || editingItem.unit || ""}
+                onChange={(e) => onChange({ unit: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
+              >
+                <option value="">Select Unit</option>
+                {units.map((unit) => (
+                  <option key={unit._id} value={unit._id}>
+                    {unit.name} ({unit.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">
+                Category
+              </label>
+              <select
+                value={editingItem.category?._id || editingItem.category || ""}
+                onChange={(e) => onChange({ category: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

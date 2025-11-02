@@ -126,6 +126,18 @@ const InventoryRow = memo(
         <td className="px-4 py-3 whitespace-nowrap">
           <div className="text-sm text-gray-300">
             {Number(item.quantity ?? 0).toLocaleString()}
+            {item.unit && (
+              <span className="text-xs text-gray-400 ml-1">
+                {item.unit.symbol}
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Category */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="text-sm text-gray-400">
+            {item.category ? item.category.name : '-'}
           </div>
         </td>
 
@@ -234,6 +246,8 @@ const Inventory = () => {
     useState(null);
   const [maintenanceHistory, setMaintenanceHistory] = useState(null);
   const [showMaintenanceHistory, setShowMaintenanceHistory] = useState(false);
+  const [units, setUnits] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -259,7 +273,26 @@ const Inventory = () => {
 
   useEffect(() => {
     fetchInventory();
+    fetchUnitsAndCategories();
   }, []);
+
+  // Fetch units and categories
+  const fetchUnitsAndCategories = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [unitsRes, categoriesRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/units", { headers }),
+        axios.get("http://localhost:5000/api/categories", { headers }),
+      ]);
+
+      setUnits(unitsRes.data.data || unitsRes.data.units || []);
+      setCategories(categoriesRes.data.data || categoriesRes.data.categories || []);
+    } catch (err) {
+      console.error("Error fetching units and categories:", err);
+    }
+  };
 
   // Handle modal success with useCallback
   const handleModalSuccess = useCallback(() => {
@@ -307,24 +340,37 @@ const Inventory = () => {
         name,
         price,
         quantity,
+        unit,
+        category,
         image,
         condition,
         status,
         maintenanceIntervalDays,
         notes,
       } = editingItem;
+      
+      const payload = {
+        name,
+        price,
+        quantity,
+        image,
+        condition,
+        status,
+        maintenanceIntervalDays,
+        notes,
+      };
+
+      // Only include unit and category if they're set
+      if (unit) {
+        payload.unit = typeof unit === 'object' ? unit._id : unit;
+      }
+      if (category) {
+        payload.category = typeof category === 'object' ? category._id : category;
+      }
+
       await axios.put(
         `http://localhost:5000/api/inventory/${_id}`,
-        {
-          name,
-          price,
-          quantity,
-          image,
-          condition,
-          status,
-          maintenanceIntervalDays,
-          notes,
-        },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       closeEdit();
@@ -516,6 +562,9 @@ const Inventory = () => {
                       Qty
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                      Category
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
                       Condition
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
@@ -533,7 +582,7 @@ const Inventory = () => {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="7"
+                        colSpan="8"
                         className="px-6 py-12 text-center text-gray-400"
                       >
                         <div className="flex flex-col items-center gap-3">
@@ -545,7 +594,7 @@ const Inventory = () => {
                   ) : inventory.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="7"
+                        colSpan="8"
                         className="px-6 py-12 text-center text-gray-400"
                       >
                         <Box className="w-12 h-12 mx-auto mb-3 text-gray-600" />
@@ -764,6 +813,8 @@ const Inventory = () => {
           onChange={handleEditChange}
           onImageChange={handleImageChange}
           error={error}
+          units={units}
+          categories={categories}
         />
 
         <DeleteConfirmModal
