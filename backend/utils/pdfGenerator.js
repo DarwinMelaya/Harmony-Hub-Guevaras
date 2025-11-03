@@ -4,239 +4,430 @@ const generateBookingAgreementPDF = (booking, res) => {
   try {
     const doc = new PDFDocument({
       size: "A4",
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      margins: { top: 40, bottom: 40, left: 40, right: 40 },
     });
 
     // Pipe the PDF to the response
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=booking-agreement-${booking._id}.pdf`
+      `attachment; filename=contract-${booking._id}.pdf`
     );
     doc.pipe(res);
 
-    // Add company logo or header
-    doc
-      .fontSize(24)
-      .fillColor("#1e40af")
-      .text("HARMONY HUB GUEVARA", { align: "center" })
-      .moveDown(0.3);
+    // Helper function to draw table cell
+    const drawCell = (x, y, width, height, text, options = {}) => {
+      const {
+        bold = false,
+        fontSize = 9,
+        align = "left",
+        fillColor = "#ffffff",
+        textColor = "#000000",
+        border = true,
+      } = options;
 
-    doc
-      .fontSize(16)
-      .fillColor("#3b82f6")
-      .text("CLIENT BOOKING AGREEMENT", { align: "center" })
-      .moveDown(1);
+      // Draw cell background
+      if (fillColor !== "#ffffff") {
+        doc.rect(x, y, width, height).fill(fillColor);
+      }
 
-    // Agreement date
+      // Draw cell border
+      if (border) {
+        doc.rect(x, y, width, height).stroke("#000000");
+      }
+
+      // Draw text
+      doc
+        .fontSize(fontSize)
+        .fillColor(textColor)
+        .font(bold ? "Helvetica-Bold" : "Helvetica");
+
+      const textY = y + height / 2 - fontSize / 2;
+      const padding = 5;
+
+      if (align === "center") {
+        doc.text(text, x + padding, textY, {
+          width: width - padding * 2,
+          align: "center",
+        });
+      } else if (align === "right") {
+        doc.text(text, x + padding, textY, {
+          width: width - padding * 2,
+          align: "right",
+        });
+      } else {
+        doc.text(text, x + padding, textY, {
+          width: width - padding * 2,
+          align: "left",
+        });
+      }
+    };
+
+    // Company Header
+    let currentY = 60;
+    doc
+      .fontSize(32)
+      .fillColor("#ea580c")
+      .font("Helvetica-Bold")
+      .text("GUEVARRA", 40, currentY, { align: "center", width: 515 });
+    
+    currentY += 35;
     doc
       .fontSize(10)
+      .fillColor("#ea580c")
+      .text("LIGHTS AND SOUNDS", 40, currentY, { align: "center", width: 515 });
+
+    currentY += 25;
+    doc
+      .fontSize(18)
       .fillColor("#000000")
-      .text(
-        `Agreement Date: ${new Date(booking.createdAt).toLocaleDateString(
-          "en-US",
-          {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }
-        )}`,
-        { align: "center" }
-      )
-      .moveDown(1);
+      .font("Helvetica-Bold")
+      .text("CONTRACT", 40, currentY, { align: "center", width: 515 });
 
-    // Draw a separator line
-    doc
-      .moveTo(50, doc.y)
-      .lineTo(545, doc.y)
-      .strokeColor("#cbd5e1")
-      .stroke()
-      .moveDown(1);
+    currentY += 35;
 
-    // PARTIES Section
-    doc.fontSize(14).fillColor("#1e40af").text("PARTIES", { underline: true });
-    doc.moveDown(0.5);
+    // Client Info Table
+    const tableX = 40;
+    const tableWidth = 515;
+    const cellHeight = 20;
 
-    doc.fontSize(10).fillColor("#000000");
-
-    // Provider Info
-    doc.font("Helvetica-Bold").text("Service Provider:", { continued: true });
-    doc.font("Helvetica").text(" Harmony Hub Guevara");
-    doc.text("(hereinafter referred to as 'Provider')");
-    doc.moveDown(0.5);
-
-    // Client Info
-    doc.font("Helvetica-Bold").text("Client:", { continued: true });
-    doc
-      .font("Helvetica")
-      .text(` ${booking.agreement?.clientName || booking.user?.fullName || "N/A"}`);
-    doc.text(
-      `Email: ${booking.agreement?.clientEmail || booking.user?.email || "N/A"}`
-    );
-    doc.text("(hereinafter referred to as 'Client')");
-    doc.moveDown(1);
-
-    // Booking Details Section
-    doc
-      .fontSize(14)
-      .fillColor("#1e40af")
-      .text("I. BOOKING DETAILS", { underline: true });
-    doc.moveDown(0.5);
-
-    doc.fontSize(10).fillColor("#000000");
-
-    doc.font("Helvetica-Bold").text("Booking Date:", { continued: true });
-    doc
-      .font("Helvetica")
-      .text(
-        ` ${new Date(booking.bookingDate).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`
-      );
-
-    doc.font("Helvetica-Bold").text("Event Time:", { continued: true });
-    doc.font("Helvetica").text(` ${booking.bookingTime}`);
-
-    doc.font("Helvetica-Bold").text("Setup Date:", { continued: true });
-    doc
-      .font("Helvetica")
-      .text(
-        ` ${new Date(booking.setupDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`
-      );
-
-    doc.font("Helvetica-Bold").text("Setup Time:", { continued: true });
-    doc.font("Helvetica").text(` ${booking.setupTime}`);
-
-    doc.font("Helvetica-Bold").text("Duration:", { continued: true });
-    doc.font("Helvetica").text(` ${booking.duration} hour(s)`);
-
-    doc.font("Helvetica-Bold").text("Venue Address:", { continued: true });
-    doc
-      .font("Helvetica")
-      .text(` ${booking.contactInfo?.address || "N/A"}`, { width: 400 });
-
-    doc.moveDown(1);
-
-    // Services/Items Booked
-    doc.font("Helvetica-Bold").text("Services/Items Booked:");
-    doc.moveDown(0.3);
-
-    booking.items.forEach((item, index) => {
-      doc
-        .font("Helvetica")
-        .text(
-          `${index + 1}. ${item.name} x${item.quantity} - ₱${(item.price * item.quantity).toLocaleString()}`,
-          { indent: 20 }
-        );
+    // Row 1: Client
+    drawCell(tableX, currentY, 50, cellHeight, "Client:", {
+      bold: true,
+      fontSize: 9,
+    });
+    drawCell(tableX + 50, currentY, tableWidth - 50, cellHeight, booking.agreement?.clientName || booking.user?.fullName || "N/A", {
+      fontSize: 9,
+    });
+    
+    // Subject row
+    currentY += cellHeight;
+    drawCell(tableX, currentY, 50, cellHeight, "Subject:", {
+      bold: true,
+      fontSize: 9,
+    });
+    
+    const subject = booking.items
+      .map((item) => (item.type === "bandArtist" ? "BAND/ARTIST" : item.name.toUpperCase()))
+      .slice(0, 3)
+      .join(" / ");
+    
+    drawCell(tableX + 50, currentY, 215, cellHeight, subject, {
+      fontSize: 8,
     });
 
-    doc.moveDown(0.5);
+    // Venue
+    drawCell(tableX + 265, currentY, 50, cellHeight, "Venue:", {
+      bold: true,
+      fontSize: 9,
+    });
+    drawCell(tableX + 315, currentY, 120, cellHeight, 
+      booking.contactInfo?.address?.split(',')[0] || "N/A", {
+      fontSize: 8,
+    });
+    
+    // Date
+    drawCell(tableX + 435, currentY, 40, cellHeight, "Date:", {
+      bold: true,
+      fontSize: 9,
+    });
+    drawCell(tableX + 475, currentY, 80, cellHeight,
+      new Date(booking.bookingDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }), {
+      fontSize: 8,
+    });
+    
+    // Time row (only on the right side)
+    currentY += cellHeight;
+    drawCell(tableX, currentY, 265, cellHeight, "", { border: false });
+    drawCell(tableX + 265, currentY, 50, cellHeight, "", { border: false });
+    drawCell(tableX + 315, currentY, 120, cellHeight, "", { border: false });
+    drawCell(tableX + 435, currentY, 40, cellHeight, "Time:", {
+      bold: true,
+      fontSize: 9,
+    });
+    drawCell(tableX + 475, currentY, 80, cellHeight, booking.bookingTime, {
+      fontSize: 8,
+    });
 
-    // Payment Details
-    doc.font("Helvetica-Bold").text("Payment Details:");
-    doc.moveDown(0.3);
+    currentY += cellHeight + 10;
 
-    doc
-      .font("Helvetica")
-      .text(`Total Amount: ₱${booking.totalAmount.toLocaleString()}`, {
-        indent: 20,
-      });
-    doc.text(
-      `Payment Method: ${booking.paymentMethod === "gcash" ? "GCash" : "Cash"}`,
-      { indent: 20 }
+    // Equipment Quotation Header
+    const itemRowHeight = 18;
+    drawCell(tableX, currentY, tableWidth, itemRowHeight, "Equipment Quotation", {
+      bold: true,
+      fontSize: 11,
+      align: "center",
+      fillColor: "#4b5563",
+      textColor: "#ffffff",
+    });
+
+    currentY += itemRowHeight;
+
+    // Group items by category
+    const audioItems = booking.items.filter((item) =>
+      item.itemId?.category?.name?.toLowerCase().includes("audio")
     );
+    const lightItems = booking.items.filter((item) =>
+      item.itemId?.category?.name?.toLowerCase().includes("light")
+    );
+    const otherInventory = booking.items.filter(
+      (item) =>
+        item.type === "inventory" &&
+        !item.itemId?.category?.name?.toLowerCase().includes("audio") &&
+        !item.itemId?.category?.name?.toLowerCase().includes("light")
+    );
+    const bandArtists = booking.items.filter((item) => item.type === "bandArtist");
+    const packages = booking.items.filter((item) => item.type === "package");
 
-    if (booking.paymentMethod === "gcash") {
-      doc.text(
-        `Payment Type: ${booking.downpaymentType === "full" ? "Full Payment" : "Partial Payment"}`,
-        { indent: 20 }
-      );
-      if (booking.remainingBalance > 0) {
-        doc
-          .fillColor("#f97316")
-          .text(
-            `Remaining Balance: ₱${booking.remainingBalance.toLocaleString()}`,
-            { indent: 20 }
-          );
-        doc.fillColor("#000000");
-      }
+    // AUDIO Section
+    if (audioItems.length > 0) {
+      drawCell(tableX, currentY, tableWidth, itemRowHeight, "AUDIO", {
+        bold: true,
+        fontSize: 10,
+        align: "center",
+        fillColor: "#d1d5db",
+      });
+      currentY += itemRowHeight;
+
+      audioItems.forEach((item) => {
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
+        drawCell(tableX + 350, currentY, 80, itemRowHeight, item.quantity.toString(), {
+          fontSize: 9,
+          align: "center",
+        });
+        drawCell(tableX + 430, currentY, 85, itemRowHeight, "Units", {
+          fontSize: 9,
+          align: "center",
+        });
+        currentY += itemRowHeight;
+      });
     }
 
-    doc.moveDown(1);
+    // LIGHTS Section
+    if (lightItems.length > 0) {
+      drawCell(tableX, currentY, tableWidth, itemRowHeight, "LIGHTS", {
+        bold: true,
+        fontSize: 10,
+        align: "center",
+        fillColor: "#d1d5db",
+      });
+      currentY += itemRowHeight;
+
+      lightItems.forEach((item) => {
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
+        drawCell(tableX + 350, currentY, 80, itemRowHeight, item.quantity.toString(), {
+          fontSize: 9,
+          align: "center",
+        });
+        drawCell(tableX + 430, currentY, 85, itemRowHeight, "Units", {
+          fontSize: 9,
+          align: "center",
+        });
+        currentY += itemRowHeight;
+      });
+    }
+
+    // Other inventory items
+    otherInventory.forEach((item) => {
+      drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
+      drawCell(tableX + 350, currentY, 80, itemRowHeight, item.quantity.toString(), {
+        fontSize: 9,
+        align: "center",
+      });
+      drawCell(tableX + 430, currentY, 85, itemRowHeight, "Units", {
+        fontSize: 9,
+        align: "center",
+      });
+      currentY += itemRowHeight;
+    });
+
+    // BAND/ARTIST Section
+    if (bandArtists.length > 0) {
+      drawCell(tableX, currentY, tableWidth, itemRowHeight, "VIDEOMAN", {
+        bold: true,
+        fontSize: 10,
+        align: "center",
+        fillColor: "#d1d5db",
+      });
+      currentY += itemRowHeight;
+
+      bandArtists.forEach((item) => {
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
+        drawCell(tableX + 350, currentY, 165, itemRowHeight, "1", {
+          fontSize: 9,
+          align: "center",
+        });
+        currentY += itemRowHeight;
+      });
+    }
+
+    // PACKAGE Section
+    if (packages.length > 0) {
+      packages.forEach((item) => {
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
+        drawCell(tableX + 350, currentY, 165, itemRowHeight, "1", {
+          fontSize: 9,
+          align: "center",
+        });
+        currentY += itemRowHeight;
+      });
+    }
+
+    // Technical Staff & Transport Vehicle
+    drawCell(tableX, currentY, tableWidth, itemRowHeight, "TECHNICAL STAFF & TRANSPORT VEHICLE", {
+      bold: true,
+      fontSize: 10,
+      align: "center",
+      fillColor: "#d1d5db",
+    });
+    currentY += itemRowHeight;
+
+    // Technical Staff row
+    drawCell(tableX, currentY, 175, itemRowHeight, "Technical Staff", { fontSize: 9 });
+    drawCell(tableX + 175, currentY, 80, itemRowHeight, "6", {
+      fontSize: 9,
+      align: "center",
+    });
+    drawCell(tableX + 255, currentY, 100, itemRowHeight, "Driver", { fontSize: 9 });
+    drawCell(tableX + 355, currentY, 160, itemRowHeight, "2", {
+      fontSize: 9,
+      align: "center",
+    });
+    currentY += itemRowHeight;
+
+    // Total Crew row
+    drawCell(tableX, currentY, 175, itemRowHeight, "Total no. of Crew", { fontSize: 9 });
+    drawCell(tableX + 175, currentY, 80, itemRowHeight, "8", {
+      fontSize: 9,
+      align: "center",
+    });
+    drawCell(tableX + 255, currentY, 100, itemRowHeight, "Transport Vehicle", { fontSize: 9 });
+    drawCell(tableX + 355, currentY, 160, itemRowHeight, "1", {
+      fontSize: 9,
+      align: "center",
+    });
+    currentY += itemRowHeight;
+
+    // Total Price Section (Dark box)
+    const priceRowHeight = 25;
+    drawCell(tableX, currentY, tableWidth, priceRowHeight, `TOTAL PRICE: Php. ${booking.totalAmount.toLocaleString()}.00`, {
+      bold: true,
+      fontSize: 12,
+      align: "left",
+      fillColor: "#374151",
+      textColor: "#ffffff",
+    });
+    currentY += priceRowHeight;
+
+    // Down payment section (if applicable)
+    if (booking.paymentMethod === "gcash" && booking.remainingBalance > 0) {
+      const downpayment = booking.totalAmount - booking.remainingBalance;
+      
+      // Down payment row
+      drawCell(tableX, currentY, 130, cellHeight, "Down payment: " + downpayment.toLocaleString(), {
+        fontSize: 9,
+      });
+      drawCell(tableX + 130, currentY, 135, cellHeight, "VIA G-CASH", {
+        fontSize: 9,
+        bold: true,
+      });
+      drawCell(tableX + 265, currentY, 80, cellHeight, "Date:", {
+        fontSize: 9,
+      });
+      drawCell(tableX + 345, currentY, 85, cellHeight,
+        new Date(booking.createdAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }), {
+        fontSize: 9,
+      });
+      drawCell(tableX + 430, currentY, 85, cellHeight, "BALANCE " + booking.remainingBalance.toLocaleString(), {
+        fontSize: 9,
+        bold: true,
+      });
+      currentY += cellHeight;
+    }
+
+    currentY += 5;
 
     // Add page break if needed
-    if (doc.y > 650) {
+    if (currentY > 650) {
       doc.addPage();
+      currentY = 60;
     }
 
-    // Terms and Conditions Section
-    doc
-      .fontSize(14)
-      .fillColor("#1e40af")
-      .text("II. TERMS AND CONDITIONS", { underline: true });
-    doc.moveDown(0.5);
+    // NOTE Section
+    const downpaymentPercentage = booking.downpaymentPercentage || 20;
+    const noteRowHeight = 20;
 
-    doc.fontSize(9).fillColor("#000000");
+    // NOTE header
+    drawCell(tableX, currentY, tableWidth, noteRowHeight, `NOTE; THE ${downpaymentPercentage} PERCENT DOWN PAYMENT IS NON REFUNDABLE IF CLIENT CHOOSES TO CANCEL`, {
+      bold: true,
+      fontSize: 9,
+      align: "left",
+      fillColor: "#fef3c7",
+    });
+    currentY += noteRowHeight;
 
-    const terms = [
-      {
-        title: "1. SCOPE OF SERVICES",
-        content:
-          "Provider agrees to provide the Client with the services and equipment listed in Section I on the specified date and time. Services include setup, operation, maintenance, technical support, and teardown of equipment.",
-      },
-      {
-        title: "2. PAYMENT TERMS",
-        content:
-          "The total booking amount must be paid as per the agreed payment method. All payments are non-refundable unless stated otherwise. Failure to pay remaining balance may result in service cancellation.",
-      },
-      {
-        title: "3. CANCELLATION & REFUND POLICY",
-        content:
-          "Client may cancel 7 days before the event for a 50% refund. Cancellations less than 7 days before are non-refundable. Provider may cancel due to unforeseen circumstances with full refund.",
-      },
-      {
-        title: "4. EQUIPMENT CARE & LIABILITY",
-        content:
-          "Client is responsible for any loss, theft, or damage to equipment during rental period. Damaged equipment will be charged at replacement or repair cost.",
-      },
-      {
-        title: "5. SETUP & VENUE ACCESS",
-        content:
-          "Client must ensure venue access and adequate space at specified setup time. Venue must have electrical power and required utilities. Delays may result in additional charges.",
-      },
+    // NOTE label row
+    drawCell(tableX, currentY, 80, noteRowHeight, "NOTE:", {
+      bold: true,
+      fontSize: 9,
+      fillColor: "#d1d5db",
+    });
+    drawCell(tableX + 80, currentY, tableWidth - 80, noteRowHeight, "", {
+      fillColor: "#f9fafb",
+    });
+    currentY += noteRowHeight;
+
+    // Note items (multi-line)
+    const noteTexts = [
+      `*${downpaymentPercentage}% Down payment should be given at the time of signing this contract. After the event, remaining balance must be paid.`,
+      "*Please ensure the safety and security of the supplier at the venue.",
+      "*Power supply should be stable at 220v.",
+      "*The client is responsible for paying for any damage that event attendees may have caused to the equipment.",
+      "*Please follow to the time constraints; excess time will result in additional charges.",
+      "*Crew meals should be provided by the client. LUNCH & DINNER",
+      "*This agreement contains the entire understanding between the Supplier and the Client.",
+      "*Kindly sign on the space provided below",
     ];
 
-    if (booking.items.some((item) => item.type === "bandArtist")) {
-      terms.push({
-        title: "6. ARTIST/PERFORMER TERMS",
-        content:
-          "Client must provide adequate facilities for artists. Performance repertoire is mutually agreed. Client agrees not to record performances without consent.",
+    noteTexts.forEach((noteText, index) => {
+      const isLunchDinner = noteText.includes("LUNCH & DINNER");
+      const rowH = index === 0 || index === 5 ? 25 : noteRowHeight;
+      
+      doc.fontSize(8).fillColor(isLunchDinner ? "#dc2626" : "#000000");
+      doc.font(isLunchDinner ? "Helvetica-Bold" : "Helvetica");
+      doc.rect(tableX + 80, currentY, tableWidth - 80, rowH).stroke("#000000");
+      doc.text(noteText, tableX + 85, currentY + 5, {
+        width: tableWidth - 90,
+        height: rowH - 10,
       });
-    }
-
-    terms.forEach((term, index) => {
-      if (doc.y > 680) {
-        doc.addPage();
-      }
-      doc.font("Helvetica-Bold").text(term.title);
-      doc.font("Helvetica").text(term.content, { indent: 10 });
-      doc.moveDown(0.5);
+      currentY += rowH;
     });
 
     // Add page break for signature if needed
-    if (doc.y > 600) {
+    if (currentY > 600) {
       doc.addPage();
+      currentY = 60;
     }
 
-    doc.moveDown(1);
+    currentY += 10;
 
     // Signature Section
-    doc
-      .fontSize(14)
-      .fillColor("#1e40af")
-      .text("III. CLIENT SIGNATURE", { underline: true });
-    doc.moveDown(0.5);
+    const signatureHeight = 80;
+    const clientNameWidth = 200;
+    const providerNameWidth = 200;
+    const gap = (tableWidth - clientNameWidth - providerNameWidth) / 3;
 
-    doc.fontSize(10).fillColor("#000000");
-
+    // Client signature on left
+    doc.rect(tableX + gap, currentY, clientNameWidth, signatureHeight).stroke("#000000");
+    
     // Check if signature exists and is valid
     if (
       booking.agreement &&
@@ -251,69 +442,82 @@ const generateBookingAgreementPDF = (booking, res) => {
         );
         const imageBuffer = Buffer.from(base64Data, "base64");
 
-        // Draw signature box
-        doc
-          .rect(50, doc.y, 300, 100)
-          .strokeColor("#cbd5e1")
-          .stroke();
-
         // Add signature image
-        doc.image(imageBuffer, 55, doc.y + 5, {
-          fit: [290, 90],
+        doc.image(imageBuffer, tableX + gap + 5, currentY + 5, {
+          fit: [clientNameWidth - 10, signatureHeight - 10],
           align: "center",
         });
-
-        doc.y += 105;
       } catch (error) {
         console.error("Error adding signature to PDF:", error);
-        doc.text("Signature: [Electronic Signature Captured]");
-        doc.moveDown(3);
       }
-    } else {
-      doc.text("Signature: [Electronic Signature Captured]");
-      doc.moveDown(3);
     }
 
-    // Client name and date
-    doc
-      .font("Helvetica-Bold")
-      .text(
-        `Client Name: ${booking.agreement?.clientName || booking.user?.fullName || "N/A"}`
-      );
-    doc
-      .font("Helvetica")
-      .text(
-        `Date Signed: ${booking.agreement?.agreedAt ? new Date(booking.agreement.agreedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "N/A"}`
-      );
-
-    doc.moveDown(1);
-
-    // Agreement Confirmation
+    // Provider signature placeholder on right
+    doc.rect(tableX + clientNameWidth + gap * 2, currentY, providerNameWidth, signatureHeight).stroke("#000000");
+    
     doc
       .fontSize(9)
-      .fillColor("#059669")
-      .text(
-        "✓ Client has electronically agreed to all terms and conditions stated herein.",
-        { align: "center" }
-      );
+      .fillColor("#000000")
+      .font("Helvetica-Oblique")
+      .text("Signed by:", tableX + clientNameWidth + gap * 2 + 10, currentY + signatureHeight - 45, {
+        width: providerNameWidth - 20,
+      });
     doc
-      .text("✓ This digital signature is legally binding and equivalent to a handwritten signature.", { align: "center" })
-      .fillColor("#000000");
+      .font("Helvetica-Bold")
+      .text("AMAYA SANTOS", tableX + clientNameWidth + gap * 2 + 10, currentY + signatureHeight - 30, {
+        width: providerNameWidth - 20,
+      });
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .text("Proprietor", tableX + clientNameWidth + gap * 2 + 10, currentY + signatureHeight - 15, {
+        width: providerNameWidth - 20,
+      });
 
-    doc.moveDown(2);
+    currentY += signatureHeight + 5;
+
+    // Client label under signature
+    doc
+      .fontSize(9)
+      .fillColor("#000000")
+      .font("Helvetica")
+      .text("Client", tableX + gap, currentY, {
+        width: clientNameWidth,
+        align: "center",
+      });
+
+    currentY += 20;
+
+    // Date line
+    doc
+      .fontSize(8)
+      .fillColor("#000000")
+      .font("Helvetica")
+      .text(
+        `Date: ${booking.agreement?.agreedAt ? new Date(booking.agreement.agreedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+        tableX,
+        currentY,
+        { width: tableWidth, align: "center" }
+      );
+
+    currentY += 15;
 
     // Footer
     doc
-      .fontSize(8)
+      .fontSize(7)
       .fillColor("#6b7280")
-      .text(
-        "This agreement is governed by the laws of the Philippines. For inquiries, contact Harmony Hub Guevara.",
-        { align: "center" }
-      );
-    doc.text(`Booking ID: ${booking._id}`, { align: "center" });
+      .text("Contract ID: " + booking._id, tableX, currentY, {
+        width: tableWidth,
+        align: "center",
+      });
+
+    currentY += 10;
+
     doc.text(
       `Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}`,
-      { align: "center" }
+      tableX,
+      currentY,
+      { width: tableWidth, align: "center" }
     );
 
     // Finalize the PDF

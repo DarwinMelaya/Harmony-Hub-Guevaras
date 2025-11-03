@@ -76,15 +76,18 @@ const BookingAgreement = ({
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
           {/* Agreement Header */}
-          <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-700/30 rounded-lg p-6 mb-6">
-            <h3 className="text-2xl font-bold text-white mb-4 text-center">
-              HARMONY HUB GUEVARA
+          <div className="bg-gradient-to-r from-orange-900/20 to-orange-800/10 border border-orange-700/30 rounded-lg p-6 mb-6">
+            <h3 className="text-3xl font-bold text-orange-400 mb-2 text-center tracking-wider">
+              GUEVARRA
             </h3>
-            <h4 className="text-lg font-semibold text-blue-300 mb-2 text-center">
-              CLIENT BOOKING AGREEMENT
+            <h4 className="text-sm font-semibold text-orange-300 mb-4 text-center tracking-widest">
+              LIGHTS AND SOUNDS
+            </h4>
+            <h4 className="text-xl font-bold text-white mb-4 text-center border-t border-b border-gray-600 py-3">
+              CONTRACT
             </h4>
             <p className="text-gray-300 text-sm text-center">
-              This agreement is entered on{" "}
+              Date:{" "}
               <span className="text-white font-medium">
                 {new Date().toLocaleDateString("en-US", {
                   year: "numeric",
@@ -97,430 +100,220 @@ const BookingAgreement = ({
 
           {/* Party Information */}
           <div className="bg-gray-700/50 rounded-lg p-5 mb-6 border border-gray-600">
-            <h4 className="text-white font-semibold mb-3">PARTIES:</h4>
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-400 mb-1">Client:</p>
+                <p className="text-white font-bold text-lg">{userName}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-gray-400">Service Provider:</p>
-                  <p className="text-white font-medium">
-                    Harmony Hub Guevara
-                  </p>
-                  <p className="text-gray-300 text-xs">
-                    (hereinafter referred to as "Provider")
+                  <p className="text-gray-400 mb-1">Venue:</p>
+                  <p className="text-white font-medium text-sm">
+                    {bookingData.contactInfo?.address?.split(',')[0] || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-400">Client:</p>
-                  <p className="text-white font-medium">{userName}</p>
-                  <p className="text-gray-300 text-xs">{userEmail}</p>
-                  <p className="text-gray-300 text-xs">
-                    (hereinafter referred to as "Client")
+                  <p className="text-gray-400 mb-1">Date:</p>
+                  <p className="text-white font-medium">
+                    {new Date(bookingData.bookingDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </p>
+                  <p className="text-gray-400 text-xs">Time: {bookingData.bookingTime}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Booking Summary */}
+          {/* Equipment Quotation */}
           <div className="bg-gray-700/50 rounded-lg p-5 mb-6 border border-gray-600">
-            <h4 className="text-white font-semibold mb-3">
-              I. BOOKING DETAILS
+            <h4 className="text-white font-bold mb-4 text-center bg-gray-600 py-2 rounded">
+              Equipment Quotation
             </h4>
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-gray-400">Booking Date:</p>
-                  <p className="text-white">
-                    {new Date(bookingData.bookingDate).toLocaleDateString(
-                      "en-US",
-                      {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Event Time:</p>
-                  <p className="text-white">{bookingData.bookingTime}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Setup Date:</p>
-                  <p className="text-white">
-                    {new Date(bookingData.setupDate).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Setup Time:</p>
-                  <p className="text-white">{bookingData.setupTime}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Duration:</p>
-                  <p className="text-white">{bookingData.duration} hour(s)</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Venue Address:</p>
-                  <p className="text-white">
-                    {bookingData.contactInfo?.address || "N/A"}
-                  </p>
-                </div>
-              </div>
 
-              {/* Items Booked */}
-              <div className="mt-4 pt-4 border-t border-gray-600">
-                <p className="text-gray-400 mb-2">Services/Items Booked:</p>
-                <div className="space-y-2">
-                  {cart.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center bg-gray-800/50 p-3 rounded"
-                    >
-                      <span className="text-white">
-                        {item.name} x
-                        {item.type === "package" || item.type === "bandArtist"
-                          ? 1
-                          : item.quantity}
-                      </span>
-                      <span className="text-green-400 font-medium">
-                        ₱
-                        {Number(
-                          item.price *
-                            (item.type === "package" ||
-                            item.type === "bandArtist"
-                              ? 1
-                              : item.quantity)
-                        ).toLocaleString()}
-                      </span>
+            {/* Subject Line */}
+            <div className="mb-4 pb-3 border-b border-gray-600">
+              <p className="text-gray-400 text-sm">Subject:</p>
+              <p className="text-white font-medium">
+                {cart.map(item => item.type === 'bandArtist' ? 'BAND/ARTIST' : item.name.toUpperCase()).join(' / ')}
+              </p>
+            </div>
+
+            {/* Items Table */}
+            <div className="space-y-2">
+              {/* Group items by type */}
+              {cart.some(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('audio')) && (
+                <div className="mb-3">
+                  <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">AUDIO</h5>
+                  {cart.filter(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('audio')).map((item, index) => (
+                    <div key={index} className="flex justify-between text-sm py-1 border-b border-gray-700">
+                      <span className="text-gray-300">{item.name}</span>
+                      <div className="flex gap-8">
+                        <span className="text-white">{item.quantity}</span>
+                        <span className="text-gray-400 text-xs">{item.unit?.symbol || 'Units'}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
 
-              {/* Payment Information */}
-              <div className="mt-4 pt-4 border-t border-gray-600">
-                <p className="text-gray-400 mb-2">Payment Details:</p>
-                <div className="bg-gray-800/50 p-3 rounded space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Total Amount:</span>
-                    <span className="text-white font-bold">
-                      ₱{Number(totalAmount).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Payment Method:</span>
-                    <span className="text-white capitalize">
-                      {bookingData.paymentMethod === "gcash"
-                        ? "GCash"
-                        : "Cash"}
-                    </span>
-                  </div>
-                  {bookingData.paymentMethod === "gcash" && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Payment Type:</span>
-                        <span className="text-white">
-                          {bookingData.downpaymentType === "full"
-                            ? "Full Payment"
-                            : "Partial Payment"}
-                        </span>
+              {cart.some(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('light')) && (
+                <div className="mb-3">
+                  <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">LIGHTS</h5>
+                  {cart.filter(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('light')).map((item, index) => (
+                    <div key={index} className="flex justify-between text-sm py-1 border-b border-gray-700">
+                      <span className="text-gray-300">{item.name}</span>
+                      <div className="flex gap-8">
+                        <span className="text-white">{item.quantity}</span>
+                        <span className="text-gray-400 text-xs">{item.unit?.symbol || 'Units'}</span>
                       </div>
-                      {bookingData.remainingBalance > 0 && (
-                        <div className="flex justify-between text-orange-400">
-                          <span>Remaining Balance:</span>
-                          <span className="font-bold">
-                            ₱{Number(bookingData.remainingBalance).toLocaleString()}
-                          </span>
-                        </div>
-                      )}
-                    </>
-                  )}
+                    </div>
+                  ))}
                 </div>
+              )}
+
+              {/* Other inventory items */}
+              {cart.filter(item => 
+                item.type === 'inventory' && 
+                !item.category?.name?.toLowerCase().includes('audio') && 
+                !item.category?.name?.toLowerCase().includes('light')
+              ).map((item, index) => (
+                <div key={index} className="flex justify-between text-sm py-1 border-b border-gray-700">
+                  <span className="text-gray-300">{item.name}</span>
+                  <div className="flex gap-8">
+                    <span className="text-white">{item.quantity}</span>
+                    <span className="text-gray-400 text-xs">{item.unit?.symbol || 'Units'}</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Band Artists */}
+              {cart.filter(item => item.type === 'bandArtist').map((item, index) => (
+                <div key={index} className="mb-2">
+                  <h5 className="text-white font-bold mb-1 text-center bg-gray-600 py-1">BAND/ARTIST</h5>
+                  <div className="flex justify-between text-sm py-1 border-b border-gray-700">
+                    <span className="text-gray-300">{item.name}</span>
+                    <span className="text-white">1</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Packages */}
+              {cart.filter(item => item.type === 'package').map((item, index) => (
+                <div key={index} className="mb-2">
+                  <h5 className="text-white font-bold mb-1 text-center bg-gray-600 py-1">PACKAGE</h5>
+                  <div className="flex justify-between text-sm py-1 border-b border-gray-700">
+                    <span className="text-gray-300">{item.name}</span>
+                    <span className="text-white">1</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Technical Staff */}
+              <div className="mt-4">
+                <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">TECHNICAL STAFF & TRANSPORT VEHICLE</h5>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between border-b border-gray-700 py-1">
+                    <span className="text-gray-300">Technical Staff</span>
+                    <span className="text-white">Included</span>
+                  </div>
+                  <div className="flex justify-between border-b border-gray-700 py-1">
+                    <span className="text-gray-300">Transport Vehicle</span>
+                    <span className="text-white">Included</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Price Section */}
+            <div className="mt-6 pt-4 border-t-2 border-gray-600">
+              <div className="bg-gray-800/70 p-4 rounded">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-white font-bold text-lg">TOTAL PRICE:</span>
+                  <span className="text-green-400 font-bold text-2xl">
+                    Php. {Number(totalAmount).toLocaleString()}.00
+                  </span>
+                </div>
+
+                {bookingData.paymentMethod === "gcash" && bookingData.remainingBalance > 0 && (
+                  <>
+                    <div className="flex justify-between items-center py-2 border-t border-gray-700">
+                      <span className="text-gray-300">Down payment:</span>
+                      <span className="text-white font-medium">
+                        {Number(totalAmount - bookingData.remainingBalance).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-gray-300">Date:</span>
+                      <span className="text-white">
+                        {new Date().toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-t border-gray-700">
+                      <span className="text-orange-400 font-bold">BALANCE:</span>
+                      <span className="text-orange-400 font-bold text-xl">
+                        {Number(bookingData.remainingBalance).toLocaleString()}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           {/* Terms and Conditions */}
           <div className="bg-gray-700/50 rounded-lg p-5 mb-6 border border-gray-600">
-            <h4 className="text-white font-semibold mb-4">
-              II. TERMS AND CONDITIONS
+            <h4 className="text-white font-bold mb-4 text-center bg-gray-600 py-2 rounded">
+              NOTE:
             </h4>
-            <div className="space-y-4 text-sm text-gray-300 max-h-80 overflow-y-auto pr-2">
-              {/* Section 1: Services */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  1. SCOPE OF SERVICES
-                </h5>
-                <p className="mb-2">
-                  Provider agrees to provide the Client with the services and
-                  equipment listed in Section I (Booking Details) on the
-                  specified date and time. Services include:
-                </p>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>Setup and installation of booked equipment/services</li>
-                  <li>Operation and maintenance during the event duration</li>
-                  <li>
-                    Teardown and removal of equipment after the event concludes
-                  </li>
-                  <li>
-                    Technical support for the duration of the booking period
-                  </li>
-                </ul>
-              </div>
-
-              {/* Section 2: Payment Terms */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  2. PAYMENT TERMS
-                </h5>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>
-                    The total booking amount is ₱
-                    {Number(totalAmount).toLocaleString()} as specified above.
-                  </li>
-                  {bookingData.paymentMethod === "gcash" &&
-                  bookingData.remainingBalance > 0 ? (
-                    <>
-                      <li>
-                        Client has paid a downpayment and agrees to pay the
-                        remaining balance of ₱
-                        {Number(bookingData.remainingBalance).toLocaleString()}{" "}
-                        on or before the event date.
-                      </li>
-                      <li>
-                        Failure to pay the remaining balance may result in
-                        service cancellation.
-                      </li>
-                    </>
-                  ) : (
-                    <li>
-                      Payment must be completed before or on the event date as
-                      per the agreed payment method.
-                    </li>
-                  )}
-                  <li>All payments are non-refundable unless stated otherwise.</li>
-                </ul>
-              </div>
-
-              {/* Section 3: Cancellation Policy */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  3. CANCELLATION & REFUND POLICY
-                </h5>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>
-                    Client may cancel the booking at least 7 days before the
-                    event date for a 50% refund.
-                  </li>
-                  <li>
-                    Cancellations made less than 7 days before the event are
-                    non-refundable.
-                  </li>
-                  <li>
-                    Provider reserves the right to cancel the booking due to
-                    unforeseen circumstances, with a full refund to the Client.
-                  </li>
-                  <li>
-                    Weather-related cancellations will be evaluated on a
-                    case-by-case basis.
-                  </li>
-                </ul>
-              </div>
-
-              {/* Section 4: Equipment and Inventory */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  4. EQUIPMENT CARE & LIABILITY
-                </h5>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>
-                    Client agrees to handle all rented equipment with reasonable
-                    care.
-                  </li>
-                  <li>
-                    Client is responsible for any loss, theft, or damage to
-                    equipment during the rental period.
-                  </li>
-                  <li>
-                    Damaged equipment will be charged at replacement cost or
-                    repair cost, whichever is applicable.
-                  </li>
-                  <li>
-                    Provider will inspect all equipment before and after the
-                    event.
-                  </li>
-                  <li>
-                    Client must report any equipment issues immediately to the
-                    Provider.
-                  </li>
-                </ul>
-              </div>
-
-              {/* Section 5: Setup and Venue Access */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  5. SETUP & VENUE ACCESS
-                </h5>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>
-                    Provider's team will arrive at the setup time specified in
-                    Section I.
-                  </li>
-                  <li>
-                    Client must ensure venue access and adequate space for setup
-                    at the specified time.
-                  </li>
-                  <li>
-                    Venue must have access to electrical power and other
-                    required utilities.
-                  </li>
-                  <li>
-                    Client is responsible for obtaining necessary venue permits
-                    and permissions.
-                  </li>
-                  <li>
-                    Delays in venue access may result in reduced setup time or
-                    additional charges.
-                  </li>
-                </ul>
-              </div>
-
-              {/* Section 6: Artist/Performer Terms (if applicable) */}
-              {cart.some((item) => item.type === "bandArtist") && (
-                <div>
-                  <h5 className="text-white font-medium mb-2">
-                    6. ARTIST/PERFORMER TERMS
-                  </h5>
-                  <ul className="list-disc list-inside space-y-1 ml-4">
-                    <li>
-                      Artist performance time and breaks are as mutually agreed.
-                    </li>
-                    <li>
-                      Client must provide adequate facilities for artists
-                      (dressing room, refreshments, etc.).
-                    </li>
-                    <li>
-                      Performance repertoire will be discussed and agreed upon
-                      in advance.
-                    </li>
-                    <li>
-                      Client agrees not to record or reproduce artist
-                      performances without written consent.
-                    </li>
-                    <li>
-                      Artist safety and security are the responsibility of the
-                      Client during the event.
-                    </li>
-                  </ul>
-                </div>
-              )}
-
-              {/* Section 7: Force Majeure */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  7. FORCE MAJEURE
-                </h5>
-                <p>
-                  Neither party shall be held liable for failure to perform
-                  obligations due to circumstances beyond their reasonable
-                  control, including but not limited to: natural disasters,
-                  acts of God, government restrictions, pandemic, war, or civil
-                  unrest. In such cases, the Provider will work with the Client
-                  to reschedule or provide a full refund.
+            <div className="space-y-3 text-sm text-gray-300">
+              <div className="bg-yellow-900/20 border border-yellow-700/50 p-3 rounded">
+                <p className="text-yellow-200 font-medium">
+                  NOTE; THE {bookingData.downpaymentPercentage || 20} PERCENT DOWN PAYMENT IS NON REFUNDABLE IF CLIENT CHOOSES TO CANCEL
                 </p>
               </div>
 
-              {/* Section 8: Liability Limitations */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  8. LIMITATION OF LIABILITY
-                </h5>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>
-                    Provider is not liable for injuries or damages occurring at
-                    the Client's venue.
-                  </li>
-                  <li>
-                    Provider's liability is limited to the total booking amount
-                    paid.
-                  </li>
-                  <li>
-                    Client agrees to hold Provider harmless from any claims
-                    arising from the event.
-                  </li>
-                  <li>
-                    Provider maintains insurance for equipment but not for
-                    third-party incidents.
-                  </li>
-                </ul>
-              </div>
+              <div className="bg-gray-800/50 p-3 rounded space-y-2">
+                <p className="text-white">
+                  * {bookingData.downpaymentPercentage || 20}% Down payment should be given at the time of signing this contract. After the event, remaining balance must be paid.
+                </p>
+                
+                <p className="text-white">
+                  * Please ensure the safety and security of the supplier at the venue.
+                </p>
 
-              {/* Section 9: Privacy and Data */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  9. PRIVACY & DATA PROTECTION
-                </h5>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>
-                    Client information will be used solely for booking and
-                    service delivery purposes.
-                  </li>
-                  <li>
-                    Provider will not share Client data with third parties
-                    without consent.
-                  </li>
-                  <li>
-                    Payment information is securely processed and not stored on
-                    Provider's servers.
-                  </li>
-                  <li>
-                    Client may request access to or deletion of their personal
-                    data at any time.
-                  </li>
-                </ul>
-              </div>
+                <p className="text-white">
+                  * Power supply should be stable at 220v.
+                </p>
 
-              {/* Section 10: Governing Law */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  10. GOVERNING LAW & DISPUTE RESOLUTION
-                </h5>
-                <p>
-                  This Agreement shall be governed by and construed in
-                  accordance with the laws of the Philippines. Any disputes
-                  arising from this Agreement shall first be resolved through
-                  good faith negotiations. If unresolved, disputes shall be
-                  submitted to mediation or arbitration before pursuing legal
-                  action.
+                <p className="text-white">
+                  * The client is responsible for paying for any damage that event attendees may have caused to the equipment.
+                </p>
+
+                <p className="text-white">
+                  * Please follow to the time constraints; excess time will result in additional charges.
+                </p>
+
+                <p className="text-red-400 font-medium">
+                  * Crew meals should be provided by the client. LUNCH & DINNER
+                </p>
+
+                <p className="text-white">
+                  * This agreement contains the entire understanding between the Supplier and the Client.
                 </p>
               </div>
 
-              {/* Section 11: Entire Agreement */}
-              <div>
-                <h5 className="text-white font-medium mb-2">
-                  11. ENTIRE AGREEMENT
-                </h5>
-                <p>
-                  This Agreement constitutes the entire agreement between the
-                  parties and supersedes all prior negotiations, representations,
-                  or agreements. Any modifications must be made in writing and
-                  signed by both parties.
+              <div className="bg-gray-800/50 p-3 rounded">
+                <p className="text-gray-300 italic">
+                  * Kindly sign on the space provided below
                 </p>
               </div>
-            </div>
-
-            {/* Scroll indicator */}
-            <div className="mt-4 flex items-center justify-center space-x-2 text-gray-400 text-sm">
-              <AlertTriangle className="w-4 h-4" />
-              <span>Please scroll and read all terms carefully</span>
             </div>
           </div>
 
@@ -544,12 +337,11 @@ const BookingAgreement = ({
           {/* Signature Section */}
           {hasReadTerms && (
             <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">
-              <h4 className="text-white font-semibold mb-4">
-                III. CLIENT SIGNATURE
+              <h4 className="text-white font-bold mb-4 text-center bg-gray-600 py-2 rounded">
+                CLIENT SIGNATURE
               </h4>
               <p className="text-gray-300 text-sm mb-4">
-                Please sign below to indicate your agreement to these terms and
-                conditions:
+                By signing below, you acknowledge that you have read and agree to all terms stated in this contract:
               </p>
 
               {!signature ? (

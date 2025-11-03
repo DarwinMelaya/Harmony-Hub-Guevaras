@@ -475,7 +475,7 @@ const BookingModal = ({
                                 Account Name:
                               </span>
                               <span className="text-white font-medium">
-                                Harmony Hub Guevara
+                                Guevarra Lights and Sounds
                               </span>
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-gray-700">

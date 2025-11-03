@@ -452,7 +452,7 @@ const UserHome = () => {
   // Booking functions
   const handleBookingSubmit = async (e, customBookingData = null) => {
     e.preventDefault();
-    
+
     // Use custom booking data if provided (from agreement modal), otherwise use state
     const dataToUse = customBookingData || bookingData;
 
@@ -601,13 +601,14 @@ const UserHome = () => {
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                Welcome to Harmony Hub
+                <span className="text-orange-400">GUEVARRA</span> LIGHTS AND
+                SOUNDS
               </h1>
               {userData && (
                 <div className="mb-4">
                   <p className="text-gray-300">
                     Welcome,{" "}
-                    <span className="text-blue-400 font-semibold">
+                    <span className="text-orange-400 font-semibold">
                       {userData.fullName || userData.username}
                     </span>
                   </p>
