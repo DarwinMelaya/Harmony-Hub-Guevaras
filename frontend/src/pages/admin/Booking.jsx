@@ -21,6 +21,7 @@ import {
 import axios from "axios";
 import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
 import CompletionModal from "../../components/Modals/Admin/CompletionModal";
+import AdminSignatureModal from "../../components/Modals/Admin/AdminSignatureModal";
 
 const Booking = () => {
   const [bookings, setBookings] = useState([]);
@@ -41,6 +42,8 @@ const Booking = () => {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [balanceAmount, setBalanceAmount] = useState("");
   const [downloadingAgreement, setDownloadingAgreement] = useState(null);
+  const [showAdminSignModal, setShowAdminSignModal] = useState(false);
+  const [signingBooking, setSigningBooking] = useState(null);
 
   const hasIssues = (booking) => {
     return (
@@ -336,6 +339,44 @@ const Booking = () => {
       setError(err.response?.data?.message || err.message || "Failed to download agreement");
     } finally {
       setDownloadingAgreement(null);
+    }
+  };
+
+  const handleAdminSign = async (signatureData) => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${signingBooking._id}/agreement/admin-sign`,
+        signatureData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update the booking in the list
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) =>
+            booking._id === signingBooking._id
+              ? response.data.data
+              : booking
+          )
+        );
+
+        // Update selected booking if it's the same one
+        if (selectedBooking && selectedBooking._id === signingBooking._id) {
+          setSelectedBooking(response.data.data);
+        }
+
+        setShowAdminSignModal(false);
+        setSigningBooking(null);
+      }
+    } catch (err) {
+      throw new Error(err.response?.data?.message || "Failed to sign agreement");
     }
   };
 
@@ -698,7 +739,7 @@ const Booking = () => {
                     Signed Agreement
                   </h3>
                   <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-4">
                       <div>
                         <p className="text-white font-medium mb-1">
                           Client has signed the booking agreement
@@ -719,28 +760,44 @@ const Booking = () => {
                           Signed by: {selectedBooking.agreement.clientName}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleDownloadAgreement(selectedBooking._id)}
-                        disabled={downloadingAgreement === selectedBooking._id}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                      >
-                        {downloadingAgreement === selectedBooking._id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Downloading...
-                          </>
+                      <div className="flex gap-2">
+                        {selectedBooking.agreement.adminSignature ? (
+                          <button
+                            onClick={() => handleDownloadAgreement(selectedBooking._id)}
+                            disabled={downloadingAgreement === selectedBooking._id}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                          >
+                            {downloadingAgreement === selectedBooking._id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4" />
+                                Download PDF
+                              </>
+                            )}
+                          </button>
                         ) : (
-                          <>
-                            <Download className="w-4 h-4" />
-                            Download PDF
-                          </>
+                          <button
+                            onClick={() => {
+                              setSigningBooking(selectedBooking);
+                              setShowAdminSignModal(true);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                          >
+                            <FileText className="w-4 h-4" />
+                            Sign as Admin
+                          </button>
                         )}
-                      </button>
+                      </div>
                     </div>
-                    {/* Preview signature */}
-                    <div className="mt-4 pt-4 border-t border-blue-700/30">
+
+                    {/* Client Signature Preview */}
+                    <div className="mb-4 pt-4 border-t border-blue-700/30">
                       <p className="text-gray-400 text-sm mb-2">
-                        Signature Preview:
+                        Client Signature:
                       </p>
                       <div className="bg-white rounded-lg p-3">
                         <img
@@ -750,6 +807,52 @@ const Booking = () => {
                         />
                       </div>
                     </div>
+
+                    {/* Admin Signature Status */}
+                    {selectedBooking.agreement.adminSignature ? (
+                      <div className="pt-4 border-t border-blue-700/30">
+                        <div className="flex items-center mb-2">
+                          <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
+                          <p className="text-green-400 font-medium">
+                            Admin has signed the agreement
+                          </p>
+                        </div>
+                        <p className="text-gray-400 text-sm mb-2">
+                          Signed by: {selectedBooking.agreement.adminSignerName}
+                        </p>
+                        <p className="text-gray-400 text-xs mb-3">
+                          On:{" "}
+                          {new Date(
+                            selectedBooking.agreement.adminSignedAt
+                          ).toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        <p className="text-gray-400 text-sm mb-2">
+                          Admin Signature:
+                        </p>
+                        <div className="bg-white rounded-lg p-3">
+                          <img
+                            src={selectedBooking.agreement.adminSignature}
+                            alt="Admin Signature"
+                            className="h-24 object-contain mx-auto"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-4 border-t border-blue-700/30">
+                        <div className="flex items-center">
+                          <AlertTriangle className="w-5 h-5 text-orange-400 mr-2" />
+                          <p className="text-orange-400 font-medium">
+                            Waiting for admin signature
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1139,6 +1242,17 @@ const Booking = () => {
           </div>
         </div>
       )}
+
+      {/* Admin Signature Modal */}
+      <AdminSignatureModal
+        isOpen={showAdminSignModal}
+        onClose={() => {
+          setShowAdminSignModal(false);
+          setSigningBooking(null);
+        }}
+        booking={signingBooking}
+        onSign={handleAdminSign}
+      />
     </Layout>
   );
 };

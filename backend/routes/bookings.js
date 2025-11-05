@@ -11,6 +11,7 @@ const {
   checkArtistAvailability,
   getPublicCalendarBookings,
   downloadBookingAgreement,
+  adminSignAgreement,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
@@ -52,5 +53,12 @@ router.patch("/:id/cancel", cancelBooking);
 
 // Download booking agreement PDF (user can download their own, admin can download any)
 router.get("/:id/agreement/download", downloadBookingAgreement);
+
+// Admin sign booking agreement (owner/admin/staff only)
+router.patch(
+  "/:id/agreement/admin-sign",
+  requireRole(["owner", "admin", "staff"]),
+  adminSignAgreement
+);
 
 module.exports = router;

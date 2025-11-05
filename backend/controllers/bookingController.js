@@ -870,10 +870,95 @@ const downloadBookingAgreement = async (req, res) => {
       });
     }
 
+    // Check if admin has signed (only for client users)
+    if (
+      userRole === "client" &&
+      (!booking.agreement.adminSignature || !booking.agreement.adminSignerName)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Agreement is pending admin signature. Please wait for the admin to sign the contract.",
+      });
+    }
+
     // Generate and send PDF
     generateBookingAgreementPDF(booking, res);
   } catch (error) {
     console.error("Error downloading booking agreement:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Admin sign booking agreement
+const adminSignAgreement = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const { adminSignature, adminSignerName, technicalStaff } = req.body;
+
+    // Only admin, owner, and staff can sign
+    if (!["admin", "owner", "staff"].includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can sign booking agreements",
+      });
+    }
+
+    // Validate required fields
+    if (!adminSignature || !adminSignerName) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin signature and signer name are required",
+      });
+    }
+
+    const booking = await Booking.findById(bookingId).populate("user");
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // Check if booking has client agreement
+    if (!booking.agreement || !booking.agreement.signature) {
+      return res.status(400).json({
+        success: false,
+        message: "Client must sign the agreement first",
+      });
+    }
+
+    // Update booking with admin signature
+    booking.agreement.adminSignature = adminSignature;
+    booking.agreement.adminSignedAt = new Date();
+    booking.agreement.adminSignerName = adminSignerName;
+    booking.agreement.adminSignerId = userId;
+
+    // Update technical staff if provided
+    if (technicalStaff) {
+      booking.technicalStaff = {
+        count: technicalStaff.count || 6,
+        drivers: technicalStaff.drivers || 2,
+        totalCrew: technicalStaff.totalCrew || 8,
+        vehicles: technicalStaff.vehicles || 1,
+      };
+    }
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Agreement signed successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error signing agreement:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -893,4 +978,5 @@ module.exports = {
   checkArtistAvailability,
   getPublicCalendarBookings,
   downloadBookingAgreement,
+  adminSignAgreement,
 };

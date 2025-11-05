@@ -152,21 +152,33 @@ const UserBooking = () => {
                         ₱{Number(b.totalAmount || 0).toLocaleString()}
                       </div>
                       {b.agreement && b.agreement.signature && (
-                        <button
-                          onClick={() => handleDownloadAgreement(b._id)}
-                          disabled={downloadingAgreement === b._id}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors flex items-center gap-1"
-                          title="Download Agreement"
-                        >
-                          {downloadingAgreement === b._id ? (
-                            "Downloading..."
+                        <>
+                          {b.agreement.adminSignature ? (
+                            <button
+                              onClick={() => handleDownloadAgreement(b._id)}
+                              disabled={downloadingAgreement === b._id}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors flex items-center gap-1"
+                              title="Download Agreement"
+                            >
+                              {downloadingAgreement === b._id ? (
+                                "Downloading..."
+                              ) : (
+                                <>
+                                  <FileText className="w-3 h-3" />
+                                  Agreement
+                                </>
+                              )}
+                            </button>
                           ) : (
-                            <>
+                            <div
+                              className="px-3 py-1 bg-gray-600 text-gray-300 text-xs rounded flex items-center gap-1 cursor-not-allowed"
+                              title="Waiting for admin signature"
+                            >
                               <FileText className="w-3 h-3" />
-                              Agreement
-                            </>
+                              Pending Admin Signature
+                            </div>
                           )}
-                        </button>
+                        </>
                       )}
                       {(b.status === "pending" || b.status === "confirmed") && (
                         <button

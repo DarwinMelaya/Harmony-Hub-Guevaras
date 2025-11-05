@@ -138,6 +138,39 @@ const BookingSchema = new mongoose.Schema({
     clientEmail: {
       type: String,
     },
+    // Admin signature fields
+    adminSignature: {
+      type: String, // Base64 encoded signature image
+    },
+    adminSignedAt: {
+      type: Date,
+    },
+    adminSignerName: {
+      type: String, // Name of the person who signed (typed by admin)
+    },
+    adminSignerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  // Technical staff details (editable by admin)
+  technicalStaff: {
+    count: {
+      type: Number,
+      default: 6,
+    },
+    drivers: {
+      type: Number,
+      default: 2,
+    },
+    totalCrew: {
+      type: Number,
+      default: 8,
+    },
+    vehicles: {
+      type: Number,
+      default: 1,
+    },
   },
   createdAt: {
     type: Date,
@@ -153,7 +186,7 @@ const BookingSchema = new mongoose.Schema({
 BookingSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
   next();
-});   
+});
 
 // Index for better query performance
 BookingSchema.index({ user: 1, bookingDate: 1 });

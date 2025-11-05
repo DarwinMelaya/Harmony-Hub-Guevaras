@@ -70,7 +70,7 @@ const generateBookingAgreementPDF = (booking, res) => {
       .fillColor("#ea580c")
       .font("Helvetica-Bold")
       .text("GUEVARRA", 40, currentY, { align: "center", width: 515 });
-    
+
     currentY += 35;
     doc
       .fontSize(10)
@@ -96,22 +96,31 @@ const generateBookingAgreementPDF = (booking, res) => {
       bold: true,
       fontSize: 9,
     });
-    drawCell(tableX + 50, currentY, tableWidth - 50, cellHeight, booking.agreement?.clientName || booking.user?.fullName || "N/A", {
-      fontSize: 9,
-    });
-    
+    drawCell(
+      tableX + 50,
+      currentY,
+      tableWidth - 50,
+      cellHeight,
+      booking.agreement?.clientName || booking.user?.fullName || "N/A",
+      {
+        fontSize: 9,
+      }
+    );
+
     // Subject row
     currentY += cellHeight;
     drawCell(tableX, currentY, 50, cellHeight, "Subject:", {
       bold: true,
       fontSize: 9,
     });
-    
+
     const subject = booking.items
-      .map((item) => (item.type === "bandArtist" ? "BAND/ARTIST" : item.name.toUpperCase()))
+      .map((item) =>
+        item.type === "bandArtist" ? "BAND/ARTIST" : item.name.toUpperCase()
+      )
       .slice(0, 3)
       .join(" / ");
-    
+
     drawCell(tableX + 50, currentY, 215, cellHeight, subject, {
       fontSize: 8,
     });
@@ -121,25 +130,37 @@ const generateBookingAgreementPDF = (booking, res) => {
       bold: true,
       fontSize: 9,
     });
-    drawCell(tableX + 315, currentY, 120, cellHeight, 
-      booking.contactInfo?.address?.split(',')[0] || "N/A", {
-      fontSize: 8,
-    });
-    
+    drawCell(
+      tableX + 315,
+      currentY,
+      120,
+      cellHeight,
+      booking.contactInfo?.address?.split(",")[0] || "N/A",
+      {
+        fontSize: 8,
+      }
+    );
+
     // Date
     drawCell(tableX + 435, currentY, 40, cellHeight, "Date:", {
       bold: true,
       fontSize: 9,
     });
-    drawCell(tableX + 475, currentY, 80, cellHeight,
+    drawCell(
+      tableX + 475,
+      currentY,
+      80,
+      cellHeight,
       new Date(booking.bookingDate).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
-      }), {
-      fontSize: 8,
-    });
-    
+      }),
+      {
+        fontSize: 8,
+      }
+    );
+
     // Time row (only on the right side)
     currentY += cellHeight;
     drawCell(tableX, currentY, 265, cellHeight, "", { border: false });
@@ -157,13 +178,20 @@ const generateBookingAgreementPDF = (booking, res) => {
 
     // Equipment Quotation Header
     const itemRowHeight = 18;
-    drawCell(tableX, currentY, tableWidth, itemRowHeight, "Equipment Quotation", {
-      bold: true,
-      fontSize: 11,
-      align: "center",
-      fillColor: "#4b5563",
-      textColor: "#ffffff",
-    });
+    drawCell(
+      tableX,
+      currentY,
+      tableWidth,
+      itemRowHeight,
+      "Equipment Quotation",
+      {
+        bold: true,
+        fontSize: 11,
+        align: "center",
+        fillColor: "#4b5563",
+        textColor: "#ffffff",
+      }
+    );
 
     currentY += itemRowHeight;
 
@@ -180,7 +208,9 @@ const generateBookingAgreementPDF = (booking, res) => {
         !item.itemId?.category?.name?.toLowerCase().includes("audio") &&
         !item.itemId?.category?.name?.toLowerCase().includes("light")
     );
-    const bandArtists = booking.items.filter((item) => item.type === "bandArtist");
+    const bandArtists = booking.items.filter(
+      (item) => item.type === "bandArtist"
+    );
     const packages = booking.items.filter((item) => item.type === "package");
 
     // AUDIO Section
@@ -194,11 +224,20 @@ const generateBookingAgreementPDF = (booking, res) => {
       currentY += itemRowHeight;
 
       audioItems.forEach((item) => {
-        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
-        drawCell(tableX + 350, currentY, 80, itemRowHeight, item.quantity.toString(), {
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, {
           fontSize: 9,
-          align: "center",
         });
+        drawCell(
+          tableX + 350,
+          currentY,
+          80,
+          itemRowHeight,
+          item.quantity.toString(),
+          {
+            fontSize: 9,
+            align: "center",
+          }
+        );
         drawCell(tableX + 430, currentY, 85, itemRowHeight, "Units", {
           fontSize: 9,
           align: "center",
@@ -218,11 +257,20 @@ const generateBookingAgreementPDF = (booking, res) => {
       currentY += itemRowHeight;
 
       lightItems.forEach((item) => {
-        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
-        drawCell(tableX + 350, currentY, 80, itemRowHeight, item.quantity.toString(), {
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, {
           fontSize: 9,
-          align: "center",
         });
+        drawCell(
+          tableX + 350,
+          currentY,
+          80,
+          itemRowHeight,
+          item.quantity.toString(),
+          {
+            fontSize: 9,
+            align: "center",
+          }
+        );
         drawCell(tableX + 430, currentY, 85, itemRowHeight, "Units", {
           fontSize: 9,
           align: "center",
@@ -233,11 +281,20 @@ const generateBookingAgreementPDF = (booking, res) => {
 
     // Other inventory items
     otherInventory.forEach((item) => {
-      drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
-      drawCell(tableX + 350, currentY, 80, itemRowHeight, item.quantity.toString(), {
+      drawCell(tableX, currentY, 350, itemRowHeight, item.name, {
         fontSize: 9,
-        align: "center",
       });
+      drawCell(
+        tableX + 350,
+        currentY,
+        80,
+        itemRowHeight,
+        item.quantity.toString(),
+        {
+          fontSize: 9,
+          align: "center",
+        }
+      );
       drawCell(tableX + 430, currentY, 85, itemRowHeight, "Units", {
         fontSize: 9,
         align: "center",
@@ -256,7 +313,9 @@ const generateBookingAgreementPDF = (booking, res) => {
       currentY += itemRowHeight;
 
       bandArtists.forEach((item) => {
-        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, {
+          fontSize: 9,
+        });
         drawCell(tableX + 350, currentY, 165, itemRowHeight, "1", {
           fontSize: 9,
           align: "center",
@@ -268,7 +327,9 @@ const generateBookingAgreementPDF = (booking, res) => {
     // PACKAGE Section
     if (packages.length > 0) {
       packages.forEach((item) => {
-        drawCell(tableX, currentY, 350, itemRowHeight, item.name, { fontSize: 9 });
+        drawCell(tableX, currentY, 350, itemRowHeight, item.name, {
+          fontSize: 9,
+        });
         drawCell(tableX + 350, currentY, 165, itemRowHeight, "1", {
           fontSize: 9,
           align: "center",
@@ -278,59 +339,117 @@ const generateBookingAgreementPDF = (booking, res) => {
     }
 
     // Technical Staff & Transport Vehicle
-    drawCell(tableX, currentY, tableWidth, itemRowHeight, "TECHNICAL STAFF & TRANSPORT VEHICLE", {
-      bold: true,
-      fontSize: 10,
-      align: "center",
-      fillColor: "#d1d5db",
-    });
+    drawCell(
+      tableX,
+      currentY,
+      tableWidth,
+      itemRowHeight,
+      "TECHNICAL STAFF & TRANSPORT VEHICLE",
+      {
+        bold: true,
+        fontSize: 10,
+        align: "center",
+        fillColor: "#d1d5db",
+      }
+    );
     currentY += itemRowHeight;
 
     // Technical Staff row
-    drawCell(tableX, currentY, 175, itemRowHeight, "Technical Staff", { fontSize: 9 });
-    drawCell(tableX + 175, currentY, 80, itemRowHeight, "6", {
+    const techStaff = booking.technicalStaff || {};
+    drawCell(tableX, currentY, 175, itemRowHeight, "Technical Staff", {
       fontSize: 9,
-      align: "center",
     });
-    drawCell(tableX + 255, currentY, 100, itemRowHeight, "Driver", { fontSize: 9 });
-    drawCell(tableX + 355, currentY, 160, itemRowHeight, "2", {
+    drawCell(
+      tableX + 175,
+      currentY,
+      80,
+      itemRowHeight,
+      String(techStaff.count || 6),
+      {
+        fontSize: 9,
+        align: "center",
+      }
+    );
+    drawCell(tableX + 255, currentY, 100, itemRowHeight, "Driver", {
       fontSize: 9,
-      align: "center",
     });
+    drawCell(
+      tableX + 355,
+      currentY,
+      160,
+      itemRowHeight,
+      String(techStaff.drivers || 2),
+      {
+        fontSize: 9,
+        align: "center",
+      }
+    );
     currentY += itemRowHeight;
 
     // Total Crew row
-    drawCell(tableX, currentY, 175, itemRowHeight, "Total no. of Crew", { fontSize: 9 });
-    drawCell(tableX + 175, currentY, 80, itemRowHeight, "8", {
+    drawCell(tableX, currentY, 175, itemRowHeight, "Total no. of Crew", {
       fontSize: 9,
-      align: "center",
     });
-    drawCell(tableX + 255, currentY, 100, itemRowHeight, "Transport Vehicle", { fontSize: 9 });
-    drawCell(tableX + 355, currentY, 160, itemRowHeight, "1", {
+    drawCell(
+      tableX + 175,
+      currentY,
+      80,
+      itemRowHeight,
+      String(techStaff.totalCrew || 8),
+      {
+        fontSize: 9,
+        align: "center",
+      }
+    );
+    drawCell(tableX + 255, currentY, 100, itemRowHeight, "Transport Vehicle", {
       fontSize: 9,
-      align: "center",
     });
+    drawCell(
+      tableX + 355,
+      currentY,
+      160,
+      itemRowHeight,
+      String(techStaff.vehicles || 1),
+      {
+        fontSize: 9,
+        align: "center",
+      }
+    );
     currentY += itemRowHeight;
 
     // Total Price Section (Dark box)
     const priceRowHeight = 25;
-    drawCell(tableX, currentY, tableWidth, priceRowHeight, `TOTAL PRICE: Php. ${booking.totalAmount.toLocaleString()}.00`, {
-      bold: true,
-      fontSize: 12,
-      align: "left",
-      fillColor: "#374151",
-      textColor: "#ffffff",
-    });
+    drawCell(
+      tableX,
+      currentY,
+      tableWidth,
+      priceRowHeight,
+      `TOTAL PRICE: Php. ${booking.totalAmount.toLocaleString()}.00`,
+      {
+        bold: true,
+        fontSize: 12,
+        align: "left",
+        fillColor: "#374151",
+        textColor: "#ffffff",
+      }
+    );
     currentY += priceRowHeight;
 
     // Down payment section (if applicable)
     if (booking.paymentMethod === "gcash" && booking.remainingBalance > 0) {
       const downpayment = booking.totalAmount - booking.remainingBalance;
-      
+
       // Down payment row
-      drawCell(tableX, currentY, 130, cellHeight, "Down payment: " + downpayment.toLocaleString(), {
-        fontSize: 9,
-      });
+      drawCell(
+        tableX,
+        currentY,
+        130,
+        cellHeight,
+        "Down payment: " + downpayment.toLocaleString(),
+        {
+          fontSize: 9,
+        }
+      );
       drawCell(tableX + 130, currentY, 135, cellHeight, "VIA G-CASH", {
         fontSize: 9,
         bold: true,
@@ -338,18 +457,31 @@ const generateBookingAgreementPDF = (booking, res) => {
       drawCell(tableX + 265, currentY, 80, cellHeight, "Date:", {
         fontSize: 9,
       });
-      drawCell(tableX + 345, currentY, 85, cellHeight,
+      drawCell(
+        tableX + 345,
+        currentY,
+        85,
+        cellHeight,
         new Date(booking.createdAt).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
           year: "numeric",
-        }), {
-        fontSize: 9,
-      });
-      drawCell(tableX + 430, currentY, 85, cellHeight, "BALANCE " + booking.remainingBalance.toLocaleString(), {
-        fontSize: 9,
-        bold: true,
-      });
+        }),
+        {
+          fontSize: 9,
+        }
+      );
+      drawCell(
+        tableX + 430,
+        currentY,
+        85,
+        cellHeight,
+        "BALANCE " + booking.remainingBalance.toLocaleString(),
+        {
+          fontSize: 9,
+          bold: true,
+        }
+      );
       currentY += cellHeight;
     }
 
@@ -366,12 +498,19 @@ const generateBookingAgreementPDF = (booking, res) => {
     const noteRowHeight = 20;
 
     // NOTE header
-    drawCell(tableX, currentY, tableWidth, noteRowHeight, `NOTE; THE ${downpaymentPercentage} PERCENT DOWN PAYMENT IS NON REFUNDABLE IF CLIENT CHOOSES TO CANCEL`, {
-      bold: true,
-      fontSize: 9,
-      align: "left",
-      fillColor: "#fef3c7",
-    });
+    drawCell(
+      tableX,
+      currentY,
+      tableWidth,
+      noteRowHeight,
+      `NOTE; THE ${downpaymentPercentage} PERCENT DOWN PAYMENT IS NON REFUNDABLE IF CLIENT CHOOSES TO CANCEL`,
+      {
+        bold: true,
+        fontSize: 9,
+        align: "left",
+        fillColor: "#fef3c7",
+      }
+    );
     currentY += noteRowHeight;
 
     // NOTE label row
@@ -400,7 +539,7 @@ const generateBookingAgreementPDF = (booking, res) => {
     noteTexts.forEach((noteText, index) => {
       const isLunchDinner = noteText.includes("LUNCH & DINNER");
       const rowH = index === 0 || index === 5 ? 25 : noteRowHeight;
-      
+
       doc.fontSize(8).fillColor(isLunchDinner ? "#dc2626" : "#000000");
       doc.font(isLunchDinner ? "Helvetica-Bold" : "Helvetica");
       doc.rect(tableX + 80, currentY, tableWidth - 80, rowH).stroke("#000000");
@@ -426,8 +565,10 @@ const generateBookingAgreementPDF = (booking, res) => {
     const gap = (tableWidth - clientNameWidth - providerNameWidth) / 3;
 
     // Client signature on left
-    doc.rect(tableX + gap, currentY, clientNameWidth, signatureHeight).stroke("#000000");
-    
+    doc
+      .rect(tableX + gap, currentY, clientNameWidth, signatureHeight)
+      .stroke("#000000");
+
     // Check if signature exists and is valid
     if (
       booking.agreement &&
@@ -452,27 +593,78 @@ const generateBookingAgreementPDF = (booking, res) => {
       }
     }
 
-    // Provider signature placeholder on right
-    doc.rect(tableX + clientNameWidth + gap * 2, currentY, providerNameWidth, signatureHeight).stroke("#000000");
-    
+    // Provider/Admin signature on right
+    doc
+      .rect(
+        tableX + clientNameWidth + gap * 2,
+        currentY,
+        providerNameWidth,
+        signatureHeight
+      )
+      .stroke("#000000");
+
+    // Check if admin signature exists
+    if (
+      booking.agreement &&
+      booking.agreement.adminSignature &&
+      booking.agreement.adminSignature.startsWith("data:image")
+    ) {
+      try {
+        // Convert base64 to buffer
+        const base64Data = booking.agreement.adminSignature.replace(
+          /^data:image\/\w+;base64,/,
+          ""
+        );
+        const imageBuffer = Buffer.from(base64Data, "base64");
+
+        // Add admin signature image
+        doc.image(
+          imageBuffer,
+          tableX + clientNameWidth + gap * 2 + 5,
+          currentY + 5,
+          {
+            fit: [providerNameWidth - 10, signatureHeight - 35],
+            align: "center",
+          }
+        );
+      } catch (error) {
+        console.error("Error adding admin signature to PDF:", error);
+      }
+    }
+
     doc
       .fontSize(9)
       .fillColor("#000000")
       .font("Helvetica-Oblique")
-      .text("Signed by:", tableX + clientNameWidth + gap * 2 + 10, currentY + signatureHeight - 45, {
-        width: providerNameWidth - 20,
-      });
+      .text(
+        "Signed by:",
+        tableX + clientNameWidth + gap * 2 + 10,
+        currentY + signatureHeight - 45,
+        {
+          width: providerNameWidth - 20,
+        }
+      );
     doc
       .font("Helvetica-Bold")
-      .text("AMAYA SANTOS", tableX + clientNameWidth + gap * 2 + 10, currentY + signatureHeight - 30, {
-        width: providerNameWidth - 20,
-      });
+      .text(
+        booking.agreement?.adminSignerName || "AMAYA SANTOS",
+        tableX + clientNameWidth + gap * 2 + 10,
+        currentY + signatureHeight - 30,
+        {
+          width: providerNameWidth - 20,
+        }
+      );
     doc
       .font("Helvetica")
       .fontSize(8)
-      .text("Proprietor", tableX + clientNameWidth + gap * 2 + 10, currentY + signatureHeight - 15, {
-        width: providerNameWidth - 20,
-      });
+      .text(
+        "Proprietor",
+        tableX + clientNameWidth + gap * 2 + 10,
+        currentY + signatureHeight - 15,
+        {
+          width: providerNameWidth - 20,
+        }
+      );
 
     currentY += signatureHeight + 5;
 
@@ -494,7 +686,19 @@ const generateBookingAgreementPDF = (booking, res) => {
       .fillColor("#000000")
       .font("Helvetica")
       .text(
-        `Date: ${booking.agreement?.agreedAt ? new Date(booking.agreement.agreedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+        `Date: ${
+          booking.agreement?.agreedAt
+            ? new Date(booking.agreement.agreedAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : new Date().toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+        }`,
         tableX,
         currentY,
         { width: tableWidth, align: "center" }
@@ -514,7 +718,13 @@ const generateBookingAgreementPDF = (booking, res) => {
     currentY += 10;
 
     doc.text(
-      `Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}`,
+      `Generated: ${new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`,
       tableX,
       currentY,
       { width: tableWidth, align: "center" }
@@ -529,4 +739,3 @@ const generateBookingAgreementPDF = (booking, res) => {
 };
 
 module.exports = { generateBookingAgreementPDF };
-
