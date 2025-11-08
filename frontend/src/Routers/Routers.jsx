@@ -29,6 +29,8 @@ import {
   Policy,
   Maintenance,
   Reports,
+  UserFeedback,
+  OwnerFeedback,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -127,6 +129,14 @@ export const Routers = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/my-feedback"
+          element={
+            <ProtectedRoute>
+              <UserFeedback />
+            </ProtectedRoute>
+          }
+        />
         {/* Protected Owner Pages */}
         <Route
           path="/owner-dashboard"
@@ -181,6 +191,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole={["owner"]}>
               <OwnerChat />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/owner-feedback"
+          element={
+            <ProtectedRoute requiredRole={["owner", "admin"]}>
+              <OwnerFeedback />
             </ProtectedRoute>
           }
         />

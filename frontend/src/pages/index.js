@@ -18,6 +18,7 @@ export { default as Maintenance } from "./admin/Maintenance";
 export { default as UserBooking } from "./users/UserBooking";
 export { default as UserHome } from "./users/UserHome";
 export { default as UserChat } from "./users/UserChat";
+export { default as UserFeedback } from "./users/UserFeedback";
 
 // Owner Pages
 export { default as OwnerDashboard } from "./owner/OwnerDashboard";
@@ -27,6 +28,7 @@ export { default as OwnerPackages } from "./owner/OwnerPackages";
 export { default as OwnerUser } from "./owner/OwnerUser";
 export { default as OwnerBooking } from "./owner/OwnerBooking";
 export { default as OwnerChat } from "./owner/OwnerChat";
+export { default as OwnerFeedback } from "./owner/OwnerFeedback";
 
 // Staff Pages
 export { default as StaffDashboard } from "./staff/StaffDashboard";

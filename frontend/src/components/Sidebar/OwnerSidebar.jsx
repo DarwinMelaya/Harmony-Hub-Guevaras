@@ -12,6 +12,7 @@ import {
   Package,
   Gift,
   FileBarChart,
+  MessageSquare,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -79,6 +80,12 @@ const OwnerSidebar = ({ onNavigate }) => {
       text: "Messages",
       path: "/owner-chat",
       isActive: location.pathname === "/owner-chat",
+    },
+    {
+      icon: MessageSquare,
+      text: "Feedback",
+      path: "/owner-feedback",
+      isActive: location.pathname === "/owner-feedback",
     },
     // {
     //   icon: HelpCircle,

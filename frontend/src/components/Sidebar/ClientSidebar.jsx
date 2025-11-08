@@ -5,6 +5,7 @@ import {
   Settings,
   LogOut,
   MessageCircle,
+  MessageSquare,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -30,6 +31,12 @@ const ClientSidebar = () => {
       text: "Messages",
       path: "/my-chat",
       isActive: location.pathname === "/my-chat",
+    },
+    {
+      icon: MessageSquare,
+      text: "Feedback",
+      path: "/my-feedback",
+      isActive: location.pathname === "/my-feedback",
     },
     // {
     //   icon: User,

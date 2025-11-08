@@ -58,6 +58,7 @@ app.use("/api/chat", require("./routes/chat"));
 app.use("/api/units", require("./routes/units"));
 app.use("/api/categories", require("./routes/categories"));
 app.use("/api/reports", require("./routes/reports"));
+app.use("/api/feedback", require("./routes/feedback"));
 
 // Socket.IO setup
 const io = socketIo(server, {
