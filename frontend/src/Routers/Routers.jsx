@@ -28,6 +28,7 @@ import {
   OwnerChat,
   Policy,
   Maintenance,
+  Reports,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -238,6 +239,15 @@ export const Routers = () => {
           element={
             <ProtectedRoute requiredRole="artist">
               <ArtistBooking />
+            </ProtectedRoute>
+          }
+        />
+        {/* Protected Public Pages */}
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute requiredRole={["admin", "owner"]}>
+              <Reports />
             </ProtectedRoute>
           }
         />

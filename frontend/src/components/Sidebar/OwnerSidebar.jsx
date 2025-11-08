@@ -11,6 +11,7 @@ import {
   LogOut,
   Package,
   Gift,
+  FileBarChart,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -54,6 +55,12 @@ const OwnerSidebar = ({ onNavigate }) => {
       text: "Booking Details",
       path: "/owner-booking",
       isActive: location.pathname === "/owner-booking",
+    },
+    {
+      icon: FileBarChart,
+      text: "Reports",
+      path: "/reports",
+      isActive: location.pathname === "/reports",
     },
     // {
     //   icon: Calendar,

@@ -12,6 +12,7 @@ import {
   Package,
   Gift,
   Wrench,
+  FileBarChart,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -61,6 +62,12 @@ const AdminSidebar = ({ onNavigate }) => {
       text: "Maintenance",
       path: "/admin-maintenance",
       isActive: location.pathname === "/admin-maintenance",
+    },
+    {
+      icon: FileBarChart,
+      text: "Reports",
+      path: "/reports",
+      isActive: location.pathname === "/reports",
     },
     // {
     //   icon: Calendar,
