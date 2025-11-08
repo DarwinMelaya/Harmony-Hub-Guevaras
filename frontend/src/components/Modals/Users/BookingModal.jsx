@@ -52,6 +52,13 @@ const BookingModal = ({
     });
   }, []);
 
+  // Auto-fill email when modal opens and userEmail is available
+  useEffect(() => {
+    if (showBookingModal && userEmail && !bookingData.contactInfo.email) {
+      handleBookingDataChange("contactInfo.email", userEmail);
+    }
+  }, [showBookingModal, userEmail]);
+
   // Calculate downpayment amount
   const calculateDownpayment = () => {
     const total = getCartTotal();
@@ -160,7 +167,7 @@ const BookingModal = ({
                 }
 
                 setShowPolicyReminder(false);
-                
+
                 // Show agreement modal instead of directly submitting
                 setShowAgreement(true);
               }}
@@ -181,7 +188,8 @@ const BookingModal = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-gray-300">
                             {item.name} x
-                            {item.type === "package" || item.type === "bandArtist"
+                            {item.type === "package" ||
+                            item.type === "bandArtist"
                               ? 1
                               : item.quantity}
                             {item.type === "inventory" && item.unit && (
@@ -764,7 +772,7 @@ const BookingModal = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Phone Number
+                        Phone Number <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="tel"
@@ -777,11 +785,12 @@ const BookingModal = ({
                         }
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="+63 912 345 6789"
+                        required
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Email
+                        Email <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="email"
@@ -794,6 +803,7 @@ const BookingModal = ({
                         }
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="your.email@example.com"
+                        required
                       />
                     </div>
                   </div>
@@ -960,7 +970,7 @@ const BookingModal = ({
         onAgree={(agreementInfo) => {
           setAgreementData(agreementInfo);
           setShowAgreement(false);
-          
+
           // Add agreement data to booking data
           const eventWithAgreement = {
             ...bookingData,
@@ -968,13 +978,13 @@ const BookingModal = ({
             downpaymentType,
             downpaymentPercentage,
           };
-          
+
           // Create a synthetic event to pass to handleBookingSubmit
           const syntheticEvent = {
             preventDefault: () => {},
             target: { checkValidity: () => true },
           };
-          
+
           // Submit the booking with agreement data
           handleBookingSubmit(syntheticEvent, eventWithAgreement);
         }}
@@ -982,9 +992,10 @@ const BookingModal = ({
           ...bookingData,
           downpaymentType,
           downpaymentPercentage,
-          remainingBalance: downpaymentType === "percentage" 
-            ? getCartTotal() - ((getCartTotal() * downpaymentPercentage) / 100)
-            : 0,
+          remainingBalance:
+            downpaymentType === "percentage"
+              ? getCartTotal() - (getCartTotal() * downpaymentPercentage) / 100
+              : 0,
         }}
         cart={cart}
         totalAmount={getCartTotal()}
