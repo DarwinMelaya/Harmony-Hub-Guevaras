@@ -12,6 +12,7 @@ const {
   getPublicCalendarBookings,
   downloadBookingAgreement,
   adminSignAgreement,
+  processRefund,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
@@ -59,6 +60,13 @@ router.patch(
   "/:id/agreement/admin-sign",
   requireRole(["owner", "admin", "staff"]),
   adminSignAgreement
+);
+
+// Process refund (owner/admin/staff only)
+router.patch(
+  "/:id/refund/process",
+  requireRole(["owner", "admin", "staff"]),
+  processRefund
 );
 
 module.exports = router;

@@ -44,6 +44,12 @@ const OwnerBooking = () => {
   const [downloadingAgreement, setDownloadingAgreement] = useState(null);
   const [showAdminSignModal, setShowAdminSignModal] = useState(false);
   const [signingBooking, setSigningBooking] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundProof, setRefundProof] = useState("");
+  const [refundProofPreview, setRefundProofPreview] = useState(null);
+  const [processingRefund, setProcessingRefund] = useState(false);
 
   const hasIssues = (booking) => {
     return (
@@ -132,7 +138,7 @@ const OwnerBooking = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId, newStatus, issueData = {}) => {
+  const updateBookingStatus = async (bookingId, newStatus, issueData = {}, cancellationReason = "") => {
     try {
       setUpdatingStatus(bookingId);
       const token = localStorage.getItem("token");
@@ -142,6 +148,11 @@ const OwnerBooking = () => {
         issueType: issueData.issueType || null,
         affectedItems: issueData.affectedItems || [],
       };
+
+      // Add cancellation reason if cancelling
+      if (newStatus === "cancelled" && cancellationReason) {
+        body.cancellationReason = cancellationReason;
+      }
 
       const response = await axios.patch(
         `http://localhost:5000/api/bookings/${bookingId}/status`,
@@ -158,17 +169,13 @@ const OwnerBooking = () => {
         setBookings((prevBookings) =>
           prevBookings.map((booking) =>
             booking._id === bookingId
-              ? { ...booking, status: newStatus, ...body }
+              ? response.data.data
               : booking
           )
         );
 
         if (selectedBooking && selectedBooking._id === bookingId) {
-          setSelectedBooking({
-            ...selectedBooking,
-            status: newStatus,
-            ...body,
-          });
+          setSelectedBooking(response.data.data);
         }
       }
     } catch (err) {
@@ -190,6 +197,8 @@ const OwnerBooking = () => {
         return "bg-red-100 text-red-800 border-red-200";
       case "completed":
         return "bg-blue-100 text-blue-800 border-blue-200";
+      case "refunded":
+        return "bg-purple-100 text-purple-800 border-purple-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -204,6 +213,8 @@ const OwnerBooking = () => {
       case "cancelled":
         return <XCircle className="w-4 h-4" />;
       case "completed":
+        return <CheckCircle className="w-4 h-4" />;
+      case "refunded":
         return <CheckCircle className="w-4 h-4" />;
       default:
         return <AlertCircle className="w-4 h-4" />;
@@ -382,6 +393,74 @@ const OwnerBooking = () => {
         err.response?.data?.message || "Failed to sign agreement"
       );
     }
+  };
+
+  const handleProcessRefund = async () => {
+    if (!selectedBooking) return;
+
+    // For GCash, require refund proof
+    if (selectedBooking.paymentMethod === "gcash" && !refundProof) {
+      setError("Please upload refund proof for GCash refunds");
+      return;
+    }
+
+    try {
+      setProcessingRefund(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+
+      const body = {};
+      if (selectedBooking.paymentMethod === "gcash") {
+        body.refundProof = refundProof;
+      }
+
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${selectedBooking._id}/refund/process`,
+        body,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update the booking in the list
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) =>
+            booking._id === selectedBooking._id
+              ? response.data.data
+              : booking
+          )
+        );
+
+        // Update selected booking
+        setSelectedBooking(response.data.data);
+
+        setShowRefundModal(false);
+        setRefundProof("");
+        setRefundProofPreview(null);
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Failed to process refund"
+      );
+    } finally {
+      setProcessingRefund(false);
+    }
+  };
+
+  const handleRefundProofChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setRefundProof(reader.result);
+      setRefundProofPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -1052,6 +1131,107 @@ const OwnerBooking = () => {
                 </div>
               </div>
 
+              {/* Cancellation and Refund Section */}
+              {(selectedBooking.status === "cancelled" || selectedBooking.status === "refunded") && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                    <XCircle className="w-5 h-5 mr-2 text-red-400" />
+                    Cancellation Information
+                  </h3>
+                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                    {selectedBooking.cancellationReason && (
+                      <div className="mb-4">
+                        <p className="text-gray-300 text-sm mb-2 font-medium">
+                          Cancellation Reason:
+                        </p>
+                        <p className="text-white text-sm italic">
+                          {selectedBooking.cancellationReason}
+                        </p>
+                      </div>
+                    )}
+                    {selectedBooking.refundAmount > 0 && (
+                      <div className="mt-4 pt-4 border-t border-red-700">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-gray-300 text-sm mb-1">
+                              Refund Amount:
+                            </p>
+                            <p className="text-green-400 font-bold text-lg">
+                              ₱{Number(selectedBooking.refundAmount).toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-300 text-sm mb-1">
+                              Refund Status:
+                            </p>
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                selectedBooking.refundStatus === "processed"
+                                  ? "bg-green-100 text-green-800"
+                                  : selectedBooking.refundStatus === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {selectedBooking.refundStatus === "processed"
+                                ? "Processed"
+                                : selectedBooking.refundStatus === "pending"
+                                ? "Pending"
+                                : "Not Applicable"}
+                            </span>
+                          </div>
+                        </div>
+                        {selectedBooking.refundedAt && (
+                          <div className="mt-3">
+                            <p className="text-gray-400 text-xs">
+                              Refunded on:{" "}
+                              {new Date(
+                                selectedBooking.refundedAt
+                              ).toLocaleString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                        )}
+                        {selectedBooking.refundProof && (
+                          <div className="mt-3">
+                            <p className="text-gray-300 text-sm mb-2 font-medium">
+                              Refund Proof:
+                            </p>
+                            <img
+                              src={selectedBooking.refundProof}
+                              alt="Refund proof"
+                              className="w-48 h-48 object-cover rounded-lg border border-gray-600"
+                            />
+                          </div>
+                        )}
+                        {selectedBooking.refundStatus === "pending" && (
+                          <div className="mt-4 pt-4 border-t border-red-700">
+                            <button
+                              onClick={() => {
+                                setShowRefundModal(true);
+                                setRefundProof("");
+                                setRefundProofPreview(null);
+                                setError(null);
+                              }}
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                            >
+                              {selectedBooking.paymentMethod === "gcash"
+                                ? "Upload Refund Proof"
+                                : "Mark as Refunded"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Issues Section */}
               {hasIssues(selectedBooking) && (
                 <div className="mb-6">
@@ -1106,8 +1286,8 @@ const OwnerBooking = () => {
                     </button>
                     <button
                       onClick={() => {
-                        updateBookingStatus(selectedBooking._id, "cancelled");
-                        setShowDetailsModal(false);
+                        setShowCancelModal(true);
+                        setCancellationReason("");
                       }}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                     >
@@ -1165,6 +1345,10 @@ const OwnerBooking = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-red-600 rounded"></div>
                   <span className="text-gray-300">Cancelled</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-purple-600 rounded"></div>
+                  <span className="text-gray-300">Refunded</span>
                 </div>
               </div>
             </div>
@@ -1263,6 +1447,151 @@ const OwnerBooking = () => {
         booking={signingBooking}
         onSign={handleAdminSign}
       />
+
+      {/* Cancellation Reason Modal */}
+      {showCancelModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Cancel Booking
+            </h2>
+            <p className="text-gray-300 mb-4">
+              Please provide a reason for cancelling this booking.
+            </p>
+            {selectedBooking.paymentMethod === "gcash" && (
+              <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                <p className="text-blue-300 text-sm">
+                  <strong>Note:</strong> A refund of ₱
+                  {Number(
+                    selectedBooking.downpaymentAmount ||
+                      selectedBooking.totalAmount ||
+                      0
+                  ).toLocaleString()}{" "}
+                  will be processed for this cancellation.
+                </p>
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="block text-gray-300 mb-2">
+                Cancellation Reason <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="Please provide a reason for cancelling this booking..."
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                rows="4"
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancellationReason("");
+                  setError(null);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!cancellationReason.trim()) {
+                    setError("Please provide a reason for cancellation");
+                    return;
+                  }
+                  await updateBookingStatus(
+                    selectedBooking._id,
+                    "cancelled",
+                    {},
+                    cancellationReason.trim()
+                  );
+                  setShowCancelModal(false);
+                  setShowDetailsModal(false);
+                  setCancellationReason("");
+                }}
+                disabled={updatingStatus === selectedBooking._id}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {updatingStatus === selectedBooking._id
+                  ? "Cancelling..."
+                  : "Confirm Cancellation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Processing Modal */}
+      {showRefundModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Process Refund
+            </h2>
+            <p className="text-gray-300 mb-4">
+              {selectedBooking.paymentMethod === "gcash"
+                ? "Please upload proof of refund for GCash payment."
+                : "Mark this refund as processed for cash payment."}
+            </p>
+            {selectedBooking.paymentMethod === "gcash" && (
+              <div className="mb-4">
+                <label className="block text-gray-300 mb-2">
+                  Refund Proof <span className="text-red-400">*</span>
+                </label>
+                {refundProofPreview && (
+                  <div className="mb-3">
+                    <img
+                      src={refundProofPreview}
+                      alt="Refund proof preview"
+                      className="w-full h-48 object-contain rounded-lg border border-gray-600"
+                    />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleRefundProofChange}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                />
+                <p className="text-gray-400 text-xs mt-2">
+                  Upload a screenshot or image of the refund transaction
+                </p>
+              </div>
+            )}
+            <div className="mb-4 p-3 bg-green-900/20 border border-green-700 rounded-lg">
+              <p className="text-green-300 text-sm">
+                <strong>Refund Amount:</strong> ₱
+                {Number(selectedBooking.refundAmount).toLocaleString()}
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRefundModal(false);
+                  setRefundProof("");
+                  setRefundProofPreview(null);
+                  setError(null);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleProcessRefund}
+                disabled={processingRefund}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {processingRefund
+                  ? "Processing..."
+                  : selectedBooking.paymentMethod === "gcash"
+                  ? "Upload & Process"
+                  : "Mark as Refunded"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

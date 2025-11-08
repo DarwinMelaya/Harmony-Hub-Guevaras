@@ -3,6 +3,10 @@ const Inventory = require("../models/Inventory");
 const Packages = require("../models/Packages");
 const User = require("../models/User");
 const { generateBookingAgreementPDF } = require("../utils/pdfGenerator");
+const {
+  uploadImageToSupabase,
+  deleteImageFromSupabase,
+} = require("../utils/supabaseImageUpload");
 
 // Create a new booking
 const createBooking = async (req, res) => {
@@ -466,10 +470,10 @@ const getBookingById = async (req, res) => {
 const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, issueType, affectedItems } = req.body;
+    const { status, issueType, affectedItems, cancellationReason } = req.body;
 
     if (
-      !["pending", "confirmed", "cancelled", "completed"].includes(
+      !["pending", "confirmed", "cancelled", "completed", "refunded"].includes(
         req.body.status
       )
     ) {
@@ -500,6 +504,31 @@ const updateBookingStatus = async (req, res) => {
       // Clear remaining balance when marking as completed
       // This means the balance has been collected from the client
       booking.remainingBalance = 0;
+    }
+
+    // Handle cancellation with reason and refund
+    if (status === "cancelled" && previousStatus !== "cancelled") {
+      // Require cancellation reason when admin cancels
+      if (!cancellationReason || cancellationReason.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Cancellation reason is required",
+        });
+      }
+
+      booking.cancellationReason = cancellationReason.trim();
+
+      // Calculate refund amount based on payment method
+      if (booking.paymentMethod === "gcash") {
+        // For GCash payments, refund the amount that was paid
+        const paidAmount = booking.downpaymentAmount || booking.totalAmount || 0;
+        booking.refundAmount = paidAmount;
+        booking.refundStatus = "pending"; // Admin needs to process the refund
+      } else {
+        // For cash payments, no refund is applicable
+        booking.refundAmount = 0;
+        booking.refundStatus = "not_applicable";
+      }
     }
 
     await booking.save();
@@ -571,7 +600,16 @@ const updateBookingStatus = async (req, res) => {
 const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
+    const { cancellationReason } = req.body;
     const userId = req.user.id;
+
+    // Validate cancellation reason is provided
+    if (!cancellationReason || cancellationReason.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancellation reason is required",
+      });
+    }
 
     const booking = await Booking.findById(id);
 
@@ -605,7 +643,22 @@ const cancelBooking = async (req, res) => {
       });
     }
 
+    // Set cancellation reason
+    booking.cancellationReason = cancellationReason.trim();
     booking.status = "cancelled";
+
+    // Calculate refund amount based on payment method
+    if (booking.paymentMethod === "gcash") {
+      // For GCash payments, refund the amount that was paid (downpaymentAmount or totalAmount)
+      const paidAmount = booking.downpaymentAmount || booking.totalAmount || 0;
+      booking.refundAmount = paidAmount;
+      booking.refundStatus = "pending"; // Admin needs to process the refund
+    } else {
+      // For cash payments, no refund is applicable
+      booking.refundAmount = 0;
+      booking.refundStatus = "not_applicable";
+    }
+
     await booking.save();
 
     // Restore inventory and re-enable package availability on cancellation
@@ -967,6 +1020,101 @@ const adminSignAgreement = async (req, res) => {
   }
 };
 
+// Process refund (admin/owner/staff only)
+const processRefund = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { refundProof } = req.body;
+    const userRole = req.user.role;
+
+    // Only admin, owner, and staff can process refunds
+    if (!["admin", "owner", "staff"].includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can process refunds",
+      });
+    }
+
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // Check if booking is cancelled
+    if (booking.status !== "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Only cancelled bookings can have refunds processed",
+      });
+    }
+
+    // Check if refund is applicable
+    if (booking.refundStatus === "not_applicable") {
+      return res.status(400).json({
+        success: false,
+        message: "Refund is not applicable for this booking",
+      });
+    }
+
+    // Check if refund is already processed
+    if (booking.refundStatus === "processed") {
+      return res.status(400).json({
+        success: false,
+        message: "Refund has already been processed",
+      });
+    }
+
+    // Handle GCash refunds - require proof
+    if (booking.paymentMethod === "gcash") {
+      if (!refundProof || refundProof.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Refund proof is required for GCash refunds",
+        });
+      }
+
+      // Upload refund proof to Supabase
+      const uploadResult = await uploadImageToSupabase(
+        refundProof,
+        "refunds"
+      );
+      if (uploadResult.success) {
+        booking.refundProof = uploadResult.url;
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Failed to upload refund proof: ${uploadResult.error}`,
+        });
+      }
+    }
+
+    // Mark refund as processed and change status to refunded
+    booking.refundStatus = "processed";
+    booking.refundedAt = new Date();
+    booking.status = "refunded"; // Change status from cancelled to refunded
+
+    await booking.save();
+    await booking.populate("user", "fullName email username");
+
+    res.json({
+      success: true,
+      message: "Refund processed successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error processing refund:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -979,4 +1127,5 @@ module.exports = {
   getPublicCalendarBookings,
   downloadBookingAgreement,
   adminSignAgreement,
+  processRefund,
 };

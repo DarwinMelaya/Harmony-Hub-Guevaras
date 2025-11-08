@@ -8,6 +8,7 @@ const statusClasses = {
   confirmed: "bg-blue-900/40 text-blue-300 border border-blue-700",
   completed: "bg-green-900/40 text-green-300 border border-green-700",
   cancelled: "bg-red-900/40 text-red-300 border border-red-700",
+  refunded: "bg-purple-900/40 text-purple-300 border border-purple-700",
 };
 
 const UserBooking = () => {
@@ -16,6 +17,9 @@ const UserBooking = () => {
   const [error, setError] = useState(null);
   const [cancelling, setCancelling] = useState(null);
   const [downloadingAgreement, setDownloadingAgreement] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedBookingForCancel, setSelectedBookingForCancel] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState("");
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -40,18 +44,27 @@ const UserBooking = () => {
     fetchBookings();
   }, []);
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) {
+  const handleCancelBooking = (booking) => {
+    setSelectedBookingForCancel(booking);
+    setCancellationReason("");
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancellationReason.trim()) {
+      setError("Please provide a reason for cancellation");
       return;
     }
 
+    if (!selectedBookingForCancel) return;
+
     try {
-      setCancelling(bookingId);
+      setCancelling(selectedBookingForCancel._id);
       setError(null);
       const token = localStorage.getItem("token");
-      await axios.patch(
-        `http://localhost:5000/api/bookings/${bookingId}/cancel`,
-        {},
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${selectedBookingForCancel._id}/cancel`,
+        { cancellationReason: cancellationReason.trim() },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -60,11 +73,15 @@ const UserBooking = () => {
       // Update the booking status in the local state
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
-          booking._id === bookingId
-            ? { ...booking, status: "cancelled" }
+          booking._id === selectedBookingForCancel._id
+            ? response.data.data
             : booking
         )
       );
+
+      setShowCancelModal(false);
+      setSelectedBookingForCancel(null);
+      setCancellationReason("");
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -182,12 +199,51 @@ const UserBooking = () => {
                       )}
                       {(b.status === "pending" || b.status === "confirmed") && (
                         <button
-                          onClick={() => handleCancelBooking(b._id)}
+                          onClick={() => handleCancelBooking(b)}
                           disabled={cancelling === b._id}
                           className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors"
                         >
                           {cancelling === b._id ? "Cancelling..." : "Cancel"}
                         </button>
+                      )}
+                      {(b.status === "cancelled" || b.status === "refunded") && b.cancellationReason && (
+                        <div className="text-xs text-gray-400 mt-2">
+                          <p className="font-medium text-gray-300">Cancellation Reason:</p>
+                          <p className="italic">{b.cancellationReason}</p>
+                          {b.refundAmount > 0 && (
+                            <div className="mt-2">
+                              {b.refundStatus === "pending" && (
+                                <p className="text-yellow-400">
+                                  Refund pending: ₱{Number(b.refundAmount).toLocaleString()}
+                                </p>
+                              )}
+                              {b.refundStatus === "processed" && (
+                                <>
+                                  <p className="text-green-400 mb-2">
+                                    Refund processed: ₱{Number(b.refundAmount).toLocaleString()}
+                                  </p>
+                                  {b.refundedAt && (
+                                    <p className="text-gray-400 text-xs">
+                                      Processed on: {new Date(b.refundedAt).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                  {b.refundProof && (
+                                    <div className="mt-2">
+                                      <p className="text-gray-300 text-xs mb-1">Refund Proof:</p>
+                                      <img
+                                        src={b.refundProof}
+                                        alt="Refund proof"
+                                        className="w-32 h-32 object-cover rounded-lg border border-gray-600 cursor-pointer"
+                                        onClick={() => window.open(b.refundProof, '_blank')}
+                                        title="Click to view full size"
+                                      />
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -221,6 +277,67 @@ const UserBooking = () => {
           )}
         </div>
       </div>
+
+      {/* Cancellation Reason Modal */}
+      {showCancelModal && selectedBookingForCancel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Cancel Booking
+            </h2>
+            <p className="text-gray-300 mb-4">
+              Are you sure you want to cancel this booking? Please provide a reason for cancellation.
+            </p>
+            {selectedBookingForCancel.paymentMethod === "gcash" && (
+              <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
+                <p className="text-blue-300 text-sm">
+                  <strong>Note:</strong> A refund of ₱
+                  {Number(
+                    selectedBookingForCancel.downpaymentAmount ||
+                      selectedBookingForCancel.totalAmount ||
+                      0
+                  ).toLocaleString()}{" "}
+                  will be processed for this cancellation.
+                </p>
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="block text-gray-300 mb-2">
+                Cancellation Reason <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="Please provide a reason for cancelling this booking..."
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                rows="4"
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setSelectedBookingForCancel(null);
+                  setCancellationReason("");
+                  setError(null);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCancel}
+                disabled={cancelling === selectedBookingForCancel._id}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {cancelling === selectedBookingForCancel._id
+                  ? "Cancelling..."
+                  : "Confirm Cancellation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

@@ -60,7 +60,7 @@ const BookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "confirmed", "cancelled", "completed"],
+    enum: ["pending", "confirmed", "cancelled", "completed", "refunded"],
     default: "pending",
   },
   notes: {
@@ -171,6 +171,27 @@ const BookingSchema = new mongoose.Schema({
       type: Number,
       default: 1,
     },
+  },
+  // Cancellation and Refund Fields
+  cancellationReason: {
+    type: String,
+    trim: true,
+  },
+  refundAmount: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  refundStatus: {
+    type: String,
+    enum: ["pending", "processed", "not_applicable"],
+    default: "not_applicable",
+  },
+  refundedAt: {
+    type: Date,
+  },
+  refundProof: {
+    type: String, // URL to refund proof image (for GCash refunds)
   },
   createdAt: {
     type: Date,
