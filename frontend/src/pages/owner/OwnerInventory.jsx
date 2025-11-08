@@ -1,8 +1,236 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import axios from "axios";
 import Layout from "../../components/Layout/Layout";
 import AddInventory from "../../components/Modals/Admin/AddInventory";
-import { Plus, Box, Calendar, AlertCircle } from "lucide-react";
+import MaintenanceModal from "../../components/Modals/Admin/MaintenanceModal";
+import EditInventoryModal from "../../components/Modals/Admin/EditInventoryModal";
+import MaintenanceHistoryModal from "../../components/Modals/Admin/MaintenanceHistoryModal";
+import DeleteConfirmModal from "../../components/Modals/Admin/DeleteConfirmModal";
+import {
+  Plus,
+  Box,
+  Calendar,
+  AlertCircle,
+  Wrench,
+  AlertTriangle,
+  Clock,
+  History,
+  Edit,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
+
+// Helper functions moved outside component for better performance
+const getConditionColor = (condition) => {
+  const colors = {
+    excellent: "bg-green-600/90 text-green-100 border-green-500/50",
+    good: "bg-blue-600/90 text-blue-100 border-blue-500/50",
+    fair: "bg-yellow-600/90 text-yellow-100 border-yellow-500/50",
+    poor: "bg-orange-600/90 text-orange-100 border-orange-500/50",
+    "needs-repair": "bg-red-600/90 text-red-100 border-red-500/50",
+  };
+  return colors[condition] || "bg-gray-600/90 text-gray-100 border-gray-500/50";
+};
+
+const getStatusColor = (status) => {
+  const colors = {
+    available: "bg-green-600/90 text-green-100 border-green-500/50",
+    "in-use": "bg-blue-600/90 text-blue-100 border-blue-500/50",
+    "under-maintenance":
+      "bg-yellow-600/90 text-yellow-100 border-yellow-500/50",
+    "needs-repair": "bg-red-600/90 text-red-100 border-red-500/50",
+    retired: "bg-gray-600/90 text-gray-100 border-gray-500/50",
+  };
+  return colors[status] || "bg-gray-600/90 text-gray-100 border-gray-500/50";
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const isMaintenanceDue = (item) => {
+  if (!item.nextMaintenanceDate) return false;
+  return new Date() >= new Date(item.nextMaintenanceDate);
+};
+
+const isMaintenanceOverdue = (item) => {
+  if (!item.nextMaintenanceDate) return false;
+  const daysOverdue = Math.floor(
+    (new Date() - new Date(item.nextMaintenanceDate)) / (1000 * 60 * 60 * 24)
+  );
+  return daysOverdue > 7;
+};
+
+const capitalizeStatus = (status) => {
+  if (!status) return "N/A";
+  return status
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+// Memoized table row component
+const InventoryRow = memo(
+  ({ item, onEdit, onMaintenance, onViewHistory, onDelete }) => {
+    return (
+      <tr
+        className={`hover:bg-gray-700/30 transition-colors ${
+          isMaintenanceOverdue(item)
+            ? "bg-red-900/10"
+            : isMaintenanceDue(item)
+            ? "bg-yellow-900/10"
+            : ""
+        }`}
+      >
+        {/* Item Column - Image + Name */}
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            {item.image ? (
+              <img
+                src={item.image}
+                alt={item.name}
+                className="h-12 w-12 rounded-lg object-cover border border-gray-600 flex-shrink-0"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-lg bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
+                <Box className="w-6 h-6 text-gray-500" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-white text-sm">{item.name}</div>
+              {item.notes && (
+                <div className="text-xs text-gray-400 truncate mt-0.5">
+                  {item.notes}
+                </div>
+              )}
+            </div>
+          </div>
+        </td>
+
+        {/* Price */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="text-sm text-green-400 font-medium">
+            ₱{Number(item.price).toLocaleString()}
+          </div>
+        </td>
+
+        {/* Quantity */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="text-sm text-gray-300">
+            {Number(item.quantity ?? 0).toLocaleString()}
+            {item.unit && (
+              <span className="text-xs text-gray-400 ml-1">
+                {item.unit.symbol}
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Category */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="text-sm text-gray-400">
+            {item.category ? item.category.name : '-'}
+          </div>
+        </td>
+
+        {/* Condition */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span
+            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${getConditionColor(
+              item.condition
+            )}`}
+          >
+            {capitalizeStatus(item.condition)}
+          </span>
+        </td>
+
+        {/* Status */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <span
+            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(
+              item.status
+            )}`}
+          >
+            {capitalizeStatus(item.status)}
+          </span>
+        </td>
+
+        {/* Maintenance */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="flex flex-col gap-1">
+            {isMaintenanceOverdue(item) ? (
+              <div className="flex items-center gap-1 text-red-400">
+                <AlertTriangle className="w-3 h-3" />
+                <span className="text-xs font-medium">Overdue</span>
+              </div>
+            ) : isMaintenanceDue(item) ? (
+              <div className="flex items-center gap-1 text-yellow-400">
+                <Clock className="w-3 h-3" />
+                <span className="text-xs font-medium">Due Now</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-gray-400">
+                <Calendar className="w-3 h-3" />
+                <span className="text-xs">
+                  {formatDate(item.nextMaintenanceDate)}
+                </span>
+              </div>
+            )}
+            {item.lastMaintenanceDate && (
+              <span className="text-xs text-gray-500">
+                {formatDate(item.lastMaintenanceDate)}
+              </span>
+            )}
+          </div>
+        </td>
+
+        {/* Actions */}
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center justify-center gap-1.5">
+            <button
+              onClick={() => onEdit(item)}
+              className="p-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              title="Edit"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onMaintenance(item)}
+              className="p-2 rounded-md bg-green-600 hover:bg-green-700 text-white transition-colors"
+              title="Log Maintenance"
+            >
+              <Wrench className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onViewHistory(item)}
+              className="p-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+              title="History"
+            >
+              <History className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onDelete(item._id)}
+              className="p-2 rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+);
+
+InventoryRow.displayName = "InventoryRow";
 
 const OwnerInventory = () => {
   const [inventory, setInventory] = useState([]);
@@ -13,6 +241,17 @@ const OwnerInventory = () => {
   const [saving, setSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [selectedItemForMaintenance, setSelectedItemForMaintenance] =
+    useState(null);
+  const [maintenanceHistory, setMaintenanceHistory] = useState(null);
+  const [showMaintenanceHistory, setShowMaintenanceHistory] = useState(false);
+  const [units, setUnits] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Fetch inventory from backend
   const fetchInventory = async () => {
@@ -34,31 +273,104 @@ const OwnerInventory = () => {
 
   useEffect(() => {
     fetchInventory();
+    fetchUnitsAndCategories();
   }, []);
 
-  // Handle modal success
-  const handleModalSuccess = () => {
+  // Fetch units and categories
+  const fetchUnitsAndCategories = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [unitsRes, categoriesRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/units", { headers }),
+        axios.get("http://localhost:5000/api/categories", { headers }),
+      ]);
+
+      setUnits(unitsRes.data.data || unitsRes.data.units || []);
+      setCategories(categoriesRes.data.data || categoriesRes.data.categories || []);
+    } catch (err) {
+      console.error("Error fetching units and categories:", err);
+    }
+  };
+
+  // Handle modal success with useCallback
+  const handleModalSuccess = useCallback(() => {
     fetchInventory();
-  };
+  }, []);
 
-  // Edit handlers
-  const openEdit = (item) => {
+  // Edit handlers with useCallback
+  const openEdit = useCallback((item) => {
     setEditingItem({ ...item });
-  };
+  }, []);
 
-  const closeEdit = () => {
+  const closeEdit = useCallback(() => {
     setEditingItem(null);
-  };
+  }, []);
 
-  const saveEdit = async () => {
+  const handleEditChange = useCallback((updates) => {
+    setEditingItem((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleImageChange = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const toBase64 = (f) =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(f);
+      });
+    try {
+      const base64 = await toBase64(file);
+      setEditingItem((prev) => ({ ...prev, image: base64 }));
+    } catch (err) {
+      setError("Failed to read image file");
+    }
+  }, []);
+
+  const saveEdit = useCallback(async () => {
     if (!editingItem?._id) return;
     try {
       setSaving(true);
       const token = localStorage.getItem("token");
-      const { _id, name, price, quantity, image } = editingItem;
+      const {
+        _id,
+        name,
+        price,
+        quantity,
+        unit,
+        category,
+        image,
+        condition,
+        status,
+        maintenanceIntervalDays,
+        notes,
+      } = editingItem;
+      
+      const payload = {
+        name,
+        price,
+        quantity,
+        image,
+        condition,
+        status,
+        maintenanceIntervalDays,
+        notes,
+      };
+
+      // Only include unit and category if they're set
+      if (unit) {
+        payload.unit = typeof unit === 'object' ? unit._id : unit;
+      }
+      if (category) {
+        payload.category = typeof category === 'object' ? category._id : category;
+      }
+
       await axios.put(
         `http://localhost:5000/api/inventory/${_id}`,
-        { name, price, quantity, image },
+        payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       closeEdit();
@@ -68,15 +380,15 @@ const OwnerInventory = () => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [editingItem, closeEdit]);
 
-  // Delete handler
-  const deleteItem = async (id) => {
+  // Delete handler with useCallback
+  const deleteItem = useCallback((id) => {
     if (!id) return;
     setConfirmDeleteId(id);
-  };
+  }, []);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (!confirmDeleteId) return;
     try {
       setDeleting(true);
@@ -94,9 +406,102 @@ const OwnerInventory = () => {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [confirmDeleteId]);
 
-  const cancelDelete = () => setConfirmDeleteId(null);
+  const cancelDelete = useCallback(() => setConfirmDeleteId(null), []);
+
+  // Maintenance handlers with useCallback
+  const openMaintenanceModal = useCallback((item) => {
+    setSelectedItemForMaintenance(item);
+    setShowMaintenanceModal(true);
+  }, []);
+
+  const closeMaintenanceModal = useCallback(() => {
+    setSelectedItemForMaintenance(null);
+    setShowMaintenanceModal(false);
+  }, []);
+
+  const handleMaintenanceSuccess = useCallback(() => {
+    fetchInventory();
+  }, []);
+
+  // View maintenance history with useCallback
+  const viewMaintenanceHistory = useCallback(async (item) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `http://localhost:5000/api/inventory/${item._id}/maintenance`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setMaintenanceHistory({
+        item,
+        history: response.data.maintenanceHistory || [],
+      });
+      setShowMaintenanceHistory(true);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    }
+  }, []);
+
+  const closeMaintenanceHistory = useCallback(() => {
+    setMaintenanceHistory(null);
+    setShowMaintenanceHistory(false);
+  }, []);
+
+  // Memoize computed values for better performance
+  const maintenanceDueCount = useMemo(() => {
+    return inventory.filter((item) => isMaintenanceDue(item)).length;
+  }, [inventory]);
+
+  // Pagination calculations
+  const paginationData = useMemo(() => {
+    const totalItems = inventory.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentItems = inventory.slice(startIndex, endIndex);
+
+    return {
+      currentItems,
+      totalPages,
+      totalItems,
+      startIndex,
+      endIndex: Math.min(endIndex, totalItems),
+    };
+  }, [inventory, currentPage, itemsPerPage]);
+
+  // Reset to first page when inventory changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [inventory.length]);
+
+  // Pagination handlers
+  const goToPage = useCallback((page) => {
+    setCurrentPage(page);
+  }, []);
+
+  const goToFirstPage = useCallback(() => {
+    setCurrentPage(1);
+  }, []);
+
+  const goToLastPage = useCallback(() => {
+    setCurrentPage(paginationData.totalPages);
+  }, [paginationData.totalPages]);
+
+  const goToPreviousPage = useCallback(() => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((prev) => Math.min(paginationData.totalPages, prev + 1));
+  }, [paginationData.totalPages]);
+
+  const handleItemsPerPageChange = useCallback((value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  }, []);
 
   return (
     <Layout>
@@ -124,28 +529,51 @@ const OwnerInventory = () => {
             </div>
           </div>
 
+          {/* Maintenance Alerts */}
+          {maintenanceDueCount > 0 && (
+            <div className="mb-6 bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                <div>
+                  <h3 className="font-semibold text-yellow-200">
+                    Maintenance Alerts
+                  </h3>
+                  <p className="text-sm text-yellow-300/80">
+                    {maintenanceDueCount} item(s) require maintenance attention
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Inventory Table */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden shadow-lg">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-auto">
                 <thead className="bg-gray-700 border-b border-gray-600">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Image
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                      Item
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
                       Price
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Quantity
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                      Qty
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Added
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                      Category
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                      Condition
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                      Maintenance
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase">
                       Actions
                     </th>
                   </tr>
@@ -154,87 +582,40 @@ const OwnerInventory = () => {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan="6"
+                        colSpan="8"
                         className="px-6 py-12 text-center text-gray-400"
                       >
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto"></div>
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+                          <p className="text-sm">Loading inventory...</p>
+                        </div>
                       </td>
                     </tr>
                   ) : inventory.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="6"
+                        colSpan="8"
                         className="px-6 py-12 text-center text-gray-400"
                       >
-                        <Box className="w-12 h-12 mx-auto mb-4 text-gray-600" />
-                        <div className="text-lg font-medium">
+                        <Box className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+                        <div className="text-base font-medium mb-1">
                           No inventory items found
                         </div>
-                        <div className="text-sm">
-                          Try adding a new inventory item
+                        <div className="text-sm text-gray-500">
+                          Click "Add Inventory" to create your first item
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    inventory.map((item) => (
-                      <tr
+                    paginationData.currentItems.map((item) => (
+                      <InventoryRow
                         key={item._id}
-                        className="hover:bg-gray-700 transition-colors"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="h-12 w-12 object-cover rounded border border-gray-600"
-                            />
-                          ) : (
-                            <span className="text-gray-500">No image</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium">
-                          {item.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-green-400 mr-1">₱</span>
-                          {Number(item.price).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-green-400 mr-1"></span>
-                          {Number(item.quantity ?? 0).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                          <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-2 text-gray-500" />
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  }
-                                )
-                              : "-"}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-3">
-                            <button
-                              onClick={() => openEdit(item)}
-                              className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs border border-blue-500"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => deleteItem(item._id)}
-                              className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-xs border border-red-500"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                        item={item}
+                        onEdit={openEdit}
+                        onMaintenance={openMaintenanceModal}
+                        onViewHistory={viewMaintenanceHistory}
+                        onDelete={deleteItem}
+                      />
                     ))
                   )}
                 </tbody>
@@ -242,11 +623,165 @@ const OwnerInventory = () => {
             </div>
           </div>
 
-          {/* Results Summary */}
+          {/* Pagination Controls */}
           {inventory.length > 0 && !loading && (
-            <div className="mt-4 text-sm text-gray-400 text-center">
-              Showing {inventory.length} inventory item
-              {inventory.length > 1 ? "s" : ""}
+            <div className="mt-6 bg-gray-800 rounded-lg border border-gray-700 p-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                {/* Items per page selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-400">Items per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) =>
+                      handleItemsPerPageChange(Number(e.target.value))
+                    }
+                    className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-md text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+
+                {/* Results info */}
+                <div className="text-sm text-gray-400">
+                  Showing {paginationData.startIndex + 1} to{" "}
+                  {paginationData.endIndex} of {paginationData.totalItems} items
+                </div>
+
+                {/* Pagination buttons */}
+                <div className="flex items-center gap-1">
+                  {/* First page */}
+                  <button
+                    onClick={goToFirstPage}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="First page"
+                  >
+                    <ChevronsLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Previous page */}
+                  <button
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1 mx-2">
+                    {(() => {
+                      const pages = [];
+                      const totalPages = paginationData.totalPages;
+                      const maxVisiblePages = 5;
+
+                      let startPage = Math.max(
+                        1,
+                        currentPage - Math.floor(maxVisiblePages / 2)
+                      );
+                      let endPage = Math.min(
+                        totalPages,
+                        startPage + maxVisiblePages - 1
+                      );
+
+                      // Adjust start if we're near the end
+                      if (endPage - startPage < maxVisiblePages - 1) {
+                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                      }
+
+                      // Add first page and ellipsis if needed
+                      if (startPage > 1) {
+                        pages.push(
+                          <button
+                            key={1}
+                            onClick={() => goToPage(1)}
+                            className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors"
+                          >
+                            1
+                          </button>
+                        );
+                        if (startPage > 2) {
+                          pages.push(
+                            <span
+                              key="ellipsis-start"
+                              className="px-2 text-gray-500"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                      }
+
+                      // Add visible page numbers
+                      for (let i = startPage; i <= endPage; i++) {
+                        pages.push(
+                          <button
+                            key={i}
+                            onClick={() => goToPage(i)}
+                            className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                              currentPage === i
+                                ? "bg-blue-600 text-white font-medium"
+                                : "bg-gray-700 hover:bg-gray-600 text-white"
+                            }`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+
+                      // Add ellipsis and last page if needed
+                      if (endPage < totalPages) {
+                        if (endPage < totalPages - 1) {
+                          pages.push(
+                            <span
+                              key="ellipsis-end"
+                              className="px-2 text-gray-500"
+                            >
+                              ...
+                            </span>
+                          );
+                        }
+                        pages.push(
+                          <button
+                            key={totalPages}
+                            onClick={() => goToPage(totalPages)}
+                            className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm transition-colors"
+                          >
+                            {totalPages}
+                          </button>
+                        );
+                      }
+
+                      return pages;
+                    })()}
+                  </div>
+
+                  {/* Next page */}
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === paginationData.totalPages}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  {/* Last page */}
+                  <button
+                    onClick={goToLastPage}
+                    disabled={currentPage === paginationData.totalPages}
+                    className="p-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Last page"
+                  >
+                    <ChevronsRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -269,146 +804,39 @@ const OwnerInventory = () => {
           onClose={() => setShowAddModal(false)}
           onSuccess={handleModalSuccess}
         />
-        {editingItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div
-              className="absolute inset-0 bg-black/50"
-              onClick={closeEdit}
-            ></div>
-            <div className="relative bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md text-white">
-              <h3 className="text-lg font-semibold mb-4">Edit Inventory</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editingItem.name || ""}
-                    onChange={(e) =>
-                      setEditingItem({ ...editingItem, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    Price
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editingItem.price ?? ""}
-                    onChange={(e) =>
-                      setEditingItem({
-                        ...editingItem,
-                        price: Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    value={editingItem.quantity ?? ""}
-                    onChange={(e) =>
-                      setEditingItem({
-                        ...editingItem,
-                        quantity: Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    Image
-                  </label>
-                  {editingItem.image && (
-                    <div className="mb-2">
-                      <img
-                        src={editingItem.image}
-                        alt="preview"
-                        className="h-20 w-20 object-cover rounded border border-gray-700"
-                      />
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const toBase64 = (f) =>
-                        new Promise((resolve, reject) => {
-                          const reader = new FileReader();
-                          reader.onload = () => resolve(reader.result);
-                          reader.onerror = reject;
-                          reader.readAsDataURL(f);
-                        });
-                      try {
-                        const base64 = await toBase64(file);
-                        setEditingItem({ ...editingItem, image: base64 });
-                      } catch (err) {
-                        setError("Failed to read image file");
-                      }
-                    }}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
-                  />
-                </div>
-              </div>
-              <div className="mt-5 flex justify-end gap-3">
-                <button
-                  onClick={closeEdit}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveEdit}
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded border border-blue-500 disabled:opacity-60"
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {confirmDeleteId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div
-              className="absolute inset-0 bg-black/50"
-              onClick={cancelDelete}
-            ></div>
-            <div className="relative bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-sm text-white">
-              <h3 className="text-lg font-semibold mb-2">Delete Inventory</h3>
-              <p className="text-gray-300 mb-4">
-                Are you sure you want to delete this item? This action cannot be
-                undone.
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={cancelDelete}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  disabled={deleting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded border border-red-500 disabled:opacity-60"
-                >
-                  {deleting ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
+        <EditInventoryModal
+          editingItem={editingItem}
+          saving={saving}
+          onClose={closeEdit}
+          onSave={saveEdit}
+          onChange={handleEditChange}
+          onImageChange={handleImageChange}
+          error={error}
+          units={units}
+          categories={categories}
+        />
+
+        <DeleteConfirmModal
+          isOpen={!!confirmDeleteId}
+          deleting={deleting}
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
+
+        <MaintenanceModal
+          isOpen={showMaintenanceModal}
+          onClose={closeMaintenanceModal}
+          onSuccess={handleMaintenanceSuccess}
+          item={selectedItemForMaintenance}
+        />
+
+        <MaintenanceHistoryModal
+          maintenanceHistory={
+            showMaintenanceHistory ? maintenanceHistory : null
+          }
+          onClose={closeMaintenanceHistory}
+        />
       </div>
     </Layout>
   );
