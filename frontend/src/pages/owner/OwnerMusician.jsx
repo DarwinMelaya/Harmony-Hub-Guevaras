@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "../../components/Layout/Layout";
 import AddMusician from "../../components/Modals/Admin/AddMusician";
 import EditMusician from "../../components/Modals/Admin/EditMusician";
+import AdminSignatureModal from "../../components/Modals/Admin/AdminSignatureModal";
 import {
   Music,
   Search,
@@ -17,7 +18,12 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  FileText,
+  Download,
+  Clock,
+  X,
 } from "lucide-react";
+import axios from "axios";
 
 const OwnerMusician = () => {
   const [musicians, setMusicians] = useState([]);
@@ -29,6 +35,12 @@ const OwnerMusician = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedMusician, setSelectedMusician] = useState(null);
+  const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [musicianBookings, setMusicianBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [showAdminSignModal, setShowAdminSignModal] = useState(false);
+  const [signingBooking, setSigningBooking] = useState(null);
+  const [downloadingAgreement, setDownloadingAgreement] = useState(null);
 
   // Fetch musicians from backend
   const fetchMusicians = async () => {
@@ -127,6 +139,120 @@ const OwnerMusician = () => {
   // Handle modal success
   const handleModalSuccess = () => {
     fetchMusicians();
+  };
+
+  // Fetch bookings for a specific musician
+  const fetchMusicianBookings = async (musicianId) => {
+    try {
+      setLoadingBookings(true);
+      const token = localStorage.getItem("token");
+
+      // Fetch all bookings and filter by artist
+      const response = await axios.get(
+        "http://localhost:5000/api/bookings",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Filter bookings where this musician is involved
+        const musicianIdStr = musicianId.toString();
+        const bookings = response.data.data.filter((booking) =>
+          booking.items.some(
+            (item) =>
+              item.type === "bandArtist" &&
+              (item.itemId?.toString() === musicianIdStr ||
+                item.itemId?._id?.toString() === musicianIdStr)
+          )
+        );
+        setMusicianBookings(bookings);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to fetch bookings");
+      console.error("Error fetching musician bookings:", err);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  // Open bookings modal for a musician
+  const openBookingsModal = async (musician) => {
+    setSelectedMusician(musician);
+    setShowBookingsModal(true);
+    await fetchMusicianBookings(musician._id);
+  };
+
+  // Handle admin sign
+  const handleAdminSign = async (signatureData) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${signingBooking._id}/agreement/admin-sign`,
+        signatureData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update the booking in the list
+        setMusicianBookings((prevBookings) =>
+          prevBookings.map((booking) =>
+            booking._id === signingBooking._id ? response.data.data : booking
+          )
+        );
+
+        setShowAdminSignModal(false);
+        setSigningBooking(null);
+      }
+    } catch (err) {
+      throw new Error(
+        err.response?.data?.message || "Failed to sign agreement"
+      );
+    }
+  };
+
+  // Download agreement
+  const handleDownloadAgreement = async (bookingId) => {
+    try {
+      setDownloadingAgreement(bookingId);
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/${bookingId}/agreement/download`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `booking-agreement-${bookingId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to download agreement"
+      );
+    } finally {
+      setDownloadingAgreement(null);
+    }
   };
 
   // Filter musicians based on search and filters
@@ -354,6 +480,13 @@ const OwnerMusician = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-2">
                             <button
+                              onClick={() => openBookingsModal(musician)}
+                              className="text-purple-400 hover:text-purple-300 p-1 transition-colors"
+                              title="View Bookings"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => openEditModal(musician)}
                               className="text-blue-400 hover:text-blue-300 p-1 transition-colors"
                               title="Edit"
@@ -400,6 +533,177 @@ const OwnerMusician = () => {
           }}
           onSuccess={handleModalSuccess}
           musician={selectedMusician}
+        />
+
+        {/* Bookings Modal */}
+        {showBookingsModal && selectedMusician && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+            <div className="bg-gray-800/95 backdrop-blur-md rounded-lg max-w-5xl w-full max-h-[95vh] overflow-hidden border border-gray-700/50">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gradient-to-r from-blue-900/30 to-purple-900/30">
+                <div className="flex items-center space-x-3">
+                  <Music className="w-6 h-6 text-blue-400" />
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      Bookings for {selectedMusician.fullName}
+                    </h2>
+                    <p className="text-sm text-gray-400">
+                      {selectedMusician.genre} • {formatCurrency(selectedMusician.booking_fee)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowBookingsModal(false);
+                    setSelectedMusician(null);
+                    setMusicianBookings([]);
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(95vh-200px)]">
+                {loadingBookings ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+                  </div>
+                ) : musicianBookings.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <FileText className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                    <div className="text-lg font-medium">No bookings found</div>
+                    <div className="text-sm">
+                      This musician has no bookings yet
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {musicianBookings.map((booking) => (
+                      <div
+                        key={booking._id}
+                        className="bg-gray-700/50 rounded-lg p-5 border border-gray-600 hover:border-gray-500 transition-colors"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h3 className="text-white font-bold">
+                                Booking #{booking._id.slice(-6)}
+                              </h3>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  booking.status === "confirmed"
+                                    ? "bg-green-900/50 text-green-300 border border-green-700"
+                                    : booking.status === "pending"
+                                    ? "bg-yellow-900/50 text-yellow-300 border border-yellow-700"
+                                    : booking.status === "completed"
+                                    ? "bg-blue-900/50 text-blue-300 border border-blue-700"
+                                    : "bg-red-900/50 text-red-300 border border-red-700"
+                                }`}
+                              >
+                                {booking.status}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-gray-400">Client:</p>
+                                <p className="text-white">
+                                  {booking.user?.fullName || booking.user?.username}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Booking Date:</p>
+                                <p className="text-white flex items-center">
+                                  <Calendar className="w-4 h-4 mr-1" />
+                                  {formatDate(booking.bookingDate)} at {booking.bookingTime}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Total Amount:</p>
+                                <p className="text-green-400 font-bold">
+                                  {formatCurrency(booking.totalAmount)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Created:</p>
+                                <p className="text-white flex items-center">
+                                  <Clock className="w-4 h-4 mr-1" />
+                                  {formatDate(booking.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Agreement Section */}
+                        {booking.agreement && booking.agreement.signature && (
+                          <div className="mt-4 pt-4 border-t border-gray-600">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <CheckCircle className="w-5 h-5 text-green-400" />
+                                <span className="text-green-400 font-medium">
+                                  Client has signed the agreement
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {booking.agreement.adminSignature ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleDownloadAgreement(booking._id)}
+                                      disabled={downloadingAgreement === booking._id}
+                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg text-sm flex items-center space-x-2 transition-colors"
+                                    >
+                                      {downloadingAgreement === booking._id ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                          <span>Downloading...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Download className="w-4 h-4" />
+                                          <span>Download</span>
+                                        </>
+                                      )}
+                                    </button>
+                                    <div className="text-sm text-gray-400">
+                                      Signed by: {booking.agreement.adminSignerName}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setSigningBooking(booking);
+                                      setShowAdminSignModal(true);
+                                    }}
+                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm flex items-center space-x-2 transition-colors"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    <span>Sign Contract</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Admin Signature Modal */}
+        <AdminSignatureModal
+          isOpen={showAdminSignModal}
+          onClose={() => {
+            setShowAdminSignModal(false);
+            setSigningBooking(null);
+          }}
+          booking={signingBooking}
+          onSign={handleAdminSign}
         />
 
         {/* Error Alert */}

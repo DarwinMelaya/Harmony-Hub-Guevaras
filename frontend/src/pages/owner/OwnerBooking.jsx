@@ -14,9 +14,14 @@ import {
   Filter,
   Search,
   RefreshCw,
+  AlertTriangle,
+  FileText,
+  Download,
 } from "lucide-react";
 import axios from "axios";
 import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
+import CompletionModal from "../../components/Modals/Admin/CompletionModal";
+import AdminSignatureModal from "../../components/Modals/Admin/AdminSignatureModal";
 
 const OwnerBooking = () => {
   const [bookings, setBookings] = useState([]);
@@ -30,8 +35,23 @@ const OwnerBooking = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completionStep, setCompletionStep] = useState("confirm");
+  const [issueType, setIssueType] = useState("");
+  const [selectedItems, setSelectedItems] = useState([]);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [balanceAmount, setBalanceAmount] = useState("");
+  const [downloadingAgreement, setDownloadingAgreement] = useState(null);
+  const [showAdminSignModal, setShowAdminSignModal] = useState(false);
+  const [signingBooking, setSigningBooking] = useState(null);
+
+  const hasIssues = (booking) => {
+    return (
+      booking.issueType &&
+      booking.affectedItems &&
+      booking.affectedItems.length > 0
+    );
+  };
 
   useEffect(() => {
     fetchBookings();
@@ -42,7 +62,7 @@ const OwnerBooking = () => {
       setLoading(true);
       const token = localStorage.getItem("token");
       const url =
-        statusFilter === "all"
+        statusFilter === "all" || statusFilter === "with-issues"
           ? "http://localhost:5000/api/bookings"
           : `http://localhost:5000/api/bookings?status=${statusFilter}`;
 
@@ -53,7 +73,14 @@ const OwnerBooking = () => {
       });
 
       if (response.data.success) {
-        setBookings(response.data.data);
+        let bookingsData = response.data.data;
+
+        // Filter for bookings with issues if needed
+        if (statusFilter === "with-issues") {
+          bookingsData = bookingsData.filter((booking) => hasIssues(booking));
+        }
+
+        setBookings(bookingsData);
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch bookings");
@@ -74,6 +101,7 @@ const OwnerBooking = () => {
       department: booking.user?.fullName || booking.user?.username || "User",
       start_time: booking.bookingTime,
       completed: booking.status === "completed",
+      status: booking.status, // Add status for color coding
       venues: { name: "Booking" },
     });
     return acc;
@@ -104,14 +132,20 @@ const OwnerBooking = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId, newStatus) => {
+  const updateBookingStatus = async (bookingId, newStatus, issueData = {}) => {
     try {
       setUpdatingStatus(bookingId);
       const token = localStorage.getItem("token");
 
+      const body = {
+        status: newStatus,
+        issueType: issueData.issueType || null,
+        affectedItems: issueData.affectedItems || [],
+      };
+
       const response = await axios.patch(
         `http://localhost:5000/api/bookings/${bookingId}/status`,
-        { status: newStatus },
+        body,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -124,13 +158,17 @@ const OwnerBooking = () => {
         setBookings((prevBookings) =>
           prevBookings.map((booking) =>
             booking._id === bookingId
-              ? { ...booking, status: newStatus }
+              ? { ...booking, status: newStatus, ...body }
               : booking
           )
         );
 
         if (selectedBooking && selectedBooking._id === bookingId) {
-          setSelectedBooking({ ...selectedBooking, status: newStatus });
+          setSelectedBooking({
+            ...selectedBooking,
+            status: newStatus,
+            ...body,
+          });
         }
       }
     } catch (err) {
@@ -185,6 +223,17 @@ const OwnerBooking = () => {
     }
   };
 
+  const getIssueIcon = (issueType) => {
+    switch (issueType) {
+      case "lost":
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      case "damaged":
+        return <AlertTriangle className="w-4 h-4 text-orange-400" />;
+      default:
+        return <AlertCircle className="w-4 h-4 text-yellow-400" />;
+    }
+  };
+
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
       booking.user?.fullName
@@ -207,7 +256,12 @@ const OwnerBooking = () => {
   };
 
   const formatTime = (timeString) => {
-    return timeString;
+    if (!timeString) return "-";
+    const [hours, minutes] = timeString.split(":");
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
   };
 
   const handleMarkAsCompleted = (booking) => {
@@ -218,9 +272,10 @@ const OwnerBooking = () => {
       setShowBalanceModal(true);
       setBalanceAmount("");
     } else {
-      // Directly update status if no remaining balance
-      updateBookingStatus(booking._id, "completed");
-      setShowDetailsModal(false);
+      setShowCompleteModal(true);
+      setCompletionStep("confirm");
+      setIssueType("");
+      setSelectedItems([]);
     }
   };
 
@@ -240,10 +295,93 @@ const OwnerBooking = () => {
       return;
     }
 
-    // Close balance modal and complete the booking
+    // Close balance modal and open completion modal
     setShowBalanceModal(false);
-    updateBookingStatus(selectedBooking._id, "completed");
-    setShowDetailsModal(false);
+    setShowCompleteModal(true);
+    setCompletionStep("confirm");
+    setIssueType("");
+    setSelectedItems([]);
+  };
+
+  const handleCompletionSubmit = (issueData = {}) => {
+    if (completionStep === "confirm") {
+      updateBookingStatus(selectedBooking._id, "completed");
+      setShowCompleteModal(false);
+    } else if (completionStep === "details") {
+      updateBookingStatus(selectedBooking._id, "completed", issueData);
+      setShowCompleteModal(false);
+    }
+  };
+
+  const handleDownloadAgreement = async (bookingId) => {
+    try {
+      setDownloadingAgreement(bookingId);
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/${bookingId}/agreement/download`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `booking-agreement-${bookingId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to download agreement"
+      );
+    } finally {
+      setDownloadingAgreement(null);
+    }
+  };
+
+  const handleAdminSign = async (signatureData) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${signingBooking._id}/agreement/admin-sign`,
+        signatureData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Update the booking in the list
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) =>
+            booking._id === signingBooking._id ? response.data.data : booking
+          )
+        );
+
+        // Update selected booking if it's the same one
+        if (selectedBooking && selectedBooking._id === signingBooking._id) {
+          setSelectedBooking(response.data.data);
+        }
+
+        setShowAdminSignModal(false);
+        setSigningBooking(null);
+      }
+    } catch (err) {
+      throw new Error(
+        err.response?.data?.message || "Failed to sign agreement"
+      );
+    }
   };
 
   return (
@@ -304,6 +442,7 @@ const OwnerBooking = () => {
                   <option value="confirmed">Confirmed</option>
                   <option value="cancelled">Cancelled</option>
                   <option value="completed">Completed</option>
+                  <option value="with-issues">With Issues</option>
                 </select>
               </div>
             </div>
@@ -443,16 +582,29 @@ const OwnerBooking = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
-                              booking.status
-                            )}`}
-                          >
-                            {getStatusIcon(booking.status)}
-                            <span className="ml-1 capitalize">
-                              {booking.status}
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
+                                booking.status
+                              )}`}
+                            >
+                              {getStatusIcon(booking.status)}
+                              <span className="ml-1 capitalize">
+                                {booking.status}
+                              </span>
                             </span>
-                          </span>
+                            {hasIssues(booking) && (
+                              <div
+                                className="flex items-center space-x-1"
+                                title={`${booking.issueType} items reported`}
+                              >
+                                {getIssueIcon(booking.issueType)}
+                                <span className="text-xs text-red-400 font-medium">
+                                  {booking.issueType}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <button
@@ -582,6 +734,138 @@ const OwnerBooking = () => {
                   )}
                 </div>
               </div>
+
+              {/* Agreement Section */}
+              {selectedBooking.agreement &&
+                selectedBooking.agreement.signature && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-blue-400" />
+                      Signed Agreement
+                    </h3>
+                    <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-white font-medium mb-1">
+                            Client has signed the booking agreement
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            Signed on:{" "}
+                            {new Date(
+                              selectedBooking.agreement.agreedAt
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            Signed by: {selectedBooking.agreement.clientName}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {selectedBooking.agreement.adminSignature ? (
+                            <button
+                              onClick={() =>
+                                handleDownloadAgreement(selectedBooking._id)
+                              }
+                              disabled={
+                                downloadingAgreement === selectedBooking._id
+                              }
+                              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                              {downloadingAgreement === selectedBooking._id ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  Downloading...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  Download PDF
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSigningBooking(selectedBooking);
+                                setShowAdminSignModal(true);
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                              <FileText className="w-4 h-4" />
+                              Sign as Admin
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Client Signature Preview */}
+                      <div className="mb-4 pt-4 border-t border-blue-700/30">
+                        <p className="text-gray-400 text-sm mb-2">
+                          Client Signature:
+                        </p>
+                        <div className="bg-white rounded-lg p-3">
+                          <img
+                            src={selectedBooking.agreement.signature}
+                            alt="Client Signature"
+                            className="h-24 object-contain mx-auto"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Admin Signature Status */}
+                      {selectedBooking.agreement.adminSignature ? (
+                        <div className="pt-4 border-t border-blue-700/30">
+                          <div className="flex items-center mb-2">
+                            <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
+                            <p className="text-green-400 font-medium">
+                              Admin has signed the agreement
+                            </p>
+                          </div>
+                          <p className="text-gray-400 text-sm mb-2">
+                            Signed by:{" "}
+                            {selectedBooking.agreement.adminSignerName}
+                          </p>
+                          <p className="text-gray-400 text-xs mb-3">
+                            On:{" "}
+                            {new Date(
+                              selectedBooking.agreement.adminSignedAt
+                            ).toLocaleString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                          <p className="text-gray-400 text-sm mb-2">
+                            Admin Signature:
+                          </p>
+                          <div className="bg-white rounded-lg p-3">
+                            <img
+                              src={selectedBooking.agreement.adminSignature}
+                              alt="Admin Signature"
+                              className="h-24 object-contain mx-auto"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pt-4 border-t border-blue-700/30">
+                          <div className="flex items-center">
+                            <AlertTriangle className="w-5 h-5 text-orange-400 mr-2" />
+                            <p className="text-orange-400 font-medium">
+                              Waiting for admin signature
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
               {/* Payment Information */}
               <div className="mb-6">
@@ -716,6 +1000,43 @@ const OwnerBooking = () => {
                           </p>
                         </div>
                       </div>
+
+                      {/* Display package items if this is a package */}
+                      {item.type === "package" &&
+                        item.itemId &&
+                        item.itemId.items && (
+                          <div className="mt-3 pt-3 border-t border-gray-600">
+                            <p className="text-gray-300 text-sm font-medium mb-2">
+                              Package Contents:
+                            </p>
+                            <div className="space-y-2">
+                              {item.itemId.items.map((packageItem, pIndex) => (
+                                <div
+                                  key={pIndex}
+                                  className="flex items-center justify-between bg-gray-600 p-2 rounded"
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <ShoppingCart className="w-3 h-3 text-gray-400" />
+                                    <span className="text-gray-300 text-sm">
+                                      {packageItem.inventoryItem?.name ||
+                                        "Unknown Item"}
+                                    </span>
+                                    <span className="text-gray-400 text-xs">
+                                      x{packageItem.quantity}
+                                    </span>
+                                  </div>
+                                  <span className="text-green-400 text-sm font-medium">
+                                    ₱
+                                    {Number(
+                                      packageItem.inventoryItem?.price *
+                                        packageItem.quantity || 0
+                                    ).toLocaleString()}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -730,6 +1051,38 @@ const OwnerBooking = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Issues Section */}
+              {hasIssues(selectedBooking) && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-2 text-red-400" />
+                    Reported Issues
+                  </h3>
+                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
+                    <div className="flex items-center mb-3">
+                      {getIssueIcon(selectedBooking.issueType)}
+                      <span className="text-red-300 font-medium ml-2 capitalize">
+                        {selectedBooking.issueType} Items
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-gray-300 text-sm mb-2">
+                        Affected Items:
+                      </p>
+                      {selectedBooking.affectedItems.map((itemName, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-2"
+                        >
+                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                          <span className="text-white text-sm">{itemName}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-6 border-t border-gray-700 flex-shrink-0">
@@ -764,7 +1117,10 @@ const OwnerBooking = () => {
                 )}
                 {selectedBooking.status === "confirmed" && (
                   <button
-                    onClick={() => handleMarkAsCompleted(selectedBooking)}
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      handleMarkAsCompleted(selectedBooking);
+                    }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                   >
                     Mark as Completed
@@ -791,6 +1147,27 @@ const OwnerBooking = () => {
                 ×
               </button>
             </div>
+            {/* Color Legend */}
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-600 rounded"></div>
+                  <span className="text-gray-300">Pending</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                  <span className="text-gray-300">Confirmed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600 rounded"></div>
+                  <span className="text-gray-300">Completed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-600 rounded"></div>
+                  <span className="text-gray-300">Cancelled</span>
+                </div>
+              </div>
+            </div>
             <div className="p-4 flex-1 overflow-auto">
               <AdminCalendar
                 monthNow={calendarMonth}
@@ -806,6 +1183,19 @@ const OwnerBooking = () => {
           </div>
         </div>
       )}
+
+      <CompletionModal
+        isOpen={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+        selectedBooking={selectedBooking}
+        onCompletionSubmit={handleCompletionSubmit}
+        completionStep={completionStep}
+        setCompletionStep={setCompletionStep}
+        issueType={issueType}
+        setIssueType={setIssueType}
+        selectedItems={selectedItems}
+        setSelectedItems={setSelectedItems}
+      />
 
       {/* Remaining Balance Modal */}
       {showBalanceModal && selectedBooking && (
@@ -862,6 +1252,17 @@ const OwnerBooking = () => {
           </div>
         </div>
       )}
+
+      {/* Admin Signature Modal */}
+      <AdminSignatureModal
+        isOpen={showAdminSignModal}
+        onClose={() => {
+          setShowAdminSignModal(false);
+          setSigningBooking(null);
+        }}
+        booking={signingBooking}
+        onSign={handleAdminSign}
+      />
     </Layout>
   );
 };
