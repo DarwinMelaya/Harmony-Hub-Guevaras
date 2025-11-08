@@ -15,6 +15,7 @@ import {
   MapPin,
   Calendar,
   Shield,
+  X,
 } from "lucide-react";
 
 const User = () => {
@@ -203,32 +204,39 @@ const User = () => {
 
   return (
     <Layout>
-      <div className="bg-[#30343c] min-h-screen w-full text-white p-8">
+      <div className="bg-[#30343c] min-h-screen w-full text-white p-4 sm:p-6 lg:p-4 xl:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                  <Users className="w-6 h-6 text-blue-400" />
+                <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                   User Management
                 </h1>
-                <p className="text-gray-300 mt-1">
+                <p className="text-gray-300 mt-1 text-sm sm:text-base">
                   Manage all users in the system ({users.length} total users)
                 </p>
               </div>
-              <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors">
+              <button 
+                type="button"
+                className="w-full sm:w-auto px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center justify-center gap-2 transition-colors cursor-pointer relative z-10"
+                onClick={() => {
+                  // Add user functionality here
+                  console.log("Add user clicked");
+                }}
+              >
                 <Users className="w-4 h-4" />
-                Add User
+                <span>Add User</span>
               </button>
             </div>
           </div>
 
           {/* Filters and Search */}
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 mb-6">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col gap-4">
               {/* Search */}
-              <div className="flex-1">
+              <div className="w-full">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
@@ -236,17 +244,17 @@ const User = () => {
                     placeholder="Search by name, email, or username..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 text-sm sm:text-base"
                   />
                 </div>
               </div>
 
-              {/* Role Filter */}
-              <div className="flex gap-2">
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white text-sm sm:text-base"
                 >
                   <option value="all">All Roles</option>
                   <option value="owner">Owner</option>
@@ -256,11 +264,10 @@ const User = () => {
                   <option value="client">Client</option>
                 </select>
 
-                {/* Status Filter */}
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white text-sm sm:text-base"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -270,28 +277,28 @@ const User = () => {
             </div>
           </div>
 
-          {/* Users Table */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-gray-700 border-b border-gray-600">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Role
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden xl:table-cell">
                       Joined
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -318,66 +325,67 @@ const User = () => {
                         key={user._id}
                         className="hover:bg-gray-700 transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
+                            <div className="flex-shrink-0 h-8 w-8 lg:h-9 lg:w-9">
                               {user.profilePhoto ? (
                                 <img
-                                  className="h-10 w-10 rounded-full object-cover"
+                                  className="h-8 w-8 lg:h-9 lg:w-9 rounded-full object-cover"
                                   src={user.profilePhoto}
                                   alt={user.fullName}
                                 />
                               ) : (
-                                <div className="h-10 w-10 rounded-full bg-gray-600 flex items-center justify-center">
-                                  <span className="text-sm font-medium text-gray-300">
+                                <div className="h-8 w-8 lg:h-9 lg:w-9 rounded-full bg-gray-600 flex items-center justify-center">
+                                  <span className="text-xs lg:text-sm font-medium text-gray-300">
                                     {user.fullName?.charAt(0).toUpperCase()}
                                   </span>
                                 </div>
                               )}
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-white">
+                            <div className="ml-2 lg:ml-3 min-w-0">
+                              <div className="text-xs lg:text-sm font-medium text-white truncate max-w-[120px] lg:max-w-[150px] xl:max-w-none">
                                 {user.fullName}
                               </div>
-                              <div className="text-sm text-gray-400">
+                              <div className="text-xs text-gray-400 truncate max-w-[120px] lg:max-w-[150px] xl:max-w-none">
                                 @{user.username}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-1">
-                            <div className="flex items-center text-sm text-white">
-                              <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                              {user.email}
+                        <td className="px-2 lg:px-3 xl:px-4 py-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center text-xs lg:text-sm text-white">
+                              <Mail className="w-3 h-3 lg:w-3.5 lg:h-3.5 mr-1.5 text-gray-400 shrink-0" />
+                              <span className="truncate max-w-[150px] lg:max-w-[200px] xl:max-w-none">{user.email}</span>
                             </div>
                             {user.phoneNumber && (
-                              <div className="flex items-center text-sm text-gray-400">
-                                <Phone className="w-4 h-4 mr-2 text-gray-500" />
-                                {user.phoneNumber}
+                              <div className="flex items-center text-xs text-gray-400 mt-0.5">
+                                <Phone className="w-3 h-3 mr-1.5 text-gray-500 shrink-0" />
+                                <span className="truncate max-w-[120px] lg:max-w-[150px]">{user.phoneNumber}</span>
                               </div>
                             )}
                             {user.location && (
-                              <div className="flex items-center text-sm text-gray-400">
-                                <MapPin className="w-4 h-4 mr-2 text-gray-500" />
-                                {user.location}
+                              <div className="flex items-center text-xs text-gray-400 mt-0.5 hidden xl:flex">
+                                <MapPin className="w-3 h-3 mr-1.5 text-gray-500 shrink-0" />
+                                <span className="truncate max-w-[150px]">{user.location}</span>
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(
                               user.role
                             )}`}
                           >
                             <Shield className="w-3 h-3 mr-1" />
-                            {user.role}
+                            <span className="hidden lg:inline">{user.role}</span>
+                            <span className="lg:hidden">{user.role.charAt(0).toUpperCase()}</span>
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                               user.isActive
                                 ? "bg-green-900/50 text-green-300 border border-green-700"
                                 : "bg-red-900/50 text-red-300 border border-red-700"
@@ -386,50 +394,52 @@ const User = () => {
                             {user.isActive ? (
                               <>
                                 <UserCheck className="w-3 h-3 mr-1" />
-                                Active
+                                <span className="hidden lg:inline">Active</span>
+                                <span className="lg:hidden">A</span>
                               </>
                             ) : (
                               <>
                                 <UserX className="w-3 h-3 mr-1" />
-                                Inactive
+                                <span className="hidden lg:inline">Inactive</span>
+                                <span className="lg:hidden">I</span>
                               </>
                             )}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap text-xs lg:text-sm text-gray-400 hidden xl:table-cell">
                           <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-2 text-gray-500" />
+                            <Calendar className="w-3 h-3 lg:w-3.5 lg:h-3.5 mr-1.5 text-gray-500 shrink-0" />
                             {formatDate(user.createdAt)}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center space-x-2">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-1 lg:space-x-1.5">
                             {canChangeUserRoles() && (
                               <button
                                 onClick={() => openRoleModal(user)}
                                 className="text-purple-400 hover:text-purple-300 p-1 transition-colors"
                                 title="Change Role"
                               >
-                                <Shield className="w-4 h-4" />
+                                <Shield className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                               </button>
                             )}
                             <button
                               className="text-blue-400 hover:text-blue-300 p-1 transition-colors"
                               title="View Details"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </button>
                             <button
                               className="text-green-400 hover:text-green-300 p-1 transition-colors"
                               title="Edit User"
                             >
-                              <Edit className="w-4 h-4" />
+                              <Edit className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </button>
                             <button
                               className="text-red-400 hover:text-red-300 p-1 transition-colors"
                               title="Delete User"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </button>
                           </div>
                         </td>
@@ -439,6 +449,144 @@ const User = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Mobile/Tablet Card View */}
+          <div className="lg:hidden space-y-4">
+            {filteredUsers.length === 0 ? (
+              <div className="bg-gray-800 rounded-lg border border-gray-700 p-12 text-center">
+                <Users className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                <div className="text-lg font-medium text-gray-400 mb-2">
+                  No users found
+                </div>
+                <div className="text-sm text-gray-500">
+                  Try adjusting your search or filters
+                </div>
+              </div>
+            ) : (
+              filteredUsers.map((user) => (
+                <div
+                  key={user._id}
+                  className="bg-gray-800 rounded-lg border border-gray-700 p-4 sm:p-6 hover:bg-gray-750 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        {user.profilePhoto ? (
+                          <img
+                            className="h-12 w-12 rounded-full object-cover"
+                            src={user.profilePhoto}
+                            alt={user.fullName}
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-full bg-gray-600 flex items-center justify-center">
+                            <span className="text-base font-medium text-gray-300">
+                              {user.fullName?.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base font-semibold text-white truncate">
+                          {user.fullName}
+                        </div>
+                        <div className="text-sm text-gray-400 truncate">
+                          @{user.username}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      {canChangeUserRoles() && (
+                        <button
+                          onClick={() => openRoleModal(user)}
+                          className="text-purple-400 hover:text-purple-300 p-1.5 transition-colors"
+                          title="Change Role"
+                        >
+                          <Shield className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        className="text-blue-400 hover:text-blue-300 p-1.5 transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="text-green-400 hover:text-green-300 p-1.5 transition-colors"
+                        title="Edit User"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="text-red-400 hover:text-red-300 p-1.5 transition-colors"
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Contact Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-white">
+                        <Mail className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
+                        <span className="truncate">{user.email}</span>
+                      </div>
+                      {user.phoneNumber && (
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Phone className="w-4 h-4 mr-2 text-gray-500 shrink-0" />
+                          {user.phoneNumber}
+                        </div>
+                      )}
+                      {user.location && (
+                        <div className="flex items-center text-sm text-gray-400">
+                          <MapPin className="w-4 h-4 mr-2 text-gray-500 shrink-0" />
+                          <span className="truncate">{user.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(
+                          user.role
+                        )}`}
+                      >
+                        <Shield className="w-3 h-3 mr-1" />
+                        {user.role}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.isActive
+                            ? "bg-green-900/50 text-green-300 border border-green-700"
+                            : "bg-red-900/50 text-red-300 border border-red-700"
+                        }`}
+                      >
+                        {user.isActive ? (
+                          <>
+                            <UserCheck className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Joined Date */}
+                    <div className="flex items-center text-sm text-gray-400 pt-2 border-t border-gray-700">
+                      <Calendar className="w-4 h-4 mr-2 text-gray-500 shrink-0" />
+                      Joined {formatDate(user.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Results Summary */}
@@ -451,8 +599,8 @@ const User = () => {
 
         {/* Role Change Modal */}
         {showRoleModal && selectedUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 w-full max-w-md mx-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 sm:p-6 w-full max-w-md">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">
                   Change User Role
@@ -463,9 +611,10 @@ const User = () => {
                     setSelectedUser(null);
                     setNewRole("");
                   }}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-white transition-colors p-1"
+                  aria-label="Close modal"
                 >
-                  ×
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
@@ -510,21 +659,21 @@ const User = () => {
                 )}
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   onClick={() => {
                     setShowRoleModal(false);
                     setSelectedUser(null);
                     setNewRole("");
                   }}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleRoleChange}
                   disabled={newRole === selectedUser.role}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 >
                   Update Role
                 </button>
@@ -535,14 +684,15 @@ const User = () => {
 
         {/* Error Alert */}
         {error && (
-          <div className="fixed top-4 right-4 bg-red-900/90 text-red-100 px-4 py-3 rounded-lg border border-red-700 flex items-center gap-2 z-50">
-            <Shield className="w-5 h-5" />
-            <span>{error}</span>
+          <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto bg-red-900/90 text-red-100 px-4 py-3 rounded-lg border border-red-700 flex items-center gap-2 z-50 shadow-lg">
+            <Shield className="w-5 h-5 shrink-0" />
+            <span className="flex-1 text-sm sm:text-base">{error}</span>
             <button
               onClick={() => setError(null)}
-              className="ml-2 text-red-300 hover:text-red-100"
+              className="ml-2 text-red-300 hover:text-red-100 transition-colors shrink-0"
+              aria-label="Close error"
             >
-              ×
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}

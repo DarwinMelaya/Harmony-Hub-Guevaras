@@ -129,32 +129,39 @@ const OwnerUser = () => {
 
   return (
     <Layout>
-      <div className="bg-[#30343c] h-screen w-full text-white flex flex-col overflow-hidden">
-        <div className="max-w-7xl mx-auto w-full h-full flex flex-col px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="bg-[#30343c] min-h-screen w-full text-white p-4 sm:p-6 lg:p-4 xl:p-8">
+        <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-4 sm:mb-6 flex-shrink-0">
+          <div className="mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
                   <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                   User Management
                 </h1>
-                <p className="text-sm sm:text-base text-gray-300 mt-1">
+                <p className="text-gray-300 mt-1 text-sm sm:text-base">
                   Manage all users in the system ({users.length} total users)
                 </p>
               </div>
-              <button className="px-3 sm:px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center justify-center gap-2 transition-colors text-sm sm:text-base whitespace-nowrap">
+              <button 
+                type="button"
+                className="w-full sm:w-auto px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center justify-center gap-2 transition-colors cursor-pointer relative z-10"
+                onClick={() => {
+                  // Add user functionality here
+                  console.log("Add user clicked");
+                }}
+              >
                 <Users className="w-4 h-4" />
-                Add User
+                <span>Add User</span>
               </button>
             </div>
           </div>
 
           {/* Filters and Search */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-3 sm:p-4 mb-4 sm:mb-6 flex-shrink-0">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 mb-6">
+            <div className="flex flex-col gap-4">
               {/* Search */}
-              <div className="flex-1 min-w-0">
+              <div className="w-full">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
@@ -167,12 +174,12 @@ const OwnerUser = () => {
                 </div>
               </div>
 
-              {/* Role Filter */}
-              <div className="flex gap-2">
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white text-sm sm:text-base flex-1 sm:flex-initial"
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white text-sm sm:text-base"
                 >
                   <option value="all">All Roles</option>
                   <option value="admin">Admin</option>
@@ -181,11 +188,10 @@ const OwnerUser = () => {
                   <option value="client">Client</option>
                 </select>
 
-                {/* Status Filter */}
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white text-sm sm:text-base flex-1 sm:flex-initial"
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white text-sm sm:text-base"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -195,28 +201,28 @@ const OwnerUser = () => {
             </div>
           </div>
 
-          {/* Users Table */}
-          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex-1 min-h-0 flex flex-col">
-            <div className="overflow-auto flex-1">
-              <table className="w-full min-w-[640px]">
-                <thead className="bg-gray-700 border-b border-gray-600 sticky top-0 z-10">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-gray-700 border-b border-gray-600">
                   <tr>
-                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       User
                     </th>
-                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Role
                     </th>
-                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden xl:table-cell">
                       Joined
                     </th>
-                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -226,13 +232,13 @@ const OwnerUser = () => {
                     <tr>
                       <td
                         colSpan="6"
-                        className="px-4 sm:px-6 py-8 sm:py-12 text-center text-gray-400"
+                        className="px-6 py-12 text-center text-gray-400"
                       >
-                        <Users className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-600" />
-                        <div className="text-base sm:text-lg font-medium">
+                        <Users className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                        <div className="text-lg font-medium">
                           No users found
                         </div>
-                        <div className="text-xs sm:text-sm">
+                        <div className="text-sm">
                           Try adjusting your search or filters
                         </div>
                       </td>
@@ -243,72 +249,67 @@ const OwnerUser = () => {
                         key={user._id}
                         className="hover:bg-gray-700 transition-colors"
                       >
-                        <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10">
+                            <div className="flex-shrink-0 h-8 w-8 lg:h-9 lg:w-9">
                               {user.profilePhoto ? (
                                 <img
-                                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover"
+                                  className="h-8 w-8 lg:h-9 lg:w-9 rounded-full object-cover"
                                   src={user.profilePhoto}
                                   alt={user.fullName}
                                 />
                               ) : (
-                                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-600 flex items-center justify-center">
-                                  <span className="text-xs sm:text-sm font-medium text-gray-300">
+                                <div className="h-8 w-8 lg:h-9 lg:w-9 rounded-full bg-gray-600 flex items-center justify-center">
+                                  <span className="text-xs lg:text-sm font-medium text-gray-300">
                                     {user.fullName?.charAt(0).toUpperCase()}
                                   </span>
                                 </div>
                               )}
                             </div>
-                            <div className="ml-2 sm:ml-4 min-w-0 flex-1">
-                              <div className="text-xs sm:text-sm font-medium text-white truncate">
+                            <div className="ml-2 lg:ml-3 min-w-0">
+                              <div className="text-xs lg:text-sm font-medium text-white truncate max-w-[120px] lg:max-w-[150px] xl:max-w-none">
                                 {user.fullName}
                               </div>
-                              <div className="text-xs sm:text-sm text-gray-400 truncate">
+                              <div className="text-xs text-gray-400 truncate max-w-[120px] lg:max-w-[150px] xl:max-w-none">
                                 @{user.username}
-                              </div>
-                              {/* Show email on mobile when contact column is hidden */}
-                              <div className="text-xs text-gray-400 truncate sm:hidden mt-1">
-                                <Mail className="w-3 h-3 inline mr-1" />
-                                {user.email}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 hidden sm:table-cell">
-                          <div className="space-y-1">
-                            <div className="flex items-center text-xs sm:text-sm text-white">
-                              <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-gray-400 flex-shrink-0" />
-                              <span className="truncate">{user.email}</span>
+                        <td className="px-2 lg:px-3 xl:px-4 py-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center text-xs lg:text-sm text-white">
+                              <Mail className="w-3 h-3 lg:w-3.5 lg:h-3.5 mr-1.5 text-gray-400 shrink-0" />
+                              <span className="truncate max-w-[150px] lg:max-w-[200px] xl:max-w-none">{user.email}</span>
                             </div>
                             {user.phoneNumber && (
-                              <div className="flex items-center text-xs sm:text-sm text-gray-400">
-                                <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-gray-500 flex-shrink-0" />
-                                <span className="truncate">{user.phoneNumber}</span>
+                              <div className="flex items-center text-xs text-gray-400 mt-0.5">
+                                <Phone className="w-3 h-3 mr-1.5 text-gray-500 shrink-0" />
+                                <span className="truncate max-w-[120px] lg:max-w-[150px]">{user.phoneNumber}</span>
                               </div>
                             )}
                             {user.location && (
-                              <div className="flex items-center text-xs sm:text-sm text-gray-400">
-                                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-gray-500 flex-shrink-0" />
-                                <span className="truncate">{user.location}</span>
+                              <div className="flex items-center text-xs text-gray-400 mt-0.5 hidden xl:flex">
+                                <MapPin className="w-3 h-3 mr-1.5 text-gray-500 shrink-0" />
+                                <span className="truncate max-w-[150px]">{user.location}</span>
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(
                               user.role
                             )}`}
                           >
                             <Shield className="w-3 h-3 mr-1" />
-                            <span className="hidden sm:inline">{user.role}</span>
-                            <span className="sm:hidden">{user.role.charAt(0).toUpperCase()}</span>
+                            <span className="hidden lg:inline">{user.role}</span>
+                            <span className="lg:hidden">{user.role.charAt(0).toUpperCase()}</span>
                           </span>
                         </td>
-                        <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                               user.isActive
                                 ? "bg-green-900/50 text-green-300 border border-green-700"
                                 : "bg-red-900/50 text-red-300 border border-red-700"
@@ -317,34 +318,34 @@ const OwnerUser = () => {
                             {user.isActive ? (
                               <>
                                 <UserCheck className="w-3 h-3 mr-1" />
-                                <span className="hidden sm:inline">Active</span>
-                                <span className="sm:hidden">A</span>
+                                <span className="hidden lg:inline">Active</span>
+                                <span className="lg:hidden">A</span>
                               </>
                             ) : (
                               <>
                                 <UserX className="w-3 h-3 mr-1" />
-                                <span className="hidden sm:inline">Inactive</span>
-                                <span className="sm:hidden">I</span>
+                                <span className="hidden lg:inline">Inactive</span>
+                                <span className="lg:hidden">I</span>
                               </>
                             )}
                           </span>
                         </td>
-                        <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 hidden md:table-cell text-xs sm:text-sm text-gray-400">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap text-xs lg:text-sm text-gray-400 hidden xl:table-cell">
                           <div className="flex items-center">
-                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-gray-500 flex-shrink-0" />
-                            <span className="truncate">{formatDate(user.createdAt)}</span>
+                            <Calendar className="w-3 h-3 lg:w-3.5 lg:h-3.5 mr-1.5 text-gray-500 shrink-0" />
+                            {formatDate(user.createdAt)}
                           </div>
                         </td>
-                        <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium">
-                          <div className="flex items-center space-x-1 sm:space-x-2">
+                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-1 lg:space-x-1.5">
                             <button className="text-blue-400 hover:text-blue-300 p-1 transition-colors" aria-label="View">
-                              <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <Eye className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </button>
                             <button className="text-green-400 hover:text-green-300 p-1 transition-colors" aria-label="Edit">
-                              <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <Edit className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </button>
                             <button className="text-red-400 hover:text-red-300 p-1 transition-colors" aria-label="Delete">
-                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <Trash2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </button>
                           </div>
                         </td>
@@ -356,9 +357,129 @@ const OwnerUser = () => {
             </div>
           </div>
 
+          {/* Mobile/Tablet Card View */}
+          <div className="lg:hidden space-y-4">
+            {filteredUsers.length === 0 ? (
+              <div className="bg-gray-800 rounded-lg border border-gray-700 p-12 text-center">
+                <Users className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+                <div className="text-lg font-medium text-gray-400 mb-2">
+                  No users found
+                </div>
+                <div className="text-sm text-gray-500">
+                  Try adjusting your search or filters
+                </div>
+              </div>
+            ) : (
+              filteredUsers.map((user) => (
+                <div
+                  key={user._id}
+                  className="bg-gray-800 rounded-lg border border-gray-700 p-4 sm:p-6 hover:bg-gray-750 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        {user.profilePhoto ? (
+                          <img
+                            className="h-12 w-12 rounded-full object-cover"
+                            src={user.profilePhoto}
+                            alt={user.fullName}
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-full bg-gray-600 flex items-center justify-center">
+                            <span className="text-base font-medium text-gray-300">
+                              {user.fullName?.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base font-semibold text-white truncate">
+                          {user.fullName}
+                        </div>
+                        <div className="text-sm text-gray-400 truncate">
+                          @{user.username}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      <button className="text-blue-400 hover:text-blue-300 p-1.5 transition-colors" aria-label="View">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button className="text-green-400 hover:text-green-300 p-1.5 transition-colors" aria-label="Edit">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button className="text-red-400 hover:text-red-300 p-1.5 transition-colors" aria-label="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Contact Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-white">
+                        <Mail className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
+                        <span className="truncate">{user.email}</span>
+                      </div>
+                      {user.phoneNumber && (
+                        <div className="flex items-center text-sm text-gray-400">
+                          <Phone className="w-4 h-4 mr-2 text-gray-500 shrink-0" />
+                          {user.phoneNumber}
+                        </div>
+                      )}
+                      {user.location && (
+                        <div className="flex items-center text-sm text-gray-400">
+                          <MapPin className="w-4 h-4 mr-2 text-gray-500 shrink-0" />
+                          <span className="truncate">{user.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Badges */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(
+                          user.role
+                        )}`}
+                      >
+                        <Shield className="w-3 h-3 mr-1" />
+                        {user.role}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.isActive
+                            ? "bg-green-900/50 text-green-300 border border-green-700"
+                            : "bg-red-900/50 text-red-300 border border-red-700"
+                        }`}
+                      >
+                        {user.isActive ? (
+                          <>
+                            <UserCheck className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Joined Date */}
+                    <div className="flex items-center text-sm text-gray-400 pt-2 border-t border-gray-700">
+                      <Calendar className="w-4 h-4 mr-2 text-gray-500 shrink-0" />
+                      Joined {formatDate(user.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
           {/* Results Summary */}
           {filteredUsers.length > 0 && (
-            <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-400 text-center flex-shrink-0">
+            <div className="mt-4 text-sm text-gray-400 text-center">
               Showing {filteredUsers.length} of {users.length} users
             </div>
           )}

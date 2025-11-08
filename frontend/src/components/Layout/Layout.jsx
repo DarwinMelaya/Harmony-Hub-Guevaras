@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { X, Menu } from "lucide-react";
 import AdminSidebar from "../Sidebar/AdminSidebar";
 import ArtistSidebar from "../Sidebar/ArtistSidebar";
 import ClientSidebar from "../Sidebar/ClientSidebar";
@@ -7,6 +8,7 @@ import StaffSidebar from "../Sidebar/StaffSidebar";
 
 const Layout = ({ children }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
   // Get user data from localStorage
   const user = JSON.parse(localStorage.getItem("user") || "null");
   const userRole = user?.role || "client";
@@ -23,69 +25,78 @@ const Layout = ({ children }) => {
       ? ArtistSidebar
       : ClientSidebar;
 
+  const toggleMobile = () => setIsMobileOpen((prev) => !prev);
   const closeMobile = () => setIsMobileOpen(false);
+
+  // Close mobile menu on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && isMobileOpen) {
+        closeMobile();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isMobileOpen]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileOpen]);
 
   return (
     <div className="flex min-h-screen bg-[#0b0d12]">
       {/* Mobile top bar */}
-      <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#0b0d12] md:hidden">
+      <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#0b0d12] md:hidden">
         <button
-          aria-label="Open menu"
-          className="text-white focus:outline-none"
-          onClick={() => setIsMobileOpen(true)}
+          aria-label={isMobileOpen ? "Close menu" : "Open menu"}
+          className="text-white hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 transition-colors"
+          onClick={toggleMobile}
         >
-          {/* simple hamburger */}
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M3 6H21"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <path
-              d="M3 12H21"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <path
-              d="M3 18H21"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
+          {isMobileOpen ? (
+            <X size={24} className="shrink-0" />
+          ) : (
+            <Menu size={24} className="shrink-0" />
+          )}
         </button>
-        <h1 className="text-white font-semibold">Harmony Hub</h1>
-        <div className="w-6" />
-      </div>
+        <h1 className="text-white font-semibold text-lg">Harmony Hub</h1>
+        <div className="w-10" />
+      </header>
 
       {/* Desktop sidebar */}
-      <div className="hidden md:block fixed left-0 top-0 h-screen z-50">
+      <aside className="hidden md:block fixed left-0 top-0 h-screen z-30">
         <SidebarComponent />
-      </div>
+      </aside>
 
-      {/* Mobile drawer */}
-      {isMobileOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-50 bg-black/50 md:hidden"
-            onClick={closeMobile}
-          />
-          <div className="fixed inset-y-0 left-0 z-50 w-64 md:hidden">
-            <SidebarComponent onNavigate={closeMobile} />
-          </div>
-        </>
-      )}
+      {/* Mobile drawer overlay */}
+      <div
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity duration-300 ${
+          isMobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={closeMobile}
+        aria-hidden="true"
+      />
 
-      <main className="flex-1 min-h-screen md:ml-64 pt-14 md:pt-0 px-4 md:px-0 w-full">
-        {children}
+      {/* Mobile drawer sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 md:hidden transform transition-transform duration-300 ease-in-out ${
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <SidebarComponent onNavigate={closeMobile} />
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 min-h-screen w-full md:ml-64 pt-14 md:pt-0">
+        <div className="h-full w-full">{children}</div>
       </main>
     </div>
   );
