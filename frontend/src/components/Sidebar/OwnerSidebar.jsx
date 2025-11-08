@@ -117,84 +117,53 @@ const OwnerSidebar = ({ onNavigate }) => {
   };
 
   return (
-    <div className="bg-[#282c34] h-screen w-64 flex flex-col">
+    <div className="bg-[#282c34] h-screen w-64 flex flex-col border-r border-gray-700">
       {/* Logo - Fixed at top */}
-      <div className="p-6 border-b border-gray-700 flex-shrink-0">
-        <h1 className="text-xl font-semibold">
-          <span className="text-white">HARMONY</span>
-          <span className="text-red-500"> HUB</span>
-        </h1>
+      <div className="px-6 py-5 border-b border-gray-700 flex-shrink-0">
+        <div className="flex items-center">
+          <h1 className="text-xl font-semibold tracking-tight">
+            <span className="text-white">HARMONY</span>
+            <span className="text-red-500"> HUB</span>
+          </h1>
+        </div>
       </div>
 
       {/* Navigation Items - Scrollable */}
-      <nav
-        className="flex-1 overflow-y-auto p-6 space-y-4"
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: "#4B5563 #1F2937",
-        }}
-      >
-        <style>{`
-          nav::-webkit-scrollbar {
-            width: 6px;
-          }
-          nav::-webkit-scrollbar-track {
-            background: #1f2937;
-            border-radius: 3px;
-          }
-          nav::-webkit-scrollbar-thumb {
-            background: #4b5563;
-            border-radius: 3px;
-            transition: background 0.2s ease;
-          }
-          nav::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
-          }
-          nav::-webkit-scrollbar-corner {
-            background: #1f2937;
-          }
-        `}</style>
-
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {navigationItems.map((item, index) => (
-          <div
+          <button
             key={index}
             onClick={() => handleNavigation(item.path)}
-            className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors relative ${
+            className={`group relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
               item.isActive
-                ? "text-blue-500 bg-blue-500/10"
-                : "text-white hover:bg-white/10"
+                ? "bg-blue-500/10 text-blue-500 shadow-sm"
+                : "text-white hover:bg-white/5 hover:text-white"
             }`}
           >
-            <div className="flex items-center space-x-3">
-              <item.icon
-                size={20}
-                className={item.isActive ? "text-blue-500" : "text-white"}
-              />
-              <span
-                className={
-                  item.isActive ? "text-blue-500 font-medium" : "text-white"
-                }
-              >
-                {item.text}
-              </span>
-            </div>
-
-            {/* Active indicator bar */}
+            <item.icon
+              size={18}
+              className={`shrink-0 transition-colors ${
+                item.isActive
+                  ? "text-blue-500"
+                  : "text-gray-400 group-hover:text-white"
+              }`}
+            />
+            <span className="flex-1 text-left">{item.text}</span>
             {item.isActive && (
-              <div className="absolute right-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-full"></div>
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-l-full bg-blue-500"></div>
             )}
-          </div>
+          </button>
         ))}
       </nav>
 
       {/* Logout Button - Fixed at bottom */}
-      <div className="p-6 border-t border-gray-700 flex-shrink-0">
+      <div className="border-t border-gray-700 px-3 py-4 flex-shrink-0">
         <button
           onClick={handleLogout}
-          className="flex items-center space-x-3 w-full p-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+          className="group relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-red-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400"
         >
-          <LogOut size={20} />
-          <span>Logout</span>
+          <LogOut size={18} className="shrink-0 text-red-400 group-hover:text-red-400" />
+          <span className="flex-1 text-left">Logout</span>
         </button>
       </div>
     </div>
