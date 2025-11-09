@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { FcGoogle } from "react-icons/fc";
-import { FaEye, FaEyeSlash, FaArrowLeft, FaArrowRight, FaCheck } from "react-icons/fa";
+import {
+  FaEye,
+  FaEyeSlash,
+  FaArrowLeft,
+  FaArrowRight,
+  FaCheck,
+} from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { provinces, cities, barangays } from "select-philippines-address";
@@ -24,7 +30,7 @@ const Signup = () => {
       }
     });
   }, []);
-  
+
   const handleCityChange = (e) => {
     const cityCode = e.target.value;
     const cityName = e.target.selectedOptions[0].text;
@@ -32,7 +38,6 @@ const Signup = () => {
 
     barangays(cityCode).then((response) => setBarangay(response));
   };
-
 
   const handleBarangayChange = (e) => {
     const barangayName = e.target.selectedOptions[0].text;
@@ -366,7 +371,7 @@ const Signup = () => {
           )}
 
           {/* Step Content */}
-          <div className="min-h-[400px]">
+          <div className="min-h-[450px]">
             {/* Step 1: Personal Information */}
             {currentStep === 1 && (
               <div className="space-y-6">
@@ -467,85 +472,101 @@ const Signup = () => {
                     </label>
                   </div>
 
-                  {/* Location */}
+                  {/* Username */}
                   <div className="relative">
-                    <div className="space-y-4">
-                    {/* City Select */}
-                    <select
-                      onChange={handleCityChange}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:ring-2 focus:ring-blue-500"
+                    <input
+                      type="text"
+                      id="username"
+                      value={formData.username}
+                      onChange={(e) =>
+                        handleInputChange("username", e.target.value)
+                      }
+                      onFocus={() => handleFocus("username")}
+                      onBlur={() => handleBlur("username")}
+                      className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
+                        errors.username ? "border-red-500" : "border-gray-600"
+                      }`}
+                      placeholder="Choose a username"
+                    />
+                    <label
+                      htmlFor="username"
+                      className={`absolute left-4 transition-all duration-300 pointer-events-none ${
+                        focusedFields.username || formData.username
+                          ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
+                          : "text-gray-400 text-sm top-4"
+                      }`}
                     >
-                      <option value="">Select City</option>
-                      {cityData.map((city) => (
-                        <option key={city.city_code} value={city.city_code}>
-                          {city.city_name}
-                        </option>
-                      ))}
-                    </select>
+                      Username
+                    </label>
+                    {errors.username && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.username}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location Section - Full Width */}
+                <div className="space-y-4">
+                  <label className="block text-blue-400 text-sm font-medium mb-2">
+                    Location
+                  </label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* City Select */}
+                    <div>
+                      <select
+                        onChange={handleCityChange}
+                        className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300"
+                      >
+                        <option value="">Select City</option>
+                        {cityData.map((city) => (
+                          <option key={city.city_code} value={city.city_code}>
+                            {city.city_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
                     {/* Barangay Select */}
-                    <select
-                      onChange={handleBarangayChange}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select Barangay</option>
-                      {barangayData.map((barangay) => (
-                        <option key={barangay.brgy_code} value={barangay.brgy_code}>
-                          {barangay.brgy_name}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <select
+                        onChange={handleBarangayChange}
+                        disabled={!cityAddr}
+                        className={`w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 ${
+                          !cityAddr ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        <option value="">Select Barangay</option>
+                        {barangayData.map((barangay) => (
+                          <option
+                            key={barangay.brgy_code}
+                            value={barangay.brgy_code}
+                          >
+                            {barangay.brgy_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-                    {/* Auto-filled Location */}
+                  {/* Auto-filled Location Display */}
+                  {formData.location && (
                     <div className="relative">
                       <input
                         type="text"
                         id="location"
                         value={formData.location}
                         readOnly
-                        className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 backdrop-blur-sm transition-all duration-300 peer"
+                        className="w-full px-4 py-4 bg-gray-800/30 border border-gray-600 rounded-xl text-gray-400 focus:outline-none backdrop-blur-sm transition-all duration-300 cursor-not-allowed"
                       />
                       <label
                         htmlFor="location"
-                        className="absolute left-4 -top-2 text-blue-400 text-xs bg-gray-900/60 px-2"
+                        className="absolute left-4 -top-2 text-gray-500 text-xs bg-gray-900/60 px-2"
                       >
-                        Location
+                        Complete Address
                       </label>
                     </div>
-                  </div>
-                  </div>
-                </div>
-
-                {/* Username */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) =>
-                      handleInputChange("username", e.target.value)
-                    }
-                    onFocus={() => handleFocus("username")}
-                    onBlur={() => handleBlur("username")}
-                    className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer ${
-                      errors.username ? "border-red-500" : "border-gray-600"
-                    }`}
-                    placeholder="Choose a username"
-                  />
-                  <label
-                    htmlFor="username"
-                    className={`absolute left-4 transition-all duration-300 pointer-events-none ${
-                      focusedFields.username || formData.username
-                        ? "text-blue-400 text-xs -top-2 bg-gray-900/60 px-2"
-                        : "text-gray-400 text-sm top-4"
-                    }`}
-                  >
-                    Username
-                  </label>
-                  {errors.username && (
-                    <p className="text-red-400 text-xs mt-1">
-                      {errors.username}
-                    </p>
                   )}
                 </div>
 
