@@ -26,11 +26,15 @@ const {
   updateArtistAvailability,
   updateArtistAvailabilityById,
   updateArtistBookingFee,
+  verifyEmail,
+  resendVerificationCode,
 } = require("../controllers/userController");
 
 // Public routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/verify-email", verifyEmail);
+router.post("/resend-verification", resendVerificationCode);
 
 // Protected routes (require authentication)
 router.get("/profile", authenticateToken, getUserProfile);

@@ -70,6 +70,7 @@ const Signup = () => {
     confirmPassword: false,
     genre: false,
     booking_fee: false,
+    verificationCode: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -78,7 +79,11 @@ const Signup = () => {
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
+  const [verificationCode, setVerificationCode] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resendingCode, setResendingCode] = useState(false);
 
   const API_BASE_URL = "http://localhost:5000/api";
 
@@ -250,9 +255,52 @@ const Signup = () => {
       );
 
       if (response.data.success) {
+        // Store pending email for verification
+        setPendingEmail(formData.email);
         setSuccessMessage(
-          "Account created successfully! Redirecting to login..."
+          "Account created successfully! Please check your email for verification code."
         );
+
+        // Move to verification step
+        setCurrentStep(4);
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      if (error.response?.data?.message) {
+        setErrors({ general: error.response.data.message });
+      } else if (error.response?.status === 400) {
+        setErrors({
+          general: "User with this email or username already exists",
+        });
+      } else {
+        setErrors({ general: "Registration failed. Please try again." });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setErrors({
+        verificationCode: "Please enter a valid 6-digit verification code",
+      });
+      return;
+    }
+
+    setVerifying(true);
+    setErrors({});
+    setSuccessMessage("");
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/users/verify-email`, {
+        email: pendingEmail,
+        verificationCode: verificationCode,
+      });
+
+      if (response.data.success) {
+        setSuccessMessage("Email verified successfully! Redirecting...");
 
         // Store token in localStorage
         localStorage.setItem("token", response.data.token);
@@ -280,19 +328,49 @@ const Signup = () => {
         }, 2000);
       }
     } catch (error) {
-      console.error("Registration error:", error);
-
+      console.error("Verification error:", error);
       if (error.response?.data?.message) {
-        setErrors({ general: error.response.data.message });
-      } else if (error.response?.status === 400) {
-        setErrors({
-          general: "User with this email or username already exists",
-        });
+        setErrors({ verificationCode: error.response.data.message });
       } else {
-        setErrors({ general: "Registration failed. Please try again." });
+        setErrors({
+          verificationCode: "Verification failed. Please try again.",
+        });
       }
     } finally {
-      setLoading(false);
+      setVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setResendingCode(true);
+    setErrors({});
+    setSuccessMessage("");
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/users/resend-verification`,
+        {
+          email: pendingEmail,
+        }
+      );
+
+      if (response.data.success) {
+        setSuccessMessage(
+          "Verification code sent successfully! Please check your email."
+        );
+        setVerificationCode("");
+      }
+    } catch (error) {
+      console.error("Resend code error:", error);
+      if (error.response?.data?.message) {
+        setErrors({ general: error.response.data.message });
+      } else {
+        setErrors({
+          general: "Failed to resend verification code. Please try again.",
+        });
+      }
+    } finally {
+      setResendingCode(false);
     }
   };
 
@@ -325,12 +403,17 @@ const Signup = () => {
             <p className="text-gray-400 text-sm mt-1">
               Step {currentStep} of {totalSteps}
             </p>
+            {currentStep === 4 && (
+              <p className="text-blue-400 text-sm mt-2">
+                Check your email for the verification code
+              </p>
+            )}
           </div>
 
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
-              {[1, 2, 3].map((step) => (
+              {[1, 2, 3, 4].map((step) => (
                 <div
                   key={step}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
@@ -353,6 +436,7 @@ const Signup = () => {
               <span>Personal Info</span>
               <span>Account Details</span>
               <span>Terms & Submit</span>
+              <span>Verify Email</span>
             </div>
           </div>
 
@@ -795,7 +879,7 @@ const Signup = () => {
             )}
 
             {/* Step 3: Terms & Submit */}
-            {currentStep === 3 && (
+            {currentStep === 3 && !pendingEmail && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-semibold text-white mb-6 text-center">
                   Terms & Conditions
@@ -857,21 +941,129 @@ const Signup = () => {
                 </div>
               </div>
             )}
+
+            {/* Step 4: Email Verification */}
+            {currentStep === 4 && pendingEmail && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+                  Verify Your Email
+                </h2>
+
+                <div className="text-center mb-6">
+                  <p className="text-gray-300 text-lg mb-2">
+                    We've sent a verification code to
+                  </p>
+                  <p className="text-blue-400 font-semibold text-lg">
+                    {pendingEmail}
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Please enter the 6-digit code to verify your email address
+                  </p>
+                </div>
+
+                {/* Verification Code Input */}
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="verificationCode"
+                      value={verificationCode}
+                      onChange={(e) => {
+                        const value = e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 6);
+                        setVerificationCode(value);
+                        if (errors.verificationCode) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            verificationCode: "",
+                          }));
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "Enter" &&
+                          verificationCode.length === 6
+                        ) {
+                          handleVerifyEmail();
+                        }
+                      }}
+                      onFocus={() => handleFocus("verificationCode")}
+                      onBlur={() => handleBlur("verificationCode")}
+                      className={`w-full px-4 py-4 bg-gray-800/50 border rounded-xl text-white text-center text-3xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 ${
+                        errors.verificationCode
+                          ? "border-red-500"
+                          : "border-gray-600"
+                      }`}
+                      placeholder="000000"
+                      maxLength="6"
+                      autoFocus
+                    />
+                    {errors.verificationCode && (
+                      <p className="text-red-400 text-xs mt-2 text-center">
+                        {errors.verificationCode}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Resend Code */}
+                  <div className="text-center">
+                    <p className="text-gray-400 text-sm mb-2">
+                      Didn't receive the code?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={resendingCode}
+                      className="text-blue-400 hover:text-blue-300 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed underline"
+                    >
+                      {resendingCode ? "Sending..." : "Resend Code"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                  <p className="text-blue-300 text-sm text-center">
+                    💡 The verification code will expire in 10 minutes. If you
+                    don't see the email, check your spam folder.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
-            <button
-              type="button"
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="px-6 py-3 bg-gray-700/50 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-gray-600/50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <FaArrowLeft className="w-4 h-4" />
-              Previous
-            </button>
+          <div
+            className={`flex ${
+              currentStep === 4 && pendingEmail
+                ? "justify-center"
+                : "justify-between"
+            } mt-8`}
+          >
+            {currentStep !== 4 && (
+              <button
+                type="button"
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className="px-6 py-3 bg-gray-700/50 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-gray-600/50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <FaArrowLeft className="w-4 h-4" />
+                Previous
+              </button>
+            )}
 
-            {currentStep < totalSteps ? (
+            {currentStep === 4 && pendingEmail ? (
+              <button
+                type="button"
+                onClick={handleVerifyEmail}
+                disabled={verifying || verificationCode.length !== 6}
+                className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {verifying ? "Verifying..." : "Verify Email"}
+                <FaCheck className="w-4 h-4" />
+              </button>
+            ) : currentStep < totalSteps ? (
               <button
                 type="button"
                 onClick={handleNext}

@@ -1,5 +1,15 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const sendEmail = require("../utils/sendEmail");
+const {
+  getVerificationEmailTemplate,
+  getWelcomeEmailTemplate,
+} = require("../utils/sendEmail");
+
+// Generate 6-digit verification code
+const generateVerificationCode = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 // Register new user
 const registerUser = async (req, res) => {
@@ -55,6 +65,13 @@ const registerUser = async (req, res) => {
       }
     }
 
+    // Generate verification code
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpires = new Date();
+    verificationCodeExpires.setMinutes(
+      verificationCodeExpires.getMinutes() + 10
+    ); // 10 minutes expiry
+
     // Create new user
     const userData = {
       fullName,
@@ -65,6 +82,10 @@ const registerUser = async (req, res) => {
       password,
       role: userRole,
       displayName: fullName,
+      isVerified: false,
+      isActive: false, // User is inactive until verified
+      verificationCode,
+      verificationCodeExpires,
     };
 
     // Add artist-specific fields if role is artist
@@ -74,34 +95,28 @@ const registerUser = async (req, res) => {
     }
 
     const user = new User(userData);
-
     await user.save();
 
-    // Send confirmation email
-  const sendEmail = require("../utils/sendEmail");
+    // Send verification email
+    try {
+      const emailHtml = getVerificationEmailTemplate(
+        user.fullName,
+        verificationCode
+      );
+      const emailText = `Hi ${user.fullName}, your verification code is: ${verificationCode}. This code will expire in 10 minutes.`;
 
-  await sendEmail(
-    user.email,
-    "Welcome to Harmony Hub 🎉",
-    `Hi ${user.fullName}, you just signed up on Harmony Hub using this email.`,
-    `
-      <h2>Welcome to Harmony Hub!</h2>
-      <p>Hi <strong>${user.fullName}</strong>,</p>
-      <p>We’re excited to have you join our community! You successfully signed up on <strong>Harmony Hub</strong> using this email address: <b>${user.email}</b>.</p>
-      <p>If this wasn’t you, please ignore this message.</p>
-      <br/>
-      <p>With love,<br/>The Harmony Hub Team</p>
-    `
-  );
+      await sendEmail(
+        user.email,
+        "Verify Your Email - Harmony Hub",
+        emailText,
+        emailHtml
+      );
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+      // Continue even if email fails - user can request resend
+    }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "24h" }
-    );
-
-    // Return user data (without password)
+    // Return user data (without password and verification code)
     const userResponse = {
       _id: user._id,
       fullName: user.fullName,
@@ -113,6 +128,7 @@ const registerUser = async (req, res) => {
       displayName: user.displayName,
       profilePhoto: user.profilePhoto,
       isActive: user.isActive,
+      isVerified: user.isVerified,
       createdAt: user.createdAt,
     };
 
@@ -124,9 +140,10 @@ const registerUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully",
+      message:
+        "User registered successfully. Please check your email for verification code.",
       data: userResponse,
-      token,
+      requiresVerification: true,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -149,6 +166,16 @@ const loginUser = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
+      });
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Please verify your email address before logging in. Check your email for the verification code.",
+        requiresVerification: true,
       });
     }
 
@@ -814,6 +841,198 @@ const updateArtistBookingFee = async (req, res) => {
   }
 };
 
+// Verify email with verification code
+const verifyEmail = async (req, res) => {
+  try {
+    const { email, verificationCode } = req.body;
+
+    if (!email || !verificationCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and verification code are required",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check if already verified
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified",
+      });
+    }
+
+    // Check if verification code matches
+    if (user.verificationCode !== verificationCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code",
+      });
+    }
+
+    // Check if verification code has expired
+    if (new Date() > user.verificationCodeExpires) {
+      return res.status(400).json({
+        success: false,
+        message: "Verification code has expired. Please request a new one.",
+      });
+    }
+
+    // Verify user and activate account
+    user.isVerified = true;
+    user.isActive = true;
+    user.verificationCode = undefined;
+    user.verificationCodeExpires = undefined;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    // Send welcome email
+    try {
+      const emailHtml = getWelcomeEmailTemplate(user.fullName, user.email);
+      const emailText = `Welcome to Harmony Hub, ${user.fullName}! Your email has been verified successfully.`;
+
+      await sendEmail(
+        user.email,
+        "Welcome to Harmony Hub! 🎉",
+        emailText,
+        emailHtml
+      );
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Continue even if email fails
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" }
+    );
+
+    // Return user data (without password)
+    const userResponse = {
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      location: user.location,
+      username: user.username,
+      role: user.role,
+      displayName: user.displayName,
+      profilePhoto: user.profilePhoto,
+      isActive: user.isActive,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+    };
+
+    // Add artist-specific fields to response if user is an artist
+    if (user.role === "artist") {
+      userResponse.genre = user.genre;
+      userResponse.booking_fee = user.booking_fee;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully! Welcome to Harmony Hub.",
+      data: userResponse,
+      token,
+    });
+  } catch (error) {
+    console.error("Email verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Resend verification code
+const resendVerificationCode = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check if already verified
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already verified",
+      });
+    }
+
+    // Generate new verification code
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpires = new Date();
+    verificationCodeExpires.setMinutes(
+      verificationCodeExpires.getMinutes() + 10
+    ); // 10 minutes expiry
+
+    // Update user with new verification code
+    user.verificationCode = verificationCode;
+    user.verificationCodeExpires = verificationCodeExpires;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    // Send verification email
+    try {
+      const emailHtml = getVerificationEmailTemplate(
+        user.fullName,
+        verificationCode
+      );
+      const emailText = `Hi ${user.fullName}, your verification code is: ${verificationCode}. This code will expire in 10 minutes.`;
+
+      await sendEmail(
+        user.email,
+        "Verify Your Email - Harmony Hub",
+        emailText,
+        emailHtml
+      );
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send verification email. Please try again later.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Verification code sent successfully. Please check your email.",
+    });
+  } catch (error) {
+    console.error("Resend verification code error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -831,4 +1050,6 @@ module.exports = {
   updateArtistAvailability,
   updateArtistAvailabilityById,
   updateArtistBookingFee,
+  verifyEmail,
+  resendVerificationCode,
 };

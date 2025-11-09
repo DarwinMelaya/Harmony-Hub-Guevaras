@@ -31,6 +31,11 @@ const UserSchema = new mongoose.Schema({
   // Role-specific fields
   permissions: [{ type: String }],
   isActive: { type: Boolean, default: true },
+  
+  // Email verification fields
+  isVerified: { type: Boolean, default: false },
+  verificationCode: { type: String },
+  verificationCodeExpires: { type: Date },
 
   // Artist-specific fields
   genre: {
