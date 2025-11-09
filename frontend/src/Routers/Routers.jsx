@@ -3,6 +3,7 @@ import {
   Login,
   Home,
   Signup,
+  GoogleVerify,
   AdminDashboard,
   Inventory,
   User,
@@ -44,6 +45,7 @@ export const Routers = () => {
         {/* Auth Pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/google-verify" element={<GoogleVerify />} />
         {/* Google OAuth Callback */}
         <Route path="/google-callback" element={<GoogleOAuthCallback />} />
         {/* Protected Admin Pages */}

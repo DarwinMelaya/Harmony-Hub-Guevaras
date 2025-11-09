@@ -4,10 +4,18 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 
 // Google login route
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+router.get("/google", (req, res, next) => {
+  // Get role from query parameter if provided
+  const role = req.query.role || "client";
+  
+  // Store role in session to pass to callback
+  req.session.googleOAuthRole = role;
+  
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    state: role, // Pass role through state parameter
+  })(req, res, next);
+});
 
 // Callback route after login
 router.get(
@@ -16,12 +24,36 @@ router.get(
     failureRedirect: "http://localhost:5173/login?error=google_auth_failed",
     failureFlash: true,
   }),
-  (req, res) => {
+  async (req, res) => {
     // Check if user exists and is authenticated
     if (req.user) {
       console.log("Google OAuth successful for user:", req.user.email);
+      
+      // Get role from session if it was stored
+      const requestedRole = req.session.googleOAuthRole;
+      if (requestedRole && req.user.role !== requestedRole) {
+        // Update user role if it was specified and different
+        req.user.role = requestedRole;
+        await req.user.save();
+      }
+      // Clear the role from session
+      delete req.session.googleOAuthRole;
 
-      // Generate JWT token
+      // Check if user is verified
+      if (!req.user.isVerified) {
+        // User is not verified, redirect to verification page
+        const encodedEmail = encodeURIComponent(req.user.email);
+        const callbackUrl = `http://localhost:5173/google-verify?email=${encodedEmail}&source=google`;
+        console.log("User not verified, redirecting to verification:", callbackUrl);
+        return res.redirect(callbackUrl);
+      }
+
+      // Check if user is active
+      if (!req.user.isActive) {
+        return res.redirect("http://localhost:5173/login?error=account_deactivated");
+      }
+
+      // User is verified and active, generate JWT token
       const token = jwt.sign(
         { userId: req.user._id },
         process.env.JWT_SECRET || "your-secret-key",
@@ -40,6 +72,7 @@ router.get(
         displayName: req.user.displayName,
         profilePhoto: req.user.profilePhoto,
         isActive: req.user.isActive,
+        isVerified: req.user.isVerified,
         createdAt: req.user.createdAt,
       };
 

@@ -1,6 +1,7 @@
 // Auth
 export { default as Login } from "./auth/Login";
 export { default as Signup } from "./auth/Signup";
+export { default as GoogleVerify } from "./auth/GoogleVerify";
 // Pages
 export { default as Home } from "./home/HomePage";
 export { default as Policy } from "./home/Policy";
