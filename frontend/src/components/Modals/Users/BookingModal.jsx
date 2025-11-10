@@ -469,6 +469,136 @@ const BookingModal = ({
                       </div>
                     </div>
 
+                    {/* Downpayment Options (Cash and GCash) */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-3">
+                        Payment Option
+                      </label>
+                      <div className="grid grid-cols-1 gap-3">
+                        <label
+                          className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            downpaymentType === "percentage"
+                              ? "border-green-500 bg-green-500/10"
+                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="downpaymentType"
+                            value="percentage"
+                            checked={downpaymentType === "percentage"}
+                            onChange={(e) => setDownpaymentType(e.target.value)}
+                            className="mr-3"
+                          />
+                          <div className="flex-1">
+                            <span className="text-white font-medium block">
+                              Downpayment
+                            </span>
+                            <span className="text-gray-400 text-xs">
+                              Pay a percentage now, rest on service day
+                            </span>
+                          </div>
+                        </label>
+                        <label
+                          className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            downpaymentType === "full"
+                              ? "border-green-500 bg-green-500/10"
+                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="downpaymentType"
+                            value="full"
+                            checked={downpaymentType === "full"}
+                            onChange={(e) => setDownpaymentType(e.target.value)}
+                            className="mr-3"
+                          />
+                          <div className="flex-1">
+                            <span className="text-white font-medium block">
+                              Full Payment
+                            </span>
+                            <span className="text-gray-400 text-xs">
+                              Pay the total amount now
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Downpayment Percentage Selector */}
+                    {downpaymentType === "percentage" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-3">
+                          Select Downpayment Percentage
+                        </label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {[20, 30, 50, 100].map((percentage) => (
+                            <button
+                              key={percentage}
+                              type="button"
+                              onClick={() => {
+                                setDownpaymentPercentage(percentage);
+                                if (percentage === 100) {
+                                  setDownpaymentType("full");
+                                }
+                              }}
+                              className={`py-2 px-3 rounded-lg font-medium transition-all ${
+                                downpaymentPercentage === percentage
+                                  ? "bg-green-600 text-white"
+                                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                              }`}
+                            >
+                              {percentage}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Breakdown (Cash and GCash) */}
+                    <div className="bg-gray-800/70 p-4 rounded-lg border border-gray-700">
+                      <h5 className="text-white font-semibold mb-3">
+                        Payment Breakdown
+                      </h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between py-1">
+                          <span className="text-gray-400">Total Amount:</span>
+                          <span className="text-white">
+                            ₱{Number(getCartTotal()).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-1 border-t border-gray-700 pt-2">
+                          <span className="text-gray-400">
+                            {downpaymentType === "full"
+                              ? "Full Payment:"
+                              : `Downpayment (${downpaymentPercentage}%):`}
+                          </span>
+                          <span className="text-green-400 font-bold text-lg">
+                            ₱{Number(downpaymentAmount).toLocaleString()}
+                          </span>
+                        </div>
+                        {downpaymentType === "percentage" && (
+                          <div className="flex justify-between py-1">
+                            <span className="text-gray-400">
+                              Remaining Balance:
+                            </span>
+                            <span className="text-orange-400 font-medium">
+                              ₱{Number(remainingBalance).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {downpaymentType === "percentage" && (
+                        <div className="mt-3 p-2 bg-orange-900/20 border border-orange-700/50 rounded text-xs text-orange-300">
+                          💡 Remaining balance (₱
+                          {Number(remainingBalance).toLocaleString()}) to be
+                          paid on service day
+                        </div>
+                      )}
+                    </div>
+
+                    {/* GCash-specific details and requirements */}
                     {bookingData.paymentMethod === "gcash" && (
                       <div className="space-y-4 bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
                         {/* GCash Account Information */}
@@ -504,142 +634,6 @@ const BookingModal = ({
                             </div>
                           </div>
                         </div>
-
-                        {/* Downpayment Options */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-3">
-                            Payment Option
-                          </label>
-                          <div className="grid grid-cols-1 gap-3">
-                            <label
-                              className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                                downpaymentType === "percentage"
-                                  ? "border-green-500 bg-green-500/10"
-                                  : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="downpaymentType"
-                                value="percentage"
-                                checked={downpaymentType === "percentage"}
-                                onChange={(e) =>
-                                  setDownpaymentType(e.target.value)
-                                }
-                                className="mr-3"
-                              />
-                              <div className="flex-1">
-                                <span className="text-white font-medium block">
-                                  Downpayment
-                                </span>
-                                <span className="text-gray-400 text-xs">
-                                  Pay a percentage now, rest on service day
-                                </span>
-                              </div>
-                            </label>
-                            <label
-                              className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                                downpaymentType === "full"
-                                  ? "border-green-500 bg-green-500/10"
-                                  : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name="downpaymentType"
-                                value="full"
-                                checked={downpaymentType === "full"}
-                                onChange={(e) =>
-                                  setDownpaymentType(e.target.value)
-                                }
-                                className="mr-3"
-                              />
-                              <div className="flex-1">
-                                <span className="text-white font-medium block">
-                                  Full Payment
-                                </span>
-                                <span className="text-gray-400 text-xs">
-                                  Pay the total amount now
-                                </span>
-                              </div>
-                            </label>
-                          </div>
-                        </div>
-
-                        {/* Downpayment Percentage Selector */}
-                        {downpaymentType === "percentage" && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-3">
-                              Select Downpayment Percentage
-                            </label>
-                            <div className="grid grid-cols-4 gap-2">
-                              {[20, 30, 50, 100].map((percentage) => (
-                                <button
-                                  key={percentage}
-                                  type="button"
-                                  onClick={() => {
-                                    setDownpaymentPercentage(percentage);
-                                    if (percentage === 100) {
-                                      setDownpaymentType("full");
-                                    }
-                                  }}
-                                  className={`py-2 px-3 rounded-lg font-medium transition-all ${
-                                    downpaymentPercentage === percentage
-                                      ? "bg-green-600 text-white"
-                                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                                  }`}
-                                >
-                                  {percentage}%
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Payment Breakdown */}
-                        <div className="bg-gray-800/70 p-4 rounded-lg border border-gray-700">
-                          <h5 className="text-white font-semibold mb-3">
-                            Payment Breakdown
-                          </h5>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between py-1">
-                              <span className="text-gray-400">
-                                Total Amount:
-                              </span>
-                              <span className="text-white">
-                                ₱{Number(getCartTotal()).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="flex justify-between py-1 border-t border-gray-700 pt-2">
-                              <span className="text-gray-400">
-                                {downpaymentType === "full"
-                                  ? "Full Payment:"
-                                  : `Downpayment (${downpaymentPercentage}%):`}
-                              </span>
-                              <span className="text-green-400 font-bold text-lg">
-                                ₱{Number(downpaymentAmount).toLocaleString()}
-                              </span>
-                            </div>
-                            {downpaymentType === "percentage" && (
-                              <div className="flex justify-between py-1">
-                                <span className="text-gray-400">
-                                  Remaining Balance:
-                                </span>
-                                <span className="text-orange-400 font-medium">
-                                  ₱{Number(remainingBalance).toLocaleString()}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          {downpaymentType === "percentage" && (
-                            <div className="mt-3 p-2 bg-orange-900/20 border border-orange-700/50 rounded text-xs text-orange-300">
-                              💡 Remaining balance (₱
-                              {Number(remainingBalance).toLocaleString()}) to be
-                              paid on service day
-                            </div>
-                          )}
-                        </div>
-
                         {/* Payment Instructions */}
                         <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
                           <h5 className="text-blue-300 font-semibold text-sm mb-2">

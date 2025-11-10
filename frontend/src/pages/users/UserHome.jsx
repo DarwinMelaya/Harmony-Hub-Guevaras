@@ -490,11 +490,9 @@ const UserHome = () => {
       // Calculate downpayment amounts
       const total = getCartTotal();
       const downpaymentAmount =
-        dataToUse.paymentMethod === "gcash"
-          ? dataToUse.downpaymentType === "full"
-            ? total
-            : (total * dataToUse.downpaymentPercentage) / 100
-          : 0;
+        dataToUse.downpaymentType === "full"
+          ? total
+          : (total * dataToUse.downpaymentPercentage) / 100;
       const remainingBalance = total - downpaymentAmount;
 
       const bookingPayload = {
