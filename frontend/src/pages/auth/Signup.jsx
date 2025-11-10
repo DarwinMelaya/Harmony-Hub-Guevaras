@@ -21,14 +21,28 @@ const Signup = () => {
   const [barangayAddr, setBarangayAddr] = useState("");
 
   useEffect(() => {
-    provinces("17").then((response) => {
-      setProvince(response);
-      const marinduque = response.find((p) => p.province_name === "Marinduque");
-      if (marinduque) {
-        cities(marinduque.province_code).then((cityList) => setCity(cityList));
-        setProvinceAddr("Marinduque");
+    const loadAddressData = async () => {
+      try {
+        const provList = await provinces(); // fetch all provinces
+        setProvince(provList);
+        const marinduque = provList.find(
+          (p) => p.province_name === "Marinduque"
+        );
+        if (marinduque?.province_code) {
+          const cityList = await cities(marinduque.province_code);
+          setCity(cityList || []);
+          setProvinceAddr(marinduque.province_name);
+        } else {
+          setCity([]);
+        }
+      } catch (err) {
+        console.error("Failed to load address data:", err);
+        setProvince([]);
+        setCity([]);
+        setBarangay([]);
       }
-    });
+    };
+    loadAddressData();
   }, []);
 
   const handleCityChange = (e) => {
@@ -124,13 +138,18 @@ const Signup = () => {
       } else if (formData.username.length < 3) {
         newErrors.username = "Username must be at least 3 characters";
       }
+      if (formData.phoneNumber && !/^\d+$/.test(formData.phoneNumber)) {
+        newErrors.phoneNumber = "Phone number must contain digits only";
+      }
     }
 
     if (currentStep === 2) {
+      const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
       if (!formData.password) {
         newErrors.password = "Password is required";
-      } else if (formData.password.length < 6) {
-        newErrors.password = "Password must be at least 6 characters";
+      } else if (!strongPassword.test(formData.password)) {
+        newErrors.password =
+          "At least 8 chars, with uppercase, lowercase, and a number";
       }
       if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = "Passwords do not match";
@@ -188,10 +207,17 @@ const Signup = () => {
     } else if (formData.username.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
     }
+    if (formData.phoneNumber && !/^\d+$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = "Phone number must contain digits only";
+    }
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else {
+      const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+      if (!strongPassword.test(formData.password)) {
+        newErrors.password =
+          "At least 8 chars, with uppercase, lowercase, and a number";
+      }
     }
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
@@ -536,9 +562,12 @@ const Signup = () => {
                       type="tel"
                       id="phoneNumber"
                       value={formData.phoneNumber}
-                      onChange={(e) =>
-                        handleInputChange("phoneNumber", e.target.value)
-                      }
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, "");
+                        handleInputChange("phoneNumber", digitsOnly);
+                      }}
                       onFocus={() => handleFocus("phoneNumber")}
                       onBlur={() => handleBlur("phoneNumber")}
                       className="w-full px-4 py-4 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 peer"
@@ -554,6 +583,11 @@ const Signup = () => {
                     >
                       Phone Number
                     </label>
+                    {errors.phoneNumber && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.phoneNumber}
+                      </p>
+                    )}
                   </div>
 
                   {/* Username */}
@@ -822,6 +856,12 @@ const Signup = () => {
                     {errors.password && (
                       <p className="text-red-400 text-xs mt-1">
                         {errors.password}
+                      </p>
+                    )}
+                    {!errors.password && (
+                      <p className="text-gray-400 text-xs mt-1">
+                        Minimum 8 characters with uppercase, lowercase, and a
+                        number.
                       </p>
                     )}
                   </div>
