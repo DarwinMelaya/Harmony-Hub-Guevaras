@@ -1,4 +1,10 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import {
   Login,
   Home,
@@ -37,9 +43,60 @@ import {
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
 
+const baseTitle = "Harmony Hub";
+
+const routeTitles = {
+  "/": `${baseTitle} | Home`,
+  "/policy": `${baseTitle} | Policy`,
+  "/login": `${baseTitle} | Login`,
+  "/signup": `${baseTitle} | Sign Up`,
+  "/google-verify": `${baseTitle} | Google Verification`,
+  "/google-callback": `${baseTitle} | Google OAuth Callback`,
+  "/admin-dashboard": `${baseTitle} | Admin Dashboard`,
+  "/admin-inventory": `${baseTitle} | Admin Inventory`,
+  "/admin-packages": `${baseTitle} | Admin Packages`,
+  "/admin-user": `${baseTitle} | Admin Users`,
+  "/admin-musician": `${baseTitle} | Admin Musicians`,
+  "/admin-booking": `${baseTitle} | Admin Booking`,
+  "/admin-maintenance": `${baseTitle} | Admin Maintenance`,
+  "/user-home": `${baseTitle} | My Home`,
+  "/my-bookings": `${baseTitle} | My Bookings`,
+  "/my-chat": `${baseTitle} | My Chat`,
+  "/my-feedback": `${baseTitle} | My Feedback`,
+  "/my-profile": `${baseTitle} | My Profile`,
+  "/owner-dashboard": `${baseTitle} | Owner Dashboard`,
+  "/owner-inventory": `${baseTitle} | Owner Inventory`,
+  "/owner-packages": `${baseTitle} | Owner Packages`,
+  "/owner-user": `${baseTitle} | Owner Users`,
+  "/owner-musician": `${baseTitle} | Owner Musicians`,
+  "/owner-booking": `${baseTitle} | Owner Booking`,
+  "/owner-chat": `${baseTitle} | Owner Chat`,
+  "/owner-feedback": `${baseTitle} | Owner Feedback`,
+  "/staff-dashboard": `${baseTitle} | Staff Dashboard`,
+  "/staff-inventory": `${baseTitle} | Staff Inventory`,
+  "/staff-packages": `${baseTitle} | Staff Packages`,
+  "/staff-musician": `${baseTitle} | Staff Musicians`,
+  "/staff-booking": `${baseTitle} | Staff Booking`,
+  "/artist-dashboard": `${baseTitle} | Artist Dashboard`,
+  "/artist-bookings": `${baseTitle} | Artist Bookings`,
+  "/reports": `${baseTitle} | Reports`,
+};
+
+const TitleUpdater = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const title = routeTitles[location.pathname] ?? baseTitle;
+    document.title = title;
+  }, [location.pathname]);
+
+  return null;
+};
+
 export const Routers = () => {
   return (
     <Router>
+      <TitleUpdater />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/policy" element={<Policy />} />
