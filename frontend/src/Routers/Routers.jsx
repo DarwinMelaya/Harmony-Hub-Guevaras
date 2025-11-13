@@ -32,6 +32,7 @@ import {
   Reports,
   UserFeedback,
   OwnerFeedback,
+  UserProfile,
 } from "../pages";
 import ProtectedRoute from "../components/Security/ProtectedRoute";
 import GoogleOAuthCallback from "../components/Security/GoogleOAuthCallback";
@@ -136,6 +137,14 @@ export const Routers = () => {
           element={
             <ProtectedRoute>
               <UserFeedback />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-profile"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
             </ProtectedRoute>
           }
         />

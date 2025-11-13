@@ -20,6 +20,7 @@ export { default as UserBooking } from "./users/UserBooking";
 export { default as UserHome } from "./users/UserHome";
 export { default as UserChat } from "./users/UserChat";
 export { default as UserFeedback } from "./users/UserFeedback";
+export { default as UserProfile } from "./users/UserProfile";
 
 // Owner Pages
 export { default as OwnerDashboard } from "./owner/OwnerDashboard";

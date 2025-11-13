@@ -38,12 +38,12 @@ const ClientSidebar = () => {
       path: "/my-feedback",
       isActive: location.pathname === "/my-feedback",
     },
-    // {
-    //   icon: User,
-    //   text: "Profile",
-    //   path: "/profile",
-    //   isActive: location.pathname === "/profile",
-    // },
+    {
+      icon: User,
+      text: "Profile",
+      path: "/my-profile",
+      isActive: location.pathname === "/my-profile",
+    },
     // {
     //   icon: Settings,
     //   text: "Settings",
@@ -74,7 +74,9 @@ const ClientSidebar = () => {
             <span className="text-white">HARMONY</span>
             <span className="text-red-500"> HUB</span>
           </h1>
-          <p className="text-gray-400 text-xs mt-1.5 font-normal">Client Portal</p>
+          <p className="text-gray-400 text-xs mt-1.5 font-normal">
+            Client Portal
+          </p>
         </div>
       </div>
 
@@ -112,7 +114,10 @@ const ClientSidebar = () => {
           onClick={handleLogout}
           className="group relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-red-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400"
         >
-          <LogOut size={18} className="shrink-0 text-red-400 group-hover:text-red-400" />
+          <LogOut
+            size={18}
+            className="shrink-0 text-red-400 group-hover:text-red-400"
+          />
           <span className="flex-1 text-left">Logout</span>
         </button>
       </div>
