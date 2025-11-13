@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   LayoutDashboard,
   Calendar,
@@ -22,6 +22,7 @@ const ClientSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = parseStoredUser();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const displayName =
     user?.displayName || user?.fullName || user?.username || "User";
@@ -84,13 +85,26 @@ const ClientSidebar = () => {
     navigate(path);
   };
 
-  const handleLogout = () => {
+  const performLogout = () => {
     // Clear localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
 
     // Redirect to login page
     navigate("/login");
+  };
+
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    performLogout();
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -139,7 +153,7 @@ const ClientSidebar = () => {
       {/* Logout Button - Fixed at bottom */}
       <div className="border-t border-gray-700 px-3 py-4 flex-shrink-0 space-y-4">
         <button
-          onClick={handleLogout}
+          onClick={handleLogoutClick}
           className="group relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-red-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-300"
         >
           <LogOut
@@ -184,6 +198,35 @@ const ClientSidebar = () => {
           </button>
         </div>
       </div>
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-[min(90vw,24rem)] rounded-2xl border border-gray-700 bg-[#1f232b] p-6 shadow-2xl">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-white">
+                Ready to log out?
+              </h2>
+              <p className="mt-2 text-sm text-gray-400">
+                You&apos;ll be signed out of your session and redirected to the
+                login page.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCancelLogout}
+                className="rounded-lg border border-gray-600 px-4 py-2 text-sm font-medium text-gray-300 transition hover:border-gray-500 hover:text-white"
+              >
+                Stay logged in
+              </button>
+              <button
+                onClick={handleConfirmLogout}
+                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-400"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
