@@ -5,6 +5,10 @@ const {
   getVerificationEmailTemplate,
   getWelcomeEmailTemplate,
 } = require("../utils/sendEmail");
+const {
+  uploadImageToSupabase,
+  deleteImageFromSupabase,
+} = require("../utils/supabaseImageUpload");
 
 // Generate 6-digit verification code
 const generateVerificationCode = () => {
@@ -263,10 +267,29 @@ const getUserProfile = async (req, res) => {
 // Update user profile
 const updateUserProfile = async (req, res) => {
   try {
-    const { fullName, phoneNumber, location, username, displayName } = req.body;
+    const {
+      fullName,
+      phoneNumber,
+      location,
+      username,
+      displayName,
+      profilePhoto,
+      removeProfilePhoto,
+    } = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const isSupabaseUrl = (url) =>
+      typeof url === "string" && url.includes("/storage/v1/object/public/");
 
     // Check if username is being changed and if it's already taken
-    if (username) {
+    if (username && username !== user.username) {
       const existingUser = await User.findOne({
         username,
         _id: { $ne: req.userId },
@@ -277,32 +300,70 @@ const updateUserProfile = async (req, res) => {
           message: "Username already taken",
         });
       }
+      user.username = username;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      req.userId,
-      {
-        fullName,
-        phoneNumber,
-        location,
-        username,
-        displayName,
-        updatedAt: Date.now(),
-      },
-      { new: true, runValidators: true }
-    ).select("-password");
+    // Update basic fields (allow empty strings but ignore undefined)
+    if (fullName !== undefined) user.fullName = fullName;
+    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+    if (location !== undefined) user.location = location;
+    if (displayName !== undefined) user.displayName = displayName;
 
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+    let newProfilePhotoUrl;
+    const shouldRemovePhoto =
+      removeProfilePhoto === true || profilePhoto === null;
+
+    if (!shouldRemovePhoto && typeof profilePhoto === "string") {
+      const isBase64Image = profilePhoto.startsWith("data:");
+
+      if (isBase64Image) {
+        const uploadResult = await uploadImageToSupabase(
+          profilePhoto,
+          "profile-photos"
+        );
+
+        if (!uploadResult.success) {
+          return res.status(400).json({
+            success: false,
+            message: `Failed to upload profile photo: ${uploadResult.error}`,
+          });
+        }
+
+        newProfilePhotoUrl = uploadResult.url;
+      } else if (profilePhoto.trim()) {
+        // Accept direct URL updates (e.g., from external providers)
+        newProfilePhotoUrl = profilePhoto.trim();
+      }
     }
+
+    if (shouldRemovePhoto) {
+      if (isSupabaseUrl(user.profilePhoto)) {
+        await deleteImageFromSupabase(user.profilePhoto);
+      }
+      user.profilePhoto = undefined;
+    } else if (newProfilePhotoUrl) {
+      if (
+        user.profilePhoto &&
+        user.profilePhoto !== newProfilePhotoUrl &&
+        isSupabaseUrl(user.profilePhoto)
+      ) {
+        await deleteImageFromSupabase(user.profilePhoto);
+      }
+      user.profilePhoto = newProfilePhotoUrl;
+    }
+
+    user.updatedAt = Date.now();
+    await user.save();
+
+    const userObject = user.toObject();
+    delete userObject.password;
+    delete userObject.verificationCode;
+    delete userObject.verificationCodeExpires;
 
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      data: updatedUser,
+      data: userObject,
     });
   } catch (error) {
     console.error("Update profile error:", error);
