@@ -23,7 +23,7 @@ const Signup = () => {
   useEffect(() => {
     const loadAddressData = async () => {
       try {
-        const provList = await provinces(); // fetch all provinces
+        const provList = await provinces("17"); // fetch provinces for region 17 (MIMAROPA)
         setProvince(provList);
         const marinduque = provList.find(
           (p) => p.province_name === "Marinduque"
