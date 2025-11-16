@@ -78,7 +78,7 @@ const PackagesCard = ({ pkg, onAdd }) => {
           disabled={!pkg.isAvailable}
           className="mt-auto w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 px-4 rounded font-medium transition-colors"
         >
-          {pkg.isAvailable ? "Add to Cart" : "Unavailable"}
+          {pkg.isAvailable ? "Add to Selection" : "Unavailable"}
         </button>
       </div>
     </div>

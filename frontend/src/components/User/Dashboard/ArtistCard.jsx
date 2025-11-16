@@ -67,7 +67,7 @@ const ArtistCard = ({
         >
           {bookingDate && isDateSpecificUnavailable
             ? "Unavailable on selected date"
-            : "Add to Cart"}
+            : "Add to Selection"}
         </button>
       </div>
     </div>
