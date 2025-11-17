@@ -435,6 +435,65 @@ const generateBookingAgreementPDF = (booking, res) => {
     );
     currentY += priceRowHeight;
 
+    const downpaymentPct = booking.downpaymentPercentage || 0;
+    const isFullPayment = booking.downpaymentType === "full";
+    const calculatedDownpayment = isFullPayment
+      ? booking.totalAmount
+      : booking.downpaymentAmount ||
+        (booking.totalAmount * downpaymentPct) / 100;
+    const remainingBalance = isFullPayment
+      ? 0
+      : booking.remainingBalance || booking.totalAmount - calculatedDownpayment;
+    const paymentMethodLabel = (booking.paymentMethod || "N/A").toUpperCase();
+    const paymentOptionLabel = isFullPayment
+      ? "Full Payment"
+      : `${
+          downpaymentPct ||
+          Math.round((calculatedDownpayment / booking.totalAmount) * 100)
+        }% Downpayment`;
+
+    const paymentInfoRowHeight = 18;
+    drawCell(
+      tableX,
+      currentY,
+      tableWidth / 2,
+      paymentInfoRowHeight,
+      `Payment Method: ${paymentMethodLabel}`,
+      { fontSize: 9 }
+    );
+    drawCell(
+      tableX + tableWidth / 2,
+      currentY,
+      tableWidth / 2,
+      paymentInfoRowHeight,
+      `Payment Option: ${paymentOptionLabel}`,
+      { fontSize: 9 }
+    );
+    currentY += paymentInfoRowHeight;
+
+    drawCell(
+      tableX,
+      currentY,
+      tableWidth / 2,
+      paymentInfoRowHeight,
+      `${isFullPayment ? "Total Paid" : "Downpayment Paid"}: Php ${Number(
+        calculatedDownpayment
+      ).toLocaleString()}`,
+      { fontSize: 9 }
+    );
+    drawCell(
+      tableX + tableWidth / 2,
+      currentY,
+      tableWidth / 2,
+      paymentInfoRowHeight,
+      `Remaining Balance: Php ${Number(remainingBalance).toLocaleString()}`,
+      {
+        fontSize: 9,
+        textColor: isFullPayment ? "#16a34a" : "#f97316",
+      }
+    );
+    currentY += paymentInfoRowHeight;
+
     // Down payment section (if applicable)
     if (booking.paymentMethod === "gcash" && booking.remainingBalance > 0) {
       const downpayment = booking.totalAmount - booking.remainingBalance;
@@ -503,7 +562,7 @@ const generateBookingAgreementPDF = (booking, res) => {
       currentY,
       tableWidth,
       noteRowHeight,
-      `NOTE; THE ${downpaymentPercentage} PERCENT DOWN PAYMENT IS NON REFUNDABLE IF CLIENT CHOOSES TO CANCEL`,
+      "NOTE; ONLY 20 PERCENT IS NON REFUNDABLE IF CLIENT CHOOSE TO CANCEL",
       {
         bold: true,
         fontSize: 9,
@@ -527,6 +586,7 @@ const generateBookingAgreementPDF = (booking, res) => {
     // Note items (multi-line)
     const noteTexts = [
       `*${downpaymentPercentage}% Down payment should be given at the time of signing this contract. After the event, remaining balance must be paid.`,
+      "*In case of cancellation, only 20% of the total amount paid (including full payments) is refundable; the remainder is forfeited.",
       "*Please ensure the safety and security of the supplier at the venue.",
       "*Power supply should be stable at 220v.",
       "*The client is responsible for paying for any damage that event attendees may have caused to the equipment.",

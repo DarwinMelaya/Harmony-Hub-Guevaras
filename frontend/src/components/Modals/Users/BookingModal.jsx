@@ -596,6 +596,11 @@ const BookingModal = ({
                           paid on service day
                         </div>
                       )}
+                      <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-700/40 rounded text-xs text-yellow-200">
+                        ⚖️ Cancellation Policy: Regardless of how much you pay
+                        upfront (including full payment), only 20% of the total
+                        payment is refundable if you cancel your booking.
+                      </div>
                     </div>
 
                     {/* GCash-specific details and requirements */}

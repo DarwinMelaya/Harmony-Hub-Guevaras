@@ -18,6 +18,19 @@ const BookingAgreement = ({
   const [showError, setShowError] = useState(false);
   const sigCanvas = useRef(null);
 
+  const computedDownpaymentPercentage = bookingData.downpaymentPercentage || 20;
+  const isFullPayment = bookingData.downpaymentType === "full";
+  const downpaymentAmount = isFullPayment
+    ? totalAmount
+    : (totalAmount * computedDownpaymentPercentage) / 100;
+  const remainingBalance = isFullPayment
+    ? 0
+    : bookingData.remainingBalance ?? totalAmount - downpaymentAmount;
+  const paymentMethodLabel = (bookingData.paymentMethod || "N/A").toUpperCase();
+  const paymentOptionLabel = isFullPayment
+    ? "Full Payment"
+    : `${computedDownpaymentPercentage}% Downpayment`;
+
   const clearSignature = () => {
     sigCanvas.current.clear();
     setSignature(null);
@@ -109,19 +122,24 @@ const BookingAgreement = ({
                 <div>
                   <p className="text-gray-400 mb-1">Venue:</p>
                   <p className="text-white font-medium text-sm">
-                    {bookingData.contactInfo?.address?.split(',')[0] || "N/A"}
+                    {bookingData.contactInfo?.address?.split(",")[0] || "N/A"}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-400 mb-1">Date:</p>
                   <p className="text-white font-medium">
-                    {new Date(bookingData.bookingDate).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {new Date(bookingData.bookingDate).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }
+                    )}
                   </p>
-                  <p className="text-gray-400 text-xs">Time: {bookingData.bookingTime}</p>
+                  <p className="text-gray-400 text-xs">
+                    Time: {bookingData.bookingTime}
+                  </p>
                 </div>
               </div>
             </div>
@@ -137,83 +155,141 @@ const BookingAgreement = ({
             <div className="mb-4 pb-3 border-b border-gray-600">
               <p className="text-gray-400 text-sm">Subject:</p>
               <p className="text-white font-medium">
-                {cart.map(item => item.type === 'bandArtist' ? 'BAND/ARTIST' : item.name.toUpperCase()).join(' / ')}
+                {cart
+                  .map((item) =>
+                    item.type === "bandArtist"
+                      ? "BAND/ARTIST"
+                      : item.name.toUpperCase()
+                  )
+                  .join(" / ")}
               </p>
             </div>
 
             {/* Items Table */}
             <div className="space-y-2">
               {/* Group items by type */}
-              {cart.some(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('audio')) && (
+              {cart.some(
+                (item) =>
+                  item.type === "inventory" &&
+                  item.category?.name?.toLowerCase().includes("audio")
+              ) && (
                 <div className="mb-3">
-                  <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">AUDIO</h5>
-                  {cart.filter(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('audio')).map((item, index) => (
-                    <div key={index} className="flex justify-between text-sm py-1 border-b border-gray-700">
-                      <span className="text-gray-300">{item.name}</span>
-                      <div className="flex gap-8">
-                        <span className="text-white">{item.quantity}</span>
-                        <span className="text-gray-400 text-xs">{item.unit?.symbol || 'Units'}</span>
+                  <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">
+                    AUDIO
+                  </h5>
+                  {cart
+                    .filter(
+                      (item) =>
+                        item.type === "inventory" &&
+                        item.category?.name?.toLowerCase().includes("audio")
+                    )
+                    .map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between text-sm py-1 border-b border-gray-700"
+                      >
+                        <span className="text-gray-300">{item.name}</span>
+                        <div className="flex gap-8">
+                          <span className="text-white">{item.quantity}</span>
+                          <span className="text-gray-400 text-xs">
+                            {item.unit?.symbol || "Units"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
 
-              {cart.some(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('light')) && (
+              {cart.some(
+                (item) =>
+                  item.type === "inventory" &&
+                  item.category?.name?.toLowerCase().includes("light")
+              ) && (
                 <div className="mb-3">
-                  <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">LIGHTS</h5>
-                  {cart.filter(item => item.type === 'inventory' && item.category?.name?.toLowerCase().includes('light')).map((item, index) => (
-                    <div key={index} className="flex justify-between text-sm py-1 border-b border-gray-700">
-                      <span className="text-gray-300">{item.name}</span>
-                      <div className="flex gap-8">
-                        <span className="text-white">{item.quantity}</span>
-                        <span className="text-gray-400 text-xs">{item.unit?.symbol || 'Units'}</span>
+                  <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">
+                    LIGHTS
+                  </h5>
+                  {cart
+                    .filter(
+                      (item) =>
+                        item.type === "inventory" &&
+                        item.category?.name?.toLowerCase().includes("light")
+                    )
+                    .map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between text-sm py-1 border-b border-gray-700"
+                      >
+                        <span className="text-gray-300">{item.name}</span>
+                        <div className="flex gap-8">
+                          <span className="text-white">{item.quantity}</span>
+                          <span className="text-gray-400 text-xs">
+                            {item.unit?.symbol || "Units"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
 
               {/* Other inventory items */}
-              {cart.filter(item => 
-                item.type === 'inventory' && 
-                !item.category?.name?.toLowerCase().includes('audio') && 
-                !item.category?.name?.toLowerCase().includes('light')
-              ).map((item, index) => (
-                <div key={index} className="flex justify-between text-sm py-1 border-b border-gray-700">
-                  <span className="text-gray-300">{item.name}</span>
-                  <div className="flex gap-8">
-                    <span className="text-white">{item.quantity}</span>
-                    <span className="text-gray-400 text-xs">{item.unit?.symbol || 'Units'}</span>
+              {cart
+                .filter(
+                  (item) =>
+                    item.type === "inventory" &&
+                    !item.category?.name?.toLowerCase().includes("audio") &&
+                    !item.category?.name?.toLowerCase().includes("light")
+                )
+                .map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between text-sm py-1 border-b border-gray-700"
+                  >
+                    <span className="text-gray-300">{item.name}</span>
+                    <div className="flex gap-8">
+                      <span className="text-white">{item.quantity}</span>
+                      <span className="text-gray-400 text-xs">
+                        {item.unit?.symbol || "Units"}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
 
               {/* Band Artists */}
-              {cart.filter(item => item.type === 'bandArtist').map((item, index) => (
-                <div key={index} className="mb-2">
-                  <h5 className="text-white font-bold mb-1 text-center bg-gray-600 py-1">BAND/ARTIST</h5>
-                  <div className="flex justify-between text-sm py-1 border-b border-gray-700">
-                    <span className="text-gray-300">{item.name}</span>
-                    <span className="text-white">1</span>
+              {cart
+                .filter((item) => item.type === "bandArtist")
+                .map((item, index) => (
+                  <div key={index} className="mb-2">
+                    <h5 className="text-white font-bold mb-1 text-center bg-gray-600 py-1">
+                      BAND/ARTIST
+                    </h5>
+                    <div className="flex justify-between text-sm py-1 border-b border-gray-700">
+                      <span className="text-gray-300">{item.name}</span>
+                      <span className="text-white">1</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
 
               {/* Packages */}
-              {cart.filter(item => item.type === 'package').map((item, index) => (
-                <div key={index} className="mb-2">
-                  <h5 className="text-white font-bold mb-1 text-center bg-gray-600 py-1">PACKAGE</h5>
-                  <div className="flex justify-between text-sm py-1 border-b border-gray-700">
-                    <span className="text-gray-300">{item.name}</span>
-                    <span className="text-white">1</span>
+              {cart
+                .filter((item) => item.type === "package")
+                .map((item, index) => (
+                  <div key={index} className="mb-2">
+                    <h5 className="text-white font-bold mb-1 text-center bg-gray-600 py-1">
+                      PACKAGE
+                    </h5>
+                    <div className="flex justify-between text-sm py-1 border-b border-gray-700">
+                      <span className="text-gray-300">{item.name}</span>
+                      <span className="text-white">1</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
 
               {/* Technical Staff */}
               <div className="mt-4">
-                <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">TECHNICAL STAFF & TRANSPORT VEHICLE</h5>
+                <h5 className="text-white font-bold mb-2 text-center bg-gray-600 py-1">
+                  TECHNICAL STAFF & TRANSPORT VEHICLE
+                </h5>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex justify-between border-b border-gray-700 py-1">
                     <span className="text-gray-300">Technical Staff</span>
@@ -231,38 +307,68 @@ const BookingAgreement = ({
             <div className="mt-6 pt-4 border-t-2 border-gray-600">
               <div className="bg-gray-800/70 p-4 rounded">
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-white font-bold text-lg">TOTAL PRICE:</span>
+                  <span className="text-white font-bold text-lg">
+                    TOTAL PRICE:
+                  </span>
                   <span className="text-green-400 font-bold text-2xl">
                     Php. {Number(totalAmount).toLocaleString()}.00
                   </span>
                 </div>
 
-                {bookingData.paymentMethod === "gcash" && bookingData.remainingBalance > 0 && (
-                  <>
-                    <div className="flex justify-between items-center py-2 border-t border-gray-700">
-                      <span className="text-gray-300">Down payment:</span>
-                      <span className="text-white font-medium">
-                        {Number(totalAmount - bookingData.remainingBalance).toLocaleString()}
+                <div className="space-y-2 text-sm text-gray-300 border-t border-gray-700 pt-3">
+                  <div className="flex justify-between items-center">
+                    <span>Payment Method:</span>
+                    <span className="text-white font-semibold">
+                      {paymentMethodLabel}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Payment Option:</span>
+                    <span className="text-white font-semibold">
+                      {paymentOptionLabel}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>
+                      {isFullPayment ? "Total Paid:" : "Downpayment Paid:"}
+                    </span>
+                    <span className="text-white font-semibold">
+                      ₱{Number(downpaymentAmount).toLocaleString()}
+                    </span>
+                  </div>
+                  {!isFullPayment && (
+                    <div className="flex justify-between items-center">
+                      <span>Remaining Balance:</span>
+                      <span className="text-orange-400 font-semibold">
+                        ₱{Number(remainingBalance).toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-300">Date:</span>
-                      <span className="text-white">
-                        {new Date().toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-t border-gray-700">
-                      <span className="text-orange-400 font-bold">BALANCE:</span>
-                      <span className="text-orange-400 font-bold text-xl">
-                        {Number(bookingData.remainingBalance).toLocaleString()}
-                      </span>
-                    </div>
-                  </>
-                )}
+                  )}
+                </div>
+
+                {bookingData.paymentMethod === "gcash" &&
+                  remainingBalance > 0 && (
+                    <>
+                      <div className="flex justify-between items-center py-2 border-t border-gray-700 mt-3">
+                        <span className="text-gray-300">Payment Date:</span>
+                        <span className="text-white">
+                          {new Date().toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-orange-400 font-bold">
+                          BALANCE:
+                        </span>
+                        <span className="text-orange-400 font-bold text-xl">
+                          ₱{Number(remainingBalance).toLocaleString()}
+                        </span>
+                      </div>
+                    </>
+                  )}
               </div>
             </div>
           </div>
@@ -275,17 +381,25 @@ const BookingAgreement = ({
             <div className="space-y-3 text-sm text-gray-300">
               <div className="bg-yellow-900/20 border border-yellow-700/50 p-3 rounded">
                 <p className="text-yellow-200 font-medium">
-                  NOTE; THE {bookingData.downpaymentPercentage || 20} PERCENT DOWN PAYMENT IS NON REFUNDABLE IF CLIENT CHOOSES TO CANCEL
+                  NOTE; ONLY 20 PERCENT OF THE TOTAL PAYMENT IS REFUNDABLE IF
+                  THE CLIENT CANCELS (EVEN IF A HIGHER AMOUNT WAS PAID)
                 </p>
               </div>
 
               <div className="bg-gray-800/50 p-3 rounded space-y-2">
                 <p className="text-white">
-                  * {bookingData.downpaymentPercentage || 20}% Down payment should be given at the time of signing this contract. After the event, remaining balance must be paid.
+                  * {computedDownpaymentPercentage}% Down payment should be
+                  given at the time of signing this contract. After the event,
+                  remaining balance must be paid.
                 </p>
-                
+                <p className="text-orange-300">
+                  * In case of cancellation, only 20% of the total amount paid
+                  (including full or higher down payments) is refundable; the
+                  remainder is forfeited.
+                </p>
                 <p className="text-white">
-                  * Please ensure the safety and security of the supplier at the venue.
+                  * Please ensure the safety and security of the supplier at the
+                  venue.
                 </p>
 
                 <p className="text-white">
@@ -293,11 +407,13 @@ const BookingAgreement = ({
                 </p>
 
                 <p className="text-white">
-                  * The client is responsible for paying for any damage that event attendees may have caused to the equipment.
+                  * The client is responsible for paying for any damage that
+                  event attendees may have caused to the equipment.
                 </p>
 
                 <p className="text-white">
-                  * Please follow to the time constraints; excess time will result in additional charges.
+                  * Please follow to the time constraints; excess time will
+                  result in additional charges.
                 </p>
 
                 <p className="text-red-400 font-medium">
@@ -305,7 +421,8 @@ const BookingAgreement = ({
                 </p>
 
                 <p className="text-white">
-                  * This agreement contains the entire understanding between the Supplier and the Client.
+                  * This agreement contains the entire understanding between the
+                  Supplier and the Client.
                 </p>
               </div>
 
@@ -341,7 +458,8 @@ const BookingAgreement = ({
                 CLIENT SIGNATURE
               </h4>
               <p className="text-gray-300 text-sm mb-4">
-                By signing below, you acknowledge that you have read and agree to all terms stated in this contract:
+                By signing below, you acknowledge that you have read and agree
+                to all terms stated in this contract:
               </p>
 
               {!signature ? (
@@ -374,7 +492,9 @@ const BookingAgreement = ({
                   {showError && (
                     <div className="text-red-400 text-sm flex items-center space-x-2">
                       <AlertTriangle className="w-4 h-4" />
-                      <span>Please provide your signature before continuing</span>
+                      <span>
+                        Please provide your signature before continuing
+                      </span>
                     </div>
                   )}
                 </div>
@@ -419,9 +539,7 @@ const BookingAgreement = ({
                     </strong>
                     <ul className="list-disc list-inside mt-2 space-y-1 ml-4">
                       <li>I have read and understood this entire agreement</li>
-                      <li>
-                        I agree to all terms and conditions stated herein
-                      </li>
+                      <li>I agree to all terms and conditions stated herein</li>
                       <li>
                         My digital signature above is legally binding and
                         equivalent to my handwritten signature
@@ -463,4 +581,3 @@ const BookingAgreement = ({
 };
 
 export default BookingAgreement;
-

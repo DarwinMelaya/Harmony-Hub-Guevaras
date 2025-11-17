@@ -789,6 +789,16 @@ const UserHome = () => {
             </div>
           </div>
 
+          {/* Cancellation Policy Notice */}
+          <div className="mb-8 bg-yellow-900/20 border border-yellow-700/40 rounded-lg p-4 text-sm text-yellow-100">
+            <p className="font-semibold text-yellow-200">Cancellation Policy</p>
+            <p className="mt-1">
+              If you decide to cancel after making a downpayment or full
+              payment, only 20% of the total payment will be eligible for
+              refund. Any amount paid beyond 20% is non-refundable.
+            </p>
+          </div>
+
           {/* Error Alert */}
           {error && (
             <div className="mb-6 bg-red-900/90 text-red-100 px-4 py-3 rounded-lg border border-red-700 flex items-center gap-2">
