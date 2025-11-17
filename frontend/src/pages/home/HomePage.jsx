@@ -3,6 +3,7 @@ import NavbarHome from "../../components/Home/NavbarHome";
 import About from "../../components/Home/About";
 import Service from "../../components/Home/Service";
 import Gallery from "../../components/Home/Gallery";
+import CalendarHome from "../../components/Home/CalendarHome";
 import Contact from "../../components/Home/Contact";
 
 const HomePage = () => {
@@ -11,6 +12,14 @@ const HomePage = () => {
       <NavbarHome />
       <div id="home">
         <Home />
+      </div>
+      <div
+        id="calendar"
+        className="bg-gradient-to-b from-gray-900 to-black py-16 px-4"
+      >
+        <div className="max-w-6xl mx-auto">
+          <CalendarHome />
+        </div>
       </div>
       <div id="about">
         <About />
@@ -21,6 +30,7 @@ const HomePage = () => {
       <div id="gallery">
         <Gallery />
       </div>
+
       <div id="contact">
         <Contact />
       </div>
