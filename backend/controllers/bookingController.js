@@ -8,6 +8,114 @@ const {
   deleteImageFromSupabase,
 } = require("../utils/supabaseImageUpload");
 
+// Helper: validate and normalize booking items (shared between create and add-items)
+const validateAndPrepareItems = async (items, bookingDate) => {
+  let totalAmount = 0;
+  const validatedItems = [];
+
+  for (const item of items) {
+    const { type, itemId, quantity, price, name } = item;
+    // Normalize quantity: non-inventory items are singular
+    const normalizedQuantity = type === "inventory" ? quantity : 1;
+
+    if (!type || !itemId || !normalizedQuantity || !price || !name) {
+      const err = new Error("INVALID_ITEM_DATA");
+      throw err;
+    }
+
+    // Check if item exists and is available
+    let itemExists = false;
+    let isAvailable = true;
+
+    switch (type) {
+      case "inventory": {
+        const inventoryItem = await Inventory.findById(itemId);
+        if (inventoryItem) {
+          itemExists = true;
+          isAvailable = inventoryItem.quantity >= normalizedQuantity;
+        }
+        break;
+      }
+      case "package": {
+        const packageItem = await Packages.findById(itemId);
+        if (packageItem) {
+          itemExists = true;
+          // Treat undefined as available for backward compatibility
+          const packageAvailable = packageItem.isAvailable !== false;
+          if (!packageAvailable) {
+            isAvailable = false;
+          }
+        }
+        break;
+      }
+      case "bandArtist": {
+        const artist = await User.findById(itemId);
+        if (
+          artist &&
+          artist.role === "artist" &&
+          artist.isActive &&
+          artist.isAvailable !== false
+        ) {
+          itemExists = true;
+
+          // Check if artist is already booked on the same date
+          const [year, month, day] = bookingDate.split("-").map(Number);
+          const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+          const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+
+          const existingBooking = await Booking.findOne({
+            "items.type": "bandArtist",
+            "items.itemId": itemId,
+            bookingDate: {
+              $gte: startOfDay,
+              $lte: endOfDay,
+            },
+            status: { $in: ["pending", "confirmed"] },
+          });
+
+          if (existingBooking) {
+            isAvailable = false;
+          }
+        }
+        break;
+      }
+      default: {
+        const err = new Error("INVALID_ITEM_TYPE");
+        throw err;
+      }
+    }
+
+    if (!itemExists) {
+      const err = new Error(`ITEM_NOT_FOUND:${type}`);
+      throw err;
+    }
+
+    if (!isAvailable) {
+      let message = `${name} is not available`;
+      if (type === "inventory") {
+        message += " in the requested quantity";
+      } else if (type === "bandArtist") {
+        message += " on the selected date";
+      }
+      const err = new Error(message);
+      err.code = "ITEM_NOT_AVAILABLE";
+      throw err;
+    }
+
+    validatedItems.push({
+      type,
+      itemId,
+      quantity: normalizedQuantity,
+      price,
+      name,
+    });
+
+    totalAmount += price * normalizedQuantity;
+  }
+
+  return { validatedItems, totalAmount };
+};
+
 // Create a new booking
 const createBooking = async (req, res) => {
   try {
@@ -137,113 +245,38 @@ const createBooking = async (req, res) => {
     let totalAmount = 0;
     const validatedItems = [];
 
-    // Validate each item and calculate total
-    for (const item of items) {
-      const { type, itemId, quantity, price, name } = item;
-      // Normalize quantity: non-inventory items are singular
-      const normalizedQuantity = type === "inventory" ? quantity : 1;
-
-      if (!type || !itemId || !normalizedQuantity || !price || !name) {
+    // Validate each item and calculate total using shared helper
+    try {
+      const result = await validateAndPrepareItems(items, bookingDate);
+      totalAmount = result.totalAmount;
+      validatedItems.push(...result.validatedItems);
+    } catch (err) {
+      if (err.message === "INVALID_ITEM_DATA") {
         return res.status(400).json({
           success: false,
           message: "Invalid item data",
         });
       }
-
-      // Check if item exists and is available
-      let itemExists = false;
-      let isAvailable = true;
-
-      switch (type) {
-        case "inventory":
-          const inventoryItem = await Inventory.findById(itemId);
-          if (inventoryItem) {
-            itemExists = true;
-            isAvailable = inventoryItem.quantity >= normalizedQuantity;
-          }
-          break;
-
-        case "package":
-          const packageItem = await Packages.findById(itemId);
-          if (packageItem) {
-            itemExists = true;
-            // Treat undefined as available for backward compatibility
-            const packageAvailable = packageItem.isAvailable !== false;
-            if (!packageAvailable) {
-              isAvailable = false;
-              break;
-            }
-          }
-          break;
-
-        case "bandArtist":
-          const artist = await User.findById(itemId);
-          if (
-            artist &&
-            artist.role === "artist" &&
-            artist.isActive &&
-            artist.isAvailable !== false
-          ) {
-            itemExists = true;
-
-            // Check if artist is already booked on the same date
-            // Parse date components to avoid timezone issues
-            const [year, month, day] = bookingDate.split("-").map(Number);
-            const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-            const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
-
-            const existingBooking = await Booking.findOne({
-              "items.type": "bandArtist",
-              "items.itemId": itemId,
-              bookingDate: {
-                $gte: startOfDay,
-                $lte: endOfDay,
-              },
-              status: { $in: ["pending", "confirmed"] },
-            });
-
-            if (existingBooking) {
-              isAvailable = false;
-            }
-          }
-          break;
-
-        default:
-          return res.status(400).json({
-            success: false,
-            message: "Invalid item type",
-          });
+      if (err.message === "INVALID_ITEM_TYPE") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid item type",
+        });
       }
-
-      if (!itemExists) {
+      if (err.message && err.message.startsWith("ITEM_NOT_FOUND:")) {
+        const type = err.message.split(":")[1];
         return res.status(404).json({
           success: false,
           message: `${type} item not found`,
         });
       }
-
-      if (!isAvailable) {
-        let message = `${name} is not available`;
-        if (type === "inventory") {
-          message += " in the requested quantity";
-        } else if (type === "bandArtist") {
-          message += " on the selected date";
-        }
+      if (err.code === "ITEM_NOT_AVAILABLE") {
         return res.status(400).json({
           success: false,
-          message: message,
+          message: err.message,
         });
       }
-
-      validatedItems.push({
-        type,
-        itemId,
-        quantity: normalizedQuantity,
-        price,
-        name,
-      });
-
-      totalAmount += price * normalizedQuantity;
+      throw err;
     }
 
     // Prepare agreement data with client information
@@ -1265,6 +1298,233 @@ const processRefund = async (req, res) => {
   }
 };
 
+// Admin: add additional items to an existing booking
+const addBookingItems = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Items array is required",
+      });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // Only allow adding items to active bookings
+    if (!["pending", "confirmed"].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Items can only be added to pending or confirmed bookings",
+      });
+    }
+
+    // Use the booking's existing bookingDate (normalized back to yyyy-mm-dd)
+    const bookingDate = new Date(booking.bookingDate);
+    const yyyy = bookingDate.getFullYear();
+    const mm = String(bookingDate.getMonth() + 1).padStart(2, "0");
+    const dd = String(bookingDate.getDate()).padStart(2, "0");
+    const bookingDateStr = `${yyyy}-${mm}-${dd}`;
+
+    let addedTotal = 0;
+    let preparedItems = [];
+
+    try {
+      const result = await validateAndPrepareItems(items, bookingDateStr);
+      addedTotal = result.totalAmount;
+      // Mark all newly added items so UI/contract can highlight them
+      preparedItems = result.validatedItems.map((it) => ({
+        ...it,
+        isAdditional: true,
+        addedAt: new Date(),
+      }));
+    } catch (err) {
+      if (err.message === "INVALID_ITEM_DATA") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid item data",
+        });
+      }
+      if (err.message === "INVALID_ITEM_TYPE") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid item type",
+        });
+      }
+      if (err.message && err.message.startsWith("ITEM_NOT_FOUND:")) {
+        const type = err.message.split(":")[1];
+        return res.status(404).json({
+          success: false,
+          message: `${type} item not found`,
+        });
+      }
+      if (err.code === "ITEM_NOT_AVAILABLE") {
+        return res.status(400).json({
+          success: false,
+          message: err.message,
+        });
+      }
+      throw err;
+    }
+
+    // Append items and adjust totals
+    booking.items.push(...preparedItems);
+    booking.totalAmount = Number(booking.totalAmount || 0) + addedTotal;
+
+    // Increase remaining balance by the added amount, regardless of previous payment plan
+    booking.remainingBalance =
+      Number(booking.remainingBalance || 0) + addedTotal;
+
+    await booking.save();
+
+    // Side effects: update inventory quantities / package availability
+    for (const bookingItem of preparedItems) {
+      if (bookingItem.type === "inventory") {
+        await Inventory.findByIdAndUpdate(
+          bookingItem.itemId,
+          { $inc: { quantity: -bookingItem.quantity } },
+          { new: true }
+        );
+      } else if (bookingItem.type === "package") {
+        await Packages.findByIdAndUpdate(
+          bookingItem.itemId,
+          { $set: { isAvailable: false } },
+          { new: true }
+        );
+      }
+    }
+
+    await booking.populate("user", "fullName email username");
+    await booking.populate({
+      path: "items.itemId",
+      model: "Packages",
+      populate: {
+        path: "items.inventoryItem",
+        model: "Inventory",
+        select: "name price quantity image",
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: "Items added to booking successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error adding items to booking:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Admin: remove an item from an existing booking
+const removeBookingItem = async (req, res) => {
+  try {
+    const { id, itemId } = req.params; // id = bookingId, itemId = subdocument _id
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // Only allow removing items from active bookings
+    if (!["pending", "confirmed"].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Items can only be removed from pending or confirmed bookings",
+      });
+    }
+
+    const item = booking.items.id(itemId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking item not found",
+      });
+    }
+
+    const amountToSubtract = Number(item.price || 0) * Number(item.quantity || 0);
+
+    // Adjust totals
+    booking.totalAmount = Math.max(
+      0,
+      Number(booking.totalAmount || 0) - amountToSubtract
+    );
+    booking.remainingBalance = Math.max(
+      0,
+      Number(booking.remainingBalance || 0) - amountToSubtract
+    );
+
+    // Keep a copy of item details before removal for side effects
+    const itemType = item.type;
+    const itemRefId = item.itemId;
+    const itemQty = item.quantity;
+
+    // Remove the subdocument (Mongoose v6/v7: use deleteOne instead of remove)
+    if (typeof item.deleteOne === "function") {
+      await item.deleteOne();
+    } else {
+      // Fallback: pull by _id in case deleteOne is not available
+      booking.items.pull({ _id: itemId });
+    }
+
+    await booking.save();
+
+    // Side effects: restore inventory quantity / package availability
+    if (itemType === "inventory") {
+      await Inventory.findByIdAndUpdate(
+        itemRefId,
+        { $inc: { quantity: itemQty } },
+        { new: true }
+      );
+    } else if (itemType === "package") {
+      await Packages.findByIdAndUpdate(
+        itemRefId,
+        { $set: { isAvailable: true } },
+        { new: true }
+      );
+    }
+
+    await booking.populate("user", "fullName email username");
+    await booking.populate({
+      path: "items.itemId",
+      model: "Packages",
+      populate: {
+        path: "items.inventoryItem",
+        model: "Inventory",
+        select: "name price quantity image",
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: "Booking item removed successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error removing booking item:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 // Add extension charge to booking
 const addBookingExtension = async (req, res) => {
   try {
@@ -1426,4 +1686,6 @@ module.exports = {
   processRefund,
   addBookingExtension,
   markExtensionPaid,
+  addBookingItems,
+  removeBookingItem,
 };

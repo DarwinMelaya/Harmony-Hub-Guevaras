@@ -16,6 +16,8 @@ const {
   processRefund,
   addBookingExtension,
   markExtensionPaid,
+  addBookingItems,
+  removeBookingItem,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
@@ -91,6 +93,20 @@ router.patch(
   "/:id/extensions/:extensionId/pay",
   requireRole(["owner", "admin", "staff"]),
   markExtensionPaid
+);
+
+// Add additional items to an existing booking (owner/admin/staff only)
+router.post(
+  "/:id/items",
+  requireRole(["owner", "admin", "staff"]),
+  addBookingItems
+);
+
+// Remove an item from an existing booking (owner/admin/staff only)
+router.delete(
+  "/:id/items/:itemId",
+  requireRole(["owner", "admin", "staff"]),
+  removeBookingItem
 );
 
 module.exports = router;

@@ -31,6 +31,14 @@ const BookingSchema = new mongoose.Schema({
         type: String,
         required: true,
       },
+      // Flag for items that were added after the original booking creation
+      isAdditional: {
+        type: Boolean,
+        default: false,
+      },
+      addedAt: {
+        type: Date,
+      },
     },
   ],
   totalAmount: {

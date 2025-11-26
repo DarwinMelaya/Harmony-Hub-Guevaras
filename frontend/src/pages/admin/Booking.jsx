@@ -22,6 +22,9 @@ import axios from "axios";
 import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
 import CompletionModal from "../../components/Modals/Admin/CompletionModal";
 import AdminSignatureModal from "../../components/Modals/Admin/AdminSignatureModal";
+import InventoryCard from "../../components/User/Dashboard/InventoryCard";
+import PackagesCard from "../../components/User/Dashboard/PackagesCard";
+import ArtistCard from "../../components/User/Dashboard/ArtistCard";
 
 const Booking = () => {
   const [bookings, setBookings] = useState([]);
@@ -67,6 +70,15 @@ const Booking = () => {
   const [extensionPaymentProof, setExtensionPaymentProof] = useState(null);
   const [processingExtensionPayment, setProcessingExtensionPayment] =
     useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [savingNewItem, setSavingNewItem] = useState(false);
+  const [addItemTab, setAddItemTab] = useState("inventory"); // inventory | package | bandArtist
+  const [inventoryOptions, setInventoryOptions] = useState([]);
+  const [packageOptions, setPackageOptions] = useState([]);
+  const [artistOptions, setArtistOptions] = useState([]);
+  const [loadingAddOptions, setLoadingAddOptions] = useState(false);
+  const [showRemoveItemModal, setShowRemoveItemModal] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState(null);
 
   const canAdminSign =
     selectedBooking &&
@@ -158,6 +170,118 @@ const Booking = () => {
     );
   };
 
+  const fetchAddItemOptions = async (type) => {
+    try {
+      setLoadingAddOptions(true);
+      const token = localStorage.getItem("token");
+
+      if (type === "inventory") {
+        const res = await axios.get("http://localhost:5000/api/inventory", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setInventoryOptions(res.data.inventory || []);
+      } else if (type === "package") {
+        const res = await axios.get("http://localhost:5000/api/packages", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPackageOptions(res.data || []);
+      } else if (type === "bandArtist") {
+        const res = await axios.get("http://localhost:5000/api/users/artists", {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limit: 100 },
+        });
+        setArtistOptions(res.data.data || []);
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to load items for adding"
+      );
+    } finally {
+      setLoadingAddOptions(false);
+    }
+  };
+
+  const quickAddItemToBooking = async (sourceItem, type) => {
+    if (!selectedBooking?._id || !sourceItem?._id) return;
+
+    let payloadItem = null;
+
+    if (type === "inventory") {
+      payloadItem = {
+        type: "inventory",
+        itemId: sourceItem._id,
+        name: sourceItem.name,
+        quantity: 1,
+        price: Number(sourceItem.price) || 0,
+      };
+    } else if (type === "package") {
+      payloadItem = {
+        type: "package",
+        itemId: sourceItem._id,
+        name: sourceItem.name,
+        quantity: 1,
+        price: Number(sourceItem.price) || 0,
+      };
+    } else if (type === "bandArtist") {
+      payloadItem = {
+        type: "bandArtist",
+        itemId: sourceItem._id,
+        name: sourceItem.fullName || sourceItem.name,
+        quantity: 1,
+        price: Number(sourceItem.booking_fee) || 0,
+      };
+    }
+
+    if (!payloadItem || !payloadItem.price || payloadItem.price <= 0) {
+      setError("Selected item has invalid price configuration.");
+      return;
+    }
+
+    try {
+      setSavingNewItem(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
+        `http://localhost:5000/api/bookings/${selectedBooking._id}/items`,
+        { items: [payloadItem] },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        syncBookingState(response.data.data);
+        // Refresh options list so quantities / availability update in the UI
+        await fetchAddItemOptions(type);
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to add item to booking"
+      );
+    } finally {
+      setSavingNewItem(false);
+    }
+  };
+
+  const openAddItemModal = (booking) => {
+    setSelectedBooking(booking);
+    setAddItemTab("inventory");
+    setShowAddItemModal(true);
+    fetchAddItemOptions("inventory");
+  };
+
+  const closeAddItemModal = () => {
+    setShowAddItemModal(false);
+    setSavingNewItem(false);
+  };
+
   const handleMonthChange = (forward) => {
     let month = calendarMonth + (forward ? 1 : -1);
     let year = calendarYear;
@@ -183,7 +307,12 @@ const Booking = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId, newStatus, issueData = {}, cancellationReason = "") => {
+  const updateBookingStatus = async (
+    bookingId,
+    newStatus,
+    issueData = {},
+    cancellationReason = ""
+  ) => {
     try {
       setUpdatingStatus(bookingId);
       const token = localStorage.getItem("token");
@@ -385,22 +514,57 @@ const Booking = () => {
     }
   };
 
+  const handleConfirmRemoveItem = async () => {
+    if (!selectedBooking?._id || !itemToRemove?._id) {
+      setShowRemoveItemModal(false);
+      setItemToRemove(null);
+      return;
+    }
+
+    try {
+      setSavingNewItem(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+      const response = await axios.delete(
+        `http://localhost:5000/api/bookings/${selectedBooking._id}/items/${itemToRemove._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (response.data.success) {
+        syncBookingState(response.data.data);
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to remove item from booking"
+      );
+    } finally {
+      setSavingNewItem(false);
+      setShowRemoveItemModal(false);
+      setItemToRemove(null);
+    }
+  };
+
   const handleDownloadAgreement = async (bookingId) => {
     try {
       setDownloadingAgreement(bookingId);
       const token = localStorage.getItem("token");
-      
+
       const response = await axios.get(
         `http://localhost:5000/api/bookings/${bookingId}/agreement/download`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          responseType: 'blob',
+          responseType: "blob",
         }
       );
 
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = `booking-agreement-${bookingId}.pdf`;
       document.body.appendChild(link);
@@ -408,7 +572,11 @@ const Booking = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to download agreement");
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to download agreement"
+      );
     } finally {
       setDownloadingAgreement(null);
     }
@@ -417,7 +585,7 @@ const Booking = () => {
   const handleAdminSign = async (signatureData) => {
     try {
       const token = localStorage.getItem("token");
-      
+
       const response = await axios.patch(
         `http://localhost:5000/api/bookings/${signingBooking._id}/agreement/admin-sign`,
         signatureData,
@@ -435,7 +603,9 @@ const Booking = () => {
         setSigningBooking(null);
       }
     } catch (err) {
-      throw new Error(err.response?.data?.message || "Failed to sign agreement");
+      throw new Error(
+        err.response?.data?.message || "Failed to sign agreement"
+      );
     }
   };
 
@@ -476,7 +646,9 @@ const Booking = () => {
         setRefundProofPreview(null);
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to process refund");
+      setError(
+        err.response?.data?.message || err.message || "Failed to process refund"
+      );
     } finally {
       setProcessingRefund(false);
     }
@@ -993,142 +1165,150 @@ const Booking = () => {
               </div>
 
               {/* Agreement Section */}
-              {selectedBooking.agreement && selectedBooking.agreement.signature && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-blue-400" />
-                    Signed Agreement
-                  </h3>
-                  <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="text-white font-medium mb-1">
-                          Client has signed the booking agreement
-                        </p>
-                        <p className="text-gray-400 text-sm">
-                          Signed on:{" "}
-                          {new Date(
-                            selectedBooking.agreement.agreedAt
-                          ).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                        <p className="text-gray-400 text-sm">
-                          Signed by: {selectedBooking.agreement.clientName}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {selectedBooking.agreement.adminSignature ? (
-                          <button
-                            onClick={() => handleDownloadAgreement(selectedBooking._id)}
-                            disabled={downloadingAgreement === selectedBooking._id}
-                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                          >
-                            {downloadingAgreement === selectedBooking._id ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Downloading...
-                              </>
-                            ) : (
-                              <>
-                                <Download className="w-4 h-4" />
-                                Download PDF
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              if (canAdminSign) {
-                                setSigningBooking(selectedBooking);
-                                setShowAdminSignModal(true);
-                              }
-                            }}
-                            disabled={!canAdminSign}
-                            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                              canAdminSign
-                                ? "bg-green-600 hover:bg-green-700 text-white"
-                                : "bg-gray-600 text-gray-300 cursor-not-allowed"
-                            }`}
-                          >
-                            <FileText className="w-4 h-4" />
-                            Sign as Admin
-                          </button>
-                        )}
-                        {!selectedBooking.agreement.adminSignature && !canAdminSign && (
-                          <p className="text-xs text-orange-300 mt-2">
-                            Require client payment submission before signing.
+              {selectedBooking.agreement &&
+                selectedBooking.agreement.signature && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-blue-400" />
+                      Signed Agreement
+                    </h3>
+                    <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-white font-medium mb-1">
+                            Client has signed the booking agreement
                           </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Client Signature Preview */}
-                    <div className="mb-4 pt-4 border-t border-blue-700/30">
-                      <p className="text-gray-400 text-sm mb-2">
-                        Client Signature:
-                      </p>
-                      <div className="bg-white rounded-lg p-3">
-                        <img
-                          src={selectedBooking.agreement.signature}
-                          alt="Client Signature"
-                          className="h-24 object-contain mx-auto"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Admin Signature Status */}
-                    {selectedBooking.agreement.adminSignature ? (
-                      <div className="pt-4 border-t border-blue-700/30">
-                        <div className="flex items-center mb-2">
-                          <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
-                          <p className="text-green-400 font-medium">
-                            Admin has signed the agreement
+                          <p className="text-gray-400 text-sm">
+                            Signed on:{" "}
+                            {new Date(
+                              selectedBooking.agreement.agreedAt
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            Signed by: {selectedBooking.agreement.clientName}
                           </p>
                         </div>
+                        <div className="flex gap-2">
+                          {selectedBooking.agreement.adminSignature ? (
+                            <button
+                              onClick={() =>
+                                handleDownloadAgreement(selectedBooking._id)
+                              }
+                              disabled={
+                                downloadingAgreement === selectedBooking._id
+                              }
+                              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                              {downloadingAgreement === selectedBooking._id ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  Downloading...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-4 h-4" />
+                                  Download PDF
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (canAdminSign) {
+                                  setSigningBooking(selectedBooking);
+                                  setShowAdminSignModal(true);
+                                }
+                              }}
+                              disabled={!canAdminSign}
+                              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                                canAdminSign
+                                  ? "bg-green-600 hover:bg-green-700 text-white"
+                                  : "bg-gray-600 text-gray-300 cursor-not-allowed"
+                              }`}
+                            >
+                              <FileText className="w-4 h-4" />
+                              Sign as Admin
+                            </button>
+                          )}
+                          {!selectedBooking.agreement.adminSignature &&
+                            !canAdminSign && (
+                              <p className="text-xs text-orange-300 mt-2">
+                                Require client payment submission before
+                                signing.
+                              </p>
+                            )}
+                        </div>
+                      </div>
+
+                      {/* Client Signature Preview */}
+                      <div className="mb-4 pt-4 border-t border-blue-700/30">
                         <p className="text-gray-400 text-sm mb-2">
-                          Signed by: {selectedBooking.agreement.adminSignerName}
-                        </p>
-                        <p className="text-gray-400 text-xs mb-3">
-                          On:{" "}
-                          {new Date(
-                            selectedBooking.agreement.adminSignedAt
-                          ).toLocaleString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                        <p className="text-gray-400 text-sm mb-2">
-                          Admin Signature:
+                          Client Signature:
                         </p>
                         <div className="bg-white rounded-lg p-3">
                           <img
-                            src={selectedBooking.agreement.adminSignature}
-                            alt="Admin Signature"
+                            src={selectedBooking.agreement.signature}
+                            alt="Client Signature"
                             className="h-24 object-contain mx-auto"
                           />
                         </div>
                       </div>
-                    ) : (
-                      <div className="pt-4 border-t border-blue-700/30">
-                        <div className="flex items-center">
-                          <AlertTriangle className="w-5 h-5 text-orange-400 mr-2" />
-                          <p className="text-orange-400 font-medium">
-                            Waiting for admin signature
+
+                      {/* Admin Signature Status */}
+                      {selectedBooking.agreement.adminSignature ? (
+                        <div className="pt-4 border-t border-blue-700/30">
+                          <div className="flex items-center mb-2">
+                            <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
+                            <p className="text-green-400 font-medium">
+                              Admin has signed the agreement
+                            </p>
+                          </div>
+                          <p className="text-gray-400 text-sm mb-2">
+                            Signed by:{" "}
+                            {selectedBooking.agreement.adminSignerName}
                           </p>
+                          <p className="text-gray-400 text-xs mb-3">
+                            On:{" "}
+                            {new Date(
+                              selectedBooking.agreement.adminSignedAt
+                            ).toLocaleString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                          <p className="text-gray-400 text-sm mb-2">
+                            Admin Signature:
+                          </p>
+                          <div className="bg-white rounded-lg p-3">
+                            <img
+                              src={selectedBooking.agreement.adminSignature}
+                              alt="Admin Signature"
+                              className="h-24 object-contain mx-auto"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="pt-4 border-t border-blue-700/30">
+                          <div className="flex items-center">
+                            <AlertTriangle className="w-5 h-5 text-orange-400 mr-2" />
+                            <p className="text-orange-400 font-medium">
+                              Waiting for admin signature
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Payment Information */}
               <div className="mb-6">
@@ -1165,7 +1345,9 @@ const Booking = () => {
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-gray-400 text-sm">Payment Method</p>
+                          <p className="text-gray-400 text-sm">
+                            Payment Method
+                          </p>
                           <p className="text-white font-medium capitalize">
                             {selectedBooking.paymentMethod === "gcash"
                               ? "GCash"
@@ -1198,12 +1380,15 @@ const Booking = () => {
                                 {selectedBooking.downpaymentType === "full"
                                   ? "Full Payment"
                                   : `Downpayment (${
-                                      selectedBooking.downpaymentPercentage || 50
+                                      selectedBooking.downpaymentPercentage ||
+                                      50
                                     }%)`}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-sm">Amount Paid</p>
+                              <p className="text-gray-400 text-sm">
+                                Amount Paid
+                              </p>
                               <p className="text-green-400 font-bold">
                                 ₱
                                 {Number(
@@ -1272,7 +1457,8 @@ const Booking = () => {
                     Add Extension
                   </button>
                 </div>
-                {selectedBooking.extensions && selectedBooking.extensions.length > 0 ? (
+                {selectedBooking.extensions &&
+                selectedBooking.extensions.length > 0 ? (
                   <div className="space-y-3">
                     {selectedBooking.extensions.map((extension) => (
                       <div
@@ -1288,21 +1474,29 @@ const Booking = () => {
                               {extension.description || "Extension charge"}
                             </p>
                             <div className="text-xs text-gray-400 mt-2 flex flex-wrap gap-3">
-                              {extension.hours !== null && extension.hours !== undefined && (
-                                <span>{extension.hours} hr(s)</span>
-                              )}
-                              {extension.rate !== null && extension.rate !== undefined && (
-                                <span>
-                                  @ ₱{Number(extension.rate || 0).toLocaleString()}/hr
-                                </span>
-                              )}
+                              {extension.hours !== null &&
+                                extension.hours !== undefined && (
+                                  <span>{extension.hours} hr(s)</span>
+                                )}
+                              {extension.rate !== null &&
+                                extension.rate !== undefined && (
+                                  <span>
+                                    @ ₱
+                                    {Number(
+                                      extension.rate || 0
+                                    ).toLocaleString()}
+                                    /hr
+                                  </span>
+                                )}
                               <span className="capitalize">
                                 Method: {extension.paymentMethod || "cash"}
                               </span>
                               <span>
                                 Recorded:{" "}
                                 {extension.createdAt
-                                  ? new Date(extension.createdAt).toLocaleString()
+                                  ? new Date(
+                                      extension.createdAt
+                                    ).toLocaleString()
                                   : "-"}
                               </span>
                               {extension.paidAt && (
@@ -1326,7 +1520,10 @@ const Booking = () => {
                             {extension.status !== "paid" && (
                               <button
                                 onClick={() =>
-                                  openExtensionPaymentModal(selectedBooking, extension)
+                                  openExtensionPaymentModal(
+                                    selectedBooking,
+                                    extension
+                                  )
                                 }
                                 className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
                               >
@@ -1354,45 +1551,92 @@ const Booking = () => {
                   </div>
                 )}
                 <div className="mt-4 p-3 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-between text-sm">
-                  <span className="text-gray-300">Outstanding Extension Balance</span>
+                  <span className="text-gray-300">
+                    Outstanding Extension Balance
+                  </span>
                   <span className="text-white font-semibold">
-                    ₱{Number(selectedBooking.extensionBalance || 0).toLocaleString()}
+                    ₱
+                    {Number(
+                      selectedBooking.extensionBalance || 0
+                    ).toLocaleString()}
                   </span>
                 </div>
               </div>
 
               {/* Items */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Booked Items
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-white">
+                    Booked Items
+                  </h3>
+                  {["pending", "confirmed"].includes(
+                    selectedBooking.status
+                  ) && (
+                    <button
+                      onClick={() => openAddItemModal(selectedBooking)}
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+                    >
+                      Add Item
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-3">
                   {selectedBooking.items.map((item, index) => (
-                    <div key={index} className="bg-gray-700 p-4 rounded-lg">
-                      <div className="flex items-center justify-between">
+                    <div
+                      key={item._id || index}
+                      className="bg-gray-700 p-4 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center space-x-3">
                           {getItemIcon(item.type)}
                           <div>
-                            <p className="text-white font-medium">
-                              {item.name}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-white font-medium">
+                                {item.name}
+                              </p>
+                              {item.isAdditional && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-900/50 text-green-300 border border-green-600/60">
+                                  New
+                                </span>
+                              )}
+                            </div>
                             <p className="text-gray-400 text-sm capitalize">
                               {item.type === "bandArtist"
                                 ? "Band Artist"
                                 : item.type}
                             </p>
+                            {item.addedAt && (
+                              <p className="text-gray-500 text-xs mt-1">
+                                Added: {new Date(item.addedAt).toLocaleString()}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-white font-medium">
-                            x{item.quantity}
-                          </p>
-                          <p className="text-green-400 font-bold">
-                            ₱
-                            {Number(
-                              item.price * item.quantity
-                            ).toLocaleString()}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-white font-medium">
+                              x{item.quantity}
+                            </p>
+                            <p className="text-green-400 font-bold">
+                              ₱
+                              {Number(
+                                item.price * item.quantity
+                              ).toLocaleString()}
+                            </p>
+                          </div>
+                          {["pending", "confirmed"].includes(
+                            selectedBooking.status
+                          ) && (
+                            <button
+                              onClick={() => {
+                                setItemToRemove(item);
+                                setShowRemoveItemModal(true);
+                              }}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -1448,7 +1692,8 @@ const Booking = () => {
               </div>
 
               {/* Cancellation and Refund Section */}
-              {(selectedBooking.status === "cancelled" || selectedBooking.status === "refunded") && (
+              {(selectedBooking.status === "cancelled" ||
+                selectedBooking.status === "refunded") && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
                     <XCircle className="w-5 h-5 mr-2 text-red-400" />
@@ -1473,7 +1718,10 @@ const Booking = () => {
                               Refund Amount:
                             </p>
                             <p className="text-green-400 font-bold text-lg">
-                              ₱{Number(selectedBooking.refundAmount).toLocaleString()}
+                              ₱
+                              {Number(
+                                selectedBooking.refundAmount
+                              ).toLocaleString()}
                             </p>
                           </div>
                           <div>
@@ -1753,6 +2001,59 @@ const Booking = () => {
         </div>
       )}
 
+      {/* Remove Item Confirmation Modal */}
+      {showRemoveItemModal && selectedBooking && itemToRemove && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
+            <h2 className="text-xl font-bold text-white mb-4">
+              Remove Item from Booking
+            </h2>
+            <p className="text-gray-300 mb-4">
+              Are you sure you want to remove{" "}
+              <span className="font-semibold text-white">
+                {itemToRemove.name}
+              </span>{" "}
+              from this booking?
+            </p>
+            <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-3 mb-4 text-sm text-gray-300">
+              <p>
+                <span className="font-semibold">Quantity:</span>{" "}
+                {itemToRemove.quantity}
+              </p>
+              <p>
+                <span className="font-semibold">Subtotal:</span> ₱
+                {Number(
+                  (itemToRemove.price || 0) * (itemToRemove.quantity || 0)
+                ).toLocaleString()}
+              </p>
+            </div>
+            <p className="text-yellow-300 text-xs mb-6">
+              This will update the booking total and remaining balance
+              accordingly and restore inventory/package availability for this
+              item.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRemoveItemModal(false);
+                  setItemToRemove(null);
+                }}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRemoveItem}
+                disabled={savingNewItem}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {savingNewItem ? "Removing..." : "Remove Item"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Admin Signature Modal */}
       <AdminSignatureModal
         isOpen={showAdminSignModal}
@@ -1914,7 +2215,9 @@ const Booking = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6 border border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Add Extension Charge</h2>
+              <h2 className="text-xl font-bold text-white">
+                Add Extension Charge
+              </h2>
               <button
                 onClick={closeExtensionModal}
                 className="text-gray-400 hover:text-white"
@@ -1923,8 +2226,9 @@ const Booking = () => {
               </button>
             </div>
             <p className="text-gray-400 text-sm mb-4">
-              Record additional hours rendered and charge the appropriate amount.
-              Leave the amount blank to automatically compute from hours × rate.
+              Record additional hours rendered and charge the appropriate
+              amount. Leave the amount blank to automatically compute from hours
+              × rate.
             </p>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2060,11 +2364,13 @@ const Booking = () => {
               <p className="text-gray-400 text-xs mt-2">
                 Payment Method:{" "}
                 <span className="capitalize">
-                  {selectedExtensionForPayment.extension.paymentMethod || "cash"}
+                  {selectedExtensionForPayment.extension.paymentMethod ||
+                    "cash"}
                 </span>
               </p>
             </div>
-            {selectedExtensionForPayment.extension.paymentMethod === "gcash" && (
+            {selectedExtensionForPayment.extension.paymentMethod ===
+              "gcash" && (
               <div className="mb-4">
                 <label className="block text-gray-300 text-sm mb-2">
                   Upload Payment Proof <span className="text-red-400">*</span>
@@ -2107,8 +2413,131 @@ const Booking = () => {
                 disabled={processingExtensionPayment}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
-                {processingExtensionPayment ? "Processing..." : "Confirm Payment"}
+                {processingExtensionPayment
+                  ? "Processing..."
+                  : "Confirm Payment"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Item to Booking Modal */}
+      {showAddItemModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-4xl w-full p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">
+                Add Item to Booking
+              </h2>
+              <button
+                onClick={closeAddItemModal}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-300 text-sm mb-4">
+              Add additional inventory, package, or band/artist to this booking
+              based on the customer&apos;s request. You can quickly pick from
+              existing items below.
+            </p>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Browse existing items using the same cards as customer view */}
+              <div>
+                <div className="flex gap-2 mb-3">
+                  {["inventory", "package", "bandArtist"].map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setAddItemTab(tab);
+                        if (
+                          tab === "inventory" &&
+                          inventoryOptions.length === 0
+                        )
+                          fetchAddItemOptions("inventory");
+                        if (tab === "package" && packageOptions.length === 0)
+                          fetchAddItemOptions("package");
+                        if (tab === "bandArtist" && artistOptions.length === 0)
+                          fetchAddItemOptions("bandArtist");
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                        addItemTab === tab
+                          ? "bg-blue-600 border-blue-500 text-white"
+                          : "bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500"
+                      }`}
+                    >
+                      {tab === "inventory"
+                        ? "Inventory"
+                        : tab === "package"
+                        ? "Packages"
+                        : "Band / Artists"}
+                    </button>
+                  ))}
+                </div>
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 max-h-96 overflow-y-auto space-y-3">
+                  {loadingAddOptions ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                    </div>
+                  ) : addItemTab === "inventory" ? (
+                    inventoryOptions.length === 0 ? (
+                      <p className="text-gray-400 text-sm">
+                        No inventory items found. Adjust filters in the
+                        inventory section if needed.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {inventoryOptions.map((item) => (
+                          <InventoryCard
+                            key={item._id}
+                            item={item}
+                            onAdd={(inv) =>
+                              quickAddItemToBooking(inv, "inventory")
+                            }
+                          />
+                        ))}
+                      </div>
+                    )
+                  ) : addItemTab === "package" ? (
+                    packageOptions.length === 0 ? (
+                      <p className="text-gray-400 text-sm">
+                        No packages found. Create packages in the packages
+                        section first.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {packageOptions.map((pkg) => (
+                          <PackagesCard
+                            key={pkg._id}
+                            pkg={pkg}
+                            onAdd={(p) => quickAddItemToBooking(p, "package")}
+                          />
+                        ))}
+                      </div>
+                    )
+                  ) : artistOptions.length === 0 ? (
+                    <p className="text-gray-400 text-sm">
+                      No artists found. Make sure artists are registered and
+                      active.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {artistOptions.map((artist) => (
+                        <ArtistCard
+                          key={artist._id}
+                          artist={artist}
+                          bookingDate={formatDate(selectedBooking.bookingDate)}
+                          artistAvailability={{}}
+                          checkingAvailability={false}
+                          onAdd={(a) => quickAddItemToBooking(a, "bandArtist")}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
