@@ -1115,6 +1115,151 @@ const processRefund = async (req, res) => {
   }
 };
 
+// Add extension charge to booking
+const addBookingExtension = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { hours, rate, amount, description, paymentMethod = "cash" } = req.body;
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    const parsedHours = hours !== undefined ? Number(hours) : null;
+    const parsedRate = rate !== undefined ? Number(rate) : null;
+    let computedAmount =
+      amount !== undefined ? Number(amount) : null;
+
+    if ((computedAmount === null || isNaN(computedAmount)) && parsedHours !== null && parsedRate !== null) {
+      computedAmount = parsedHours * parsedRate;
+    }
+
+    if (computedAmount === null || isNaN(computedAmount) || computedAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid amount or hour/rate combination is required.",
+      });
+    }
+
+    const extension = {
+      hours: parsedHours,
+      rate: parsedRate,
+      amount: computedAmount,
+      description: description?.trim(),
+      paymentMethod: ["cash", "gcash"].includes(paymentMethod)
+        ? paymentMethod
+        : "cash",
+      recordedBy: req.user.id,
+    };
+
+    booking.extensions.push(extension);
+    booking.extensionBalance =
+      Number(booking.extensionBalance || 0) + computedAmount;
+
+    await booking.save();
+    await booking.populate("user", "fullName email username");
+    await booking.populate({
+      path: "items.itemId",
+      model: "Packages",
+      populate: {
+        path: "items.inventoryItem",
+        model: "Inventory",
+        select: "name price quantity image",
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Extension charge added successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error adding booking extension:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Mark extension as paid
+const markExtensionPaid = async (req, res) => {
+  try {
+    const { id, extensionId } = req.params;
+    const { paymentProof } = req.body;
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    const extension = booking.extensions.id(extensionId);
+    if (!extension) {
+      return res.status(404).json({
+        success: false,
+        message: "Extension charge not found",
+      });
+    }
+
+    if (extension.status === "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Extension charge already marked as paid",
+      });
+    }
+
+    if (extension.paymentMethod === "gcash" && paymentProof) {
+      const uploadResult = await uploadImageToSupabase(paymentProof, "extensions");
+      if (!uploadResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: `Failed to upload payment proof: ${uploadResult.error}`,
+        });
+      }
+      extension.paymentProof = uploadResult.url;
+    }
+
+    extension.status = "paid";
+    extension.paidAt = new Date();
+
+    const newBalance = Number(booking.extensionBalance || 0) - Number(extension.amount || 0);
+    booking.extensionBalance = newBalance > 0 ? newBalance : 0;
+
+    await booking.save();
+    await booking.populate("user", "fullName email username");
+    await booking.populate({
+      path: "items.itemId",
+      model: "Packages",
+      populate: {
+        path: "items.inventoryItem",
+        model: "Inventory",
+        select: "name price quantity image",
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "Extension charge marked as paid",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error marking extension as paid:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getUserBookings,
@@ -1128,4 +1273,6 @@ module.exports = {
   downloadBookingAgreement,
   adminSignAgreement,
   processRefund,
+  addBookingExtension,
+  markExtensionPaid,
 };

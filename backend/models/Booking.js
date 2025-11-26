@@ -193,6 +193,56 @@ const BookingSchema = new mongoose.Schema({
   refundProof: {
     type: String, // URL to refund proof image (for GCash refunds)
   },
+  extensions: [
+    {
+      hours: {
+        type: Number,
+        min: 0,
+      },
+      rate: {
+        type: Number,
+        min: 0,
+      },
+      amount: {
+        type: Number,
+        min: 0,
+        required: true,
+      },
+      description: {
+        type: String,
+        trim: true,
+      },
+      paymentMethod: {
+        type: String,
+        enum: ["cash", "gcash"],
+        default: "cash",
+      },
+      status: {
+        type: String,
+        enum: ["pending", "paid"],
+        default: "pending",
+      },
+      paymentProof: {
+        type: String,
+      },
+      recordedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+      paidAt: {
+        type: Date,
+      },
+    },
+  ],
+  extensionBalance: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

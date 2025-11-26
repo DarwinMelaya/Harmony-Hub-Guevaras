@@ -270,6 +270,77 @@ const UserBooking = () => {
                         </div>
                       ))}
                     </div>
+                  {(b.extensions?.length || b.extensionBalance) && (
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300 font-medium">
+                          Extension Charges
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          Outstanding: ₱
+                          {Number(b.extensionBalance || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      {b.extensions && b.extensions.length > 0 ? (
+                        <div className="mt-2 space-y-2">
+                          {b.extensions.map((ext) => (
+                            <div
+                              key={ext._id || ext.createdAt}
+                              className="bg-gray-700 rounded px-3 py-2 text-sm border border-gray-600"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-white font-medium">
+                                  ₱{Number(ext.amount || 0).toLocaleString()}
+                                </span>
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded-full border ${
+                                    ext.status === "paid"
+                                      ? "text-green-300 border-green-500/50"
+                                      : "text-yellow-300 border-yellow-500/50"
+                                  }`}
+                                >
+                                  {ext.status === "paid" ? "Paid" : "Pending"}
+                                </span>
+                              </div>
+                              <p className="text-gray-300 mt-1">
+                                {ext.description || "Extension charge"}
+                              </p>
+                              <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-3">
+                                {ext.hours !== null && ext.hours !== undefined && (
+                                  <span>{ext.hours} hr(s)</span>
+                                )}
+                                {ext.rate !== null && ext.rate !== undefined && (
+                                  <span>
+                                    @ ₱{Number(ext.rate || 0).toLocaleString()}/hr
+                                  </span>
+                                )}
+                                <span className="capitalize">
+                                  Method: {ext.paymentMethod || "cash"}
+                                </span>
+                                {ext.paidAt && (
+                                  <span>
+                                    Paid: {new Date(ext.paidAt).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              {ext.paymentProof && (
+                                <button
+                                  onClick={() => window.open(ext.paymentProof, "_blank")}
+                                  className="text-xs text-blue-300 underline mt-2"
+                                >
+                                  View Proof
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm mt-2">
+                          No extension charges recorded.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   </div>
                 </div>
               ))}

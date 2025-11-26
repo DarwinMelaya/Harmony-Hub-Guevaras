@@ -50,6 +50,23 @@ const Booking = () => {
   const [refundProof, setRefundProof] = useState("");
   const [refundProofPreview, setRefundProofPreview] = useState(null);
   const [processingRefund, setProcessingRefund] = useState(false);
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
+  const [extensionTargetBooking, setExtensionTargetBooking] = useState(null);
+  const [extensionForm, setExtensionForm] = useState({
+    hours: "",
+    rate: "",
+    amount: "",
+    paymentMethod: "cash",
+    description: "",
+  });
+  const [savingExtension, setSavingExtension] = useState(false);
+  const [showExtensionPaymentModal, setShowExtensionPaymentModal] =
+    useState(false);
+  const [selectedExtensionForPayment, setSelectedExtensionForPayment] =
+    useState(null);
+  const [extensionPaymentProof, setExtensionPaymentProof] = useState(null);
+  const [processingExtensionPayment, setProcessingExtensionPayment] =
+    useState(false);
 
   const hasIssues = (booking) => {
     return (
@@ -113,6 +130,27 @@ const Booking = () => {
     return acc;
   }, {});
 
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const syncBookingState = (updatedBooking) => {
+    setBookings((prevBookings) =>
+      prevBookings.map((booking) =>
+        booking._id === updatedBooking._id ? updatedBooking : booking
+      )
+    );
+    setSelectedBooking((prevSelected) =>
+      prevSelected && prevSelected._id === updatedBooking._id
+        ? updatedBooking
+        : prevSelected
+    );
+  };
+
   const handleMonthChange = (forward) => {
     let month = calendarMonth + (forward ? 1 : -1);
     let year = calendarYear;
@@ -166,17 +204,7 @@ const Booking = () => {
       );
 
       if (response.data.success) {
-        setBookings((prevBookings) =>
-          prevBookings.map((booking) =>
-            booking._id === bookingId
-              ? response.data.data
-              : booking
-          )
-        );
-
-        if (selectedBooking && selectedBooking._id === bookingId) {
-          setSelectedBooking(response.data.data);
-        }
+        syncBookingState(response.data.data);
       }
     } catch (err) {
       setError(
@@ -369,20 +397,7 @@ const Booking = () => {
       );
 
       if (response.data.success) {
-        // Update the booking in the list
-        setBookings((prevBookings) =>
-          prevBookings.map((booking) =>
-            booking._id === signingBooking._id
-              ? response.data.data
-              : booking
-          )
-        );
-
-        // Update selected booking if it's the same one
-        if (selectedBooking && selectedBooking._id === signingBooking._id) {
-          setSelectedBooking(response.data.data);
-        }
-
+        syncBookingState(response.data.data);
         setShowAdminSignModal(false);
         setSigningBooking(null);
       }
@@ -422,18 +437,7 @@ const Booking = () => {
       );
 
       if (response.data.success) {
-        // Update the booking in the list
-        setBookings((prevBookings) =>
-          prevBookings.map((booking) =>
-            booking._id === selectedBooking._id
-              ? response.data.data
-              : booking
-          )
-        );
-
-        // Update selected booking
-        setSelectedBooking(response.data.data);
-
+        syncBookingState(response.data.data);
         setShowRefundModal(false);
         setRefundProof("");
         setRefundProofPreview(null);
@@ -442,6 +446,153 @@ const Booking = () => {
       setError(err.response?.data?.message || err.message || "Failed to process refund");
     } finally {
       setProcessingRefund(false);
+    }
+  };
+
+  const openExtensionModal = (booking) => {
+    setExtensionTargetBooking(booking);
+    setExtensionForm({
+      hours: "",
+      rate: "",
+      amount: "",
+      paymentMethod: booking?.paymentMethod === "gcash" ? "gcash" : "cash",
+      description: "",
+    });
+    setShowExtensionModal(true);
+  };
+
+  const closeExtensionModal = () => {
+    setShowExtensionModal(false);
+    setExtensionTargetBooking(null);
+    setExtensionForm({
+      hours: "",
+      rate: "",
+      amount: "",
+      paymentMethod: "cash",
+      description: "",
+    });
+    setSavingExtension(false);
+  };
+
+  const handleExtensionFieldChange = (field, value) => {
+    setExtensionForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const submitExtensionCharge = async () => {
+    if (!extensionTargetBooking?._id) return;
+    try {
+      setSavingExtension(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+      const payload = {
+        description: extensionForm.description?.trim() || undefined,
+        paymentMethod: extensionForm.paymentMethod,
+      };
+      if (extensionForm.hours) payload.hours = Number(extensionForm.hours);
+      if (extensionForm.rate) payload.rate = Number(extensionForm.rate);
+      if (extensionForm.amount) payload.amount = Number(extensionForm.amount);
+
+      const response = await axios.post(
+        `http://localhost:5000/api/bookings/${extensionTargetBooking._id}/extensions`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        syncBookingState(response.data.data);
+        closeExtensionModal();
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to add extension charge"
+      );
+    } finally {
+      setSavingExtension(false);
+    }
+  };
+
+  const openExtensionPaymentModal = (booking, extension) => {
+    setSelectedExtensionForPayment({
+      bookingId: booking?._id,
+      extension,
+    });
+    setExtensionPaymentProof(null);
+    setShowExtensionPaymentModal(true);
+  };
+
+  const closeExtensionPaymentModal = () => {
+    setShowExtensionPaymentModal(false);
+    setSelectedExtensionForPayment(null);
+    setExtensionPaymentProof(null);
+    setProcessingExtensionPayment(false);
+  };
+
+  const handleExtensionProofChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await fileToBase64(file);
+      setExtensionPaymentProof(base64);
+    } catch (readErr) {
+      setError("Failed to read payment proof file.");
+    }
+  };
+
+  const confirmExtensionPayment = async () => {
+    if (
+      !selectedExtensionForPayment?.bookingId ||
+      !selectedExtensionForPayment.extension?._id
+    ) {
+      return;
+    }
+    if (
+      selectedExtensionForPayment.extension.paymentMethod === "gcash" &&
+      !extensionPaymentProof
+    ) {
+      setError("Please upload a payment proof for GCash extensions.");
+      return;
+    }
+    try {
+      setProcessingExtensionPayment(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+      const body = {};
+      if (extensionPaymentProof) {
+        body.paymentProof = extensionPaymentProof;
+      }
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${selectedExtensionForPayment.bookingId}/extensions/${selectedExtensionForPayment.extension._id}/pay`,
+        body,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        syncBookingState(response.data.data);
+        closeExtensionPaymentModal();
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to mark extension as paid"
+      );
+    } finally {
+      setProcessingExtensionPayment(false);
     }
   };
 
@@ -1033,6 +1184,108 @@ const Booking = () => {
                 </div>
               </div>
 
+              {/* Extension Charges */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-white">
+                    Extension Charges
+                  </h3>
+                  <button
+                    onClick={() => openExtensionModal(selectedBooking)}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                  >
+                    Add Extension
+                  </button>
+                </div>
+                {selectedBooking.extensions && selectedBooking.extensions.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedBooking.extensions.map((extension) => (
+                      <div
+                        key={extension._id || extension.createdAt}
+                        className="bg-gray-700 p-4 rounded-lg border border-gray-600"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                          <div>
+                            <p className="text-white font-semibold">
+                              ₱{Number(extension.amount || 0).toLocaleString()}
+                            </p>
+                            <p className="text-gray-300 text-sm">
+                              {extension.description || "Extension charge"}
+                            </p>
+                            <div className="text-xs text-gray-400 mt-2 flex flex-wrap gap-3">
+                              {extension.hours !== null && extension.hours !== undefined && (
+                                <span>{extension.hours} hr(s)</span>
+                              )}
+                              {extension.rate !== null && extension.rate !== undefined && (
+                                <span>
+                                  @ ₱{Number(extension.rate || 0).toLocaleString()}/hr
+                                </span>
+                              )}
+                              <span className="capitalize">
+                                Method: {extension.paymentMethod || "cash"}
+                              </span>
+                              <span>
+                                Recorded:{" "}
+                                {extension.createdAt
+                                  ? new Date(extension.createdAt).toLocaleString()
+                                  : "-"}
+                              </span>
+                              {extension.paidAt && (
+                                <span>
+                                  Paid on:{" "}
+                                  {new Date(extension.paidAt).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                extension.status === "paid"
+                                  ? "bg-green-900/40 text-green-300 border-green-500/30"
+                                  : "bg-yellow-900/40 text-yellow-300 border-yellow-500/30"
+                              }`}
+                            >
+                              {extension.status === "paid" ? "Paid" : "Pending"}
+                            </span>
+                            {extension.status !== "paid" && (
+                              <button
+                                onClick={() =>
+                                  openExtensionPaymentModal(selectedBooking, extension)
+                                }
+                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
+                              >
+                                Mark as Paid
+                              </button>
+                            )}
+                            {extension.paymentProof && (
+                              <a
+                                href={extension.paymentProof}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-300 text-xs underline"
+                              >
+                                View Proof
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-gray-700 rounded-lg p-4 text-gray-400 text-sm border border-gray-600">
+                    No extension charges recorded yet.
+                  </div>
+                )}
+                <div className="mt-4 p-3 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-between text-sm">
+                  <span className="text-gray-300">Outstanding Extension Balance</span>
+                  <span className="text-white font-semibold">
+                    ₱{Number(selectedBooking.extensionBalance || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
               {/* Items */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-3">
@@ -1575,6 +1828,211 @@ const Booking = () => {
                   : selectedBooking.paymentMethod === "gcash"
                   ? "Upload & Process"
                   : "Mark as Refunded"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extension Charge Modal */}
+      {showExtensionModal && extensionTargetBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">Add Extension Charge</h2>
+              <button
+                onClick={closeExtensionModal}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-400 text-sm mb-4">
+              Record additional hours rendered and charge the appropriate amount.
+              Leave the amount blank to automatically compute from hours × rate.
+            </p>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1">
+                    Additional Hours
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={extensionForm.hours}
+                    onChange={(e) =>
+                      handleExtensionFieldChange("hours", e.target.value)
+                    }
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1">
+                    Rate per Hour (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={extensionForm.rate}
+                    onChange={(e) =>
+                      handleExtensionFieldChange("rate", e.target.value)
+                    }
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-1">
+                  Total Amount (₱)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={extensionForm.amount}
+                  onChange={(e) =>
+                    handleExtensionFieldChange("amount", e.target.value)
+                  }
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="Auto-compute if left blank"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-1">
+                  Payment Method
+                </label>
+                <select
+                  value={extensionForm.paymentMethod}
+                  onChange={(e) =>
+                    handleExtensionFieldChange("paymentMethod", e.target.value)
+                  }
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="gcash">GCash</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm mb-1">
+                  Notes
+                </label>
+                <textarea
+                  rows="3"
+                  value={extensionForm.description}
+                  onChange={(e) =>
+                    handleExtensionFieldChange("description", e.target.value)
+                  }
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="Add optional details about the extension..."
+                ></textarea>
+              </div>
+              {extensionForm.hours && extensionForm.rate && (
+                <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg text-blue-200 text-sm">
+                  Estimated amount based on hours × rate: ₱
+                  {(
+                    Number(extensionForm.hours || 0) *
+                    Number(extensionForm.rate || 0)
+                  ).toLocaleString()}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closeExtensionModal}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitExtensionCharge}
+                disabled={savingExtension}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {savingExtension ? "Saving..." : "Add Charge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extension Payment Modal */}
+      {showExtensionPaymentModal && selectedExtensionForPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">
+                Mark Extension as Paid
+              </h2>
+              <button
+                onClick={closeExtensionPaymentModal}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <div className="bg-gray-700 rounded-lg p-4 mb-4">
+              <p className="text-white font-semibold text-lg">
+                ₱
+                {Number(
+                  selectedExtensionForPayment.extension.amount || 0
+                ).toLocaleString()}
+              </p>
+              <p className="text-gray-300 text-sm">
+                {selectedExtensionForPayment.extension.description ||
+                  "Extension charge"}
+              </p>
+              <p className="text-gray-400 text-xs mt-2">
+                Payment Method:{" "}
+                <span className="capitalize">
+                  {selectedExtensionForPayment.extension.paymentMethod || "cash"}
+                </span>
+              </p>
+            </div>
+            {selectedExtensionForPayment.extension.paymentMethod === "gcash" && (
+              <div className="mb-4">
+                <label className="block text-gray-300 text-sm mb-2">
+                  Upload Payment Proof <span className="text-red-400">*</span>
+                </label>
+                {extensionPaymentProof && (
+                  <div className="mb-2">
+                    <img
+                      src={extensionPaymentProof}
+                      alt="Payment proof"
+                      className="w-full h-48 object-contain rounded border border-gray-600"
+                    />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleExtensionProofChange}
+                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                />
+                <p className="text-gray-400 text-xs mt-1">
+                  Required for GCash payments.
+                </p>
+              </div>
+            )}
+            {selectedExtensionForPayment.extension.paymentMethod === "cash" && (
+              <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-700 rounded-lg text-yellow-200 text-sm">
+                Confirm that cash has been collected for this extension charge.
+                You may optionally upload proof if needed.
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeExtensionPaymentModal}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmExtensionPayment}
+                disabled={processingExtensionPayment}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {processingExtensionPayment ? "Processing..." : "Confirm Payment"}
               </button>
             </div>
           </div>

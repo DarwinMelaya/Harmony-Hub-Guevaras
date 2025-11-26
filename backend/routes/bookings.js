@@ -13,6 +13,8 @@ const {
   downloadBookingAgreement,
   adminSignAgreement,
   processRefund,
+  addBookingExtension,
+  markExtensionPaid,
 } = require("../controllers/bookingController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
@@ -67,6 +69,20 @@ router.patch(
   "/:id/refund/process",
   requireRole(["owner", "admin", "staff"]),
   processRefund
+);
+
+// Add extension charge (owner/admin/staff only)
+router.post(
+  "/:id/extensions",
+  requireRole(["owner", "admin", "staff"]),
+  addBookingExtension
+);
+
+// Mark extension as paid (owner/admin/staff only)
+router.patch(
+  "/:id/extensions/:extensionId/pay",
+  requireRole(["owner", "admin", "staff"]),
+  markExtensionPaid
 );
 
 module.exports = router;
