@@ -24,6 +24,7 @@ const BookingModal = ({
   checkArtistAvailability,
   userName,
   userEmail,
+  reservedDates = [],
 }) => {
   const [provinceData, setProvince] = useState([]);
   const [cityData, setCity] = useState([]);
@@ -114,6 +115,66 @@ const BookingModal = ({
     handleBookingDataChange(
       "contactInfo.address",
       `${barangayName}, ${cityAddr}, ${provinceAddr}`
+    );
+  };
+
+  // Simple inline calendar that highlights reserved dates (YYYY-MM-DD)
+  const InlineReservedCalendar = ({ reservedDates = [] }) => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const weeks = [];
+    let currentDay = 1 - firstDay;
+
+    while (currentDay <= daysInMonth) {
+      const week = [];
+      for (let i = 0; i < 7; i++) {
+        if (currentDay < 1 || currentDay > daysInMonth) {
+          week.push(null);
+        } else {
+          const d = new Date(year, month, currentDay);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          const dayStr = String(d.getDate()).padStart(2, "0");
+          const key = `${y}-${m}-${dayStr}`;
+          const isReserved = reservedDates.includes(key);
+          week.push({ day: currentDay, isReserved });
+        }
+        currentDay++;
+      }
+      weeks.push(week);
+    }
+
+    return (
+      <div className="space-y-1 text-[11px]">
+        <div className="text-gray-200 font-semibold text-xs">
+          {today.toLocaleString("default", { month: "long", year: "numeric" })}
+        </div>
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 gap-1">
+            {week.map((cell, ci) =>
+              cell ? (
+                <div
+                  key={ci}
+                  className={`py-1 rounded ${
+                    cell.isReserved
+                      ? "bg-red-700 text-white"
+                      : "bg-gray-800 text-gray-200"
+                  }`}
+                >
+                  {cell.day}
+                </div>
+              ) : (
+                <div key={ci} className="py-1 rounded bg-transparent" />
+              )
+            )}
+          </div>
+        ))}
+      </div>
     );
   };
   return (
@@ -258,8 +319,27 @@ const BookingModal = ({
                   </div>
                 )}
 
-              {/* Booking Details */}
+              {/* Booking Details + Calendar */}
               <div className="space-y-4">
+                {/* Inline Calendar Hint for Reserved Dates */}
+                <div className="bg-gray-700 rounded-lg p-3 border border-gray-600 mb-2">
+                  <p className="text-sm font-semibold text-white mb-2">
+                    Calendar Overview
+                  </p>
+                  <p className="text-xs text-gray-300 mb-2">
+                    Check reserved dates while filling out your event details.
+                    Days marked as{" "}
+                    <span className="text-red-300 font-semibold">Reserved</span>{" "}
+                    already have a confirmed booking.
+                  </p>
+                  <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-gray-300 mb-1">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
+                      <span key={d}>{d}</span>
+                    ))}
+                  </div>
+                  {/* Simple current-month view based on today's month/year */}
+                  <InlineReservedCalendar reservedDates={reservedDates} />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">

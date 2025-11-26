@@ -1017,6 +1017,7 @@ const UserHome = () => {
         checkArtistAvailability={checkArtistAvailability}
         userName={userData?.fullName || userData?.username || "Guest"}
         userEmail={userData?.email || ""}
+        reservedDates={reservedDates}
       />
 
       {/* Calendar Modal */}
