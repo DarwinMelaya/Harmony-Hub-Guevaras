@@ -67,6 +67,7 @@ const UserHome = () => {
   // Artist availability tracking
   const [artistAvailability, setArtistAvailability] = useState({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [reservedDates, setReservedDates] = useState([]); // dates with confirmed bookings (YYYY-MM-DD)
 
   useEffect(() => {
     // Get user data from localStorage
@@ -77,6 +78,34 @@ const UserHome = () => {
 
     // Fetch inventory and packages
     fetchData();
+
+    // Fetch confirmed-reserved dates for venue
+    const fetchReservedDates = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:5000/api/bookings/calendar"
+        );
+        const bookings = response.data?.data || [];
+
+        // Keep only confirmed bookings and map to YYYY-MM-DD strings
+        const confirmedDates = bookings
+          .filter((b) => b.status === "confirmed")
+          .map((b) => {
+            const d = new Date(b.bookingDate);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+          });
+
+        // Unique date strings
+        setReservedDates(Array.from(new Set(confirmedDates)));
+      } catch (err) {
+        console.error("Error fetching reserved dates:", err);
+      }
+    };
+
+    fetchReservedDates();
   }, []);
 
   // Refetch data after successful booking to reflect availability/quantities
@@ -537,6 +566,14 @@ const UserHome = () => {
         },
       }));
     } else {
+      // Block selecting a date that is already reserved (confirmed booking)
+      if (field === "bookingDate" && value) {
+        if (reservedDates.includes(value)) {
+          setError("Selected date is already reserved.");
+          return;
+        }
+      }
+
       setBookingData((prev) => ({
         ...prev,
         [field]: value,

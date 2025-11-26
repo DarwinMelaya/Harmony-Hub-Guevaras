@@ -198,6 +198,9 @@ const CalendarHome = () => {
           const allDayBookings = dateKey
             ? allSchedulesByDate[dateKey] || []
             : [];
+          const hasConfirmed = allDayBookings.some(
+            (b) => b.status === "confirmed"
+          );
 
           return (
             <div
@@ -218,6 +221,14 @@ const CalendarHome = () => {
                   {date ? date.getDate() : ""}
                 </span>
               </div>
+
+              {hasConfirmed && (
+                <div className="absolute top-1 left-1">
+                  <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full">
+                    Reserved
+                  </span>
+                </div>
+              )}
 
               {allDayBookings.length > 0 && (
                 <div className="space-y-1 overflow-y-auto max-h-[80px] hide-scrollbar">

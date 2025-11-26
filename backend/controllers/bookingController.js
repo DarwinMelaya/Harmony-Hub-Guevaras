@@ -96,6 +96,44 @@ const createBooking = async (req, res) => {
       }
     }
 
+    // Check if there is already a confirmed booking on this date
+    const [reservedYear, reservedMonth, reservedDay] = bookingDate
+      .split("-")
+      .map(Number);
+    const reservedStartOfDay = new Date(
+      reservedYear,
+      reservedMonth - 1,
+      reservedDay,
+      0,
+      0,
+      0,
+      0
+    );
+    const reservedEndOfDay = new Date(
+      reservedYear,
+      reservedMonth - 1,
+      reservedDay,
+      23,
+      59,
+      59,
+      999
+    );
+
+    const existingConfirmed = await Booking.findOne({
+      bookingDate: {
+        $gte: reservedStartOfDay,
+        $lte: reservedEndOfDay,
+      },
+      status: "confirmed",
+    });
+
+    if (existingConfirmed) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected date is already reserved.",
+      });
+    }
+
     let totalAmount = 0;
     const validatedItems = [];
 

@@ -328,6 +328,9 @@ const UserCalendar = () => {
           const allDayBookings = dateKey
             ? allSchedulesByDate[dateKey] || []
             : [];
+          const hasConfirmed = allDayBookings.some(
+            (b) => b.status === "confirmed"
+          );
 
           return (
             <div
@@ -348,6 +351,14 @@ const UserCalendar = () => {
                   {date ? date.getDate() : ""}
                 </span>
               </div>
+
+              {hasConfirmed && (
+                <div className="absolute top-1 left-1">
+                  <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full">
+                    Reserved
+                  </span>
+                </div>
+              )}
 
               {/* Display content based on view mode */}
               {/* Show all bookings from all users */}
