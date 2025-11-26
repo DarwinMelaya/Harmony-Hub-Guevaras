@@ -2,6 +2,7 @@ import Layout from "../../components/Layout/Layout";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { FileText, Download } from "lucide-react";
+import BookingAgreement from "../../components/Agreement/BookingAgreement";
 
 const statusClasses = {
   pending: "bg-yellow-900/40 text-yellow-300 border border-yellow-700",
@@ -9,6 +10,25 @@ const statusClasses = {
   completed: "bg-green-900/40 text-green-300 border border-green-700",
   cancelled: "bg-red-900/40 text-red-300 border border-red-700",
   refunded: "bg-purple-900/40 text-purple-300 border border-purple-700",
+};
+
+const paymentStatusMeta = {
+  awaiting_confirmation: {
+    label: "Waiting for admin confirmation",
+    className: "bg-gray-700 text-gray-300",
+  },
+  awaiting_selection: {
+    label: "Awaiting payment selection",
+    className: "bg-yellow-900/40 text-yellow-200 border border-yellow-600/60",
+  },
+  submitted: {
+    label: "Payment submitted",
+    className: "bg-blue-900/40 text-blue-200 border border-blue-700/60",
+  },
+  verified: {
+    label: "Payment verified",
+    className: "bg-green-900/40 text-green-200 border border-green-700/60",
+  },
 };
 
 const UserBooking = () => {
@@ -20,6 +40,20 @@ const UserBooking = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedBookingForCancel, setSelectedBookingForCancel] = useState(null);
   const [cancellationReason, setCancellationReason] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({
+    paymentMethod: "cash",
+    downpaymentType: "percentage",
+    downpaymentPercentage: 50,
+    paymentReference: "",
+    paymentImage: null,
+  });
+  const [paymentProofPreview, setPaymentProofPreview] = useState(null);
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [showAgreement, setShowAgreement] = useState(false);
+  const [pendingPaymentPayload, setPendingPaymentPayload] = useState(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -40,6 +74,15 @@ const UserBooking = () => {
         setLoading(false);
       }
     };
+
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUserData(JSON.parse(storedUser));
+      } catch {
+        setUserData(null);
+      }
+    }
 
     fetchBookings();
   }, []);
@@ -87,6 +130,125 @@ const UserBooking = () => {
     } finally {
       setCancelling(null);
     }
+  };
+
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const openPaymentModal = (booking) => {
+    setSelectedBookingForPayment(booking);
+    setPaymentForm({
+      paymentMethod: "cash",
+      downpaymentType: "percentage",
+      downpaymentPercentage: 50,
+      paymentReference: "",
+      paymentImage: null,
+    });
+    setPaymentProofPreview(null);
+    setShowPaymentModal(true);
+    setError(null);
+  };
+
+  const closePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedBookingForPayment(null);
+    setPaymentProofPreview(null);
+    setSubmittingPayment(false);
+  };
+
+  const handlePaymentFormChange = (field, value) => {
+    setPaymentForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handlePaymentProofChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File size must be less than 5MB.");
+      return;
+    }
+
+    try {
+      const base64 = await fileToBase64(file);
+      handlePaymentFormChange("paymentImage", base64);
+      setPaymentProofPreview(base64);
+    } catch (uploadErr) {
+      setError("Failed to read payment proof file.");
+    }
+  };
+
+  const submitPaymentToServer = async (payload) => {
+    if (!selectedBookingForPayment) return;
+
+    try {
+      setSubmittingPayment(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+
+      const response = await axios.patch(
+        `http://localhost:5000/api/bookings/${selectedBookingForPayment._id}/payment`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data?.success) {
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) =>
+            booking._id === selectedBookingForPayment._id
+              ? response.data.data
+              : booking
+          )
+        );
+        closePaymentModal();
+        setShowAgreement(false);
+        setPendingPaymentPayload(null);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
+  const handlePaymentSubmitClick = () => {
+    if (!selectedBookingForPayment) return;
+
+    if (
+      paymentForm.paymentMethod === "gcash" &&
+      (!paymentForm.paymentReference?.trim() || !paymentForm.paymentImage)
+    ) {
+      setError("GCash payments require a reference number and screenshot.");
+      return;
+    }
+
+    const payload = {
+      paymentMethod: paymentForm.paymentMethod,
+    };
+
+    if (paymentForm.paymentMethod === "gcash") {
+      payload.paymentReference = paymentForm.paymentReference.trim();
+      payload.paymentImage = paymentForm.paymentImage;
+      payload.downpaymentType =
+        paymentForm.downpaymentType === "full" ? "full" : "percentage";
+      payload.downpaymentPercentage =
+        paymentForm.downpaymentType === "full"
+          ? 100
+          : Number(paymentForm.downpaymentPercentage) || 50;
+    }
+
+    setPendingPaymentPayload(payload);
+    setShowAgreement(true);
   };
 
   const handleDownloadAgreement = async (bookingId) => {
@@ -146,11 +308,15 @@ const UserBooking = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {bookings.map((b) => (
-                <div
-                  key={b._id}
-                  className="bg-gray-800 rounded-lg border border-gray-700 p-5"
-                >
+              {bookings.map((b) => {
+                const paymentMeta =
+                  paymentStatusMeta[b.paymentStatus] ||
+                  paymentStatusMeta.awaiting_confirmation;
+                return (
+                  <div
+                    key={b._id}
+                    className="bg-gray-800 rounded-lg border border-gray-700 p-5"
+                  >
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
                       <span
@@ -164,10 +330,15 @@ const UserBooking = () => {
                         {new Date(b.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <div className="text-green-400 font-semibold">
                         ₱{Number(b.totalAmount || 0).toLocaleString()}
                       </div>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${paymentMeta.className}`}
+                      >
+                        {paymentMeta.label}
+                      </span>
                       {b.agreement && b.agreement.signature && (
                         <>
                           {b.agreement.adminSignature ? (
@@ -342,13 +513,291 @@ const UserBooking = () => {
                     </div>
                   )}
                   </div>
+
+                  {/* Payment Call-to-action */}
+                  <div className="mt-4 p-4 bg-gray-700 rounded-lg border border-gray-600">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <p className="text-white font-medium text-sm">
+                          Payment Status
+                        </p>
+                        <p className="text-gray-300 text-xs">
+                          {paymentMeta.label}
+                        </p>
+                      </div>
+                      {b.status === "confirmed" &&
+                        (b.paymentStatus === "awaiting_selection" ||
+                          !b.paymentStatus) && (
+                          <button
+                            onClick={() => openPaymentModal(b)}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                          >
+                            Choose Payment Method
+                          </button>
+                        )}
+                    </div>
+                    {b.paymentStatus === "submitted" && (
+                      <p className="text-xs text-blue-200 mt-3">
+                        Thanks! Your payment details were sent. Please wait for
+                        admin verification and signature.
+                      </p>
+                    )}
+                    {b.paymentStatus === "verified" && (
+                      <p className="text-xs text-green-200 mt-3">
+                        Payment verified. A signed copy of the contract is now
+                        available for download.
+                      </p>
+                    )}
+                    {(!b.paymentStatus ||
+                      b.paymentStatus === "awaiting_confirmation") && (
+                      <p className="text-xs text-gray-300 mt-3">
+                        Once an admin confirms your schedule, you can submit
+                        your preferred payment method here.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
+      {/* Payment Selection Modal */}
+      {showPaymentModal && selectedBookingForPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-white">
+                Choose Payment Method
+              </h2>
+              <button
+                onClick={closePaymentModal}
+                className="text-gray-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-300 text-sm mb-4">
+              Booking for{" "}
+              <span className="font-semibold text-white">
+                {new Date(
+                  selectedBookingForPayment.bookingDate
+                ).toLocaleDateString()}
+              </span>{" "}
+              • ₱
+              {Number(
+                selectedBookingForPayment.totalAmount || 0
+              ).toLocaleString()}
+            </p>
+
+            <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Payment Method
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {["cash", "gcash"].map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => handlePaymentFormChange("paymentMethod", method)}
+                      className={`py-2 px-3 rounded-lg text-sm font-semibold border transition-colors ${
+                        paymentForm.paymentMethod === method
+                          ? "bg-blue-600 text-white border-blue-500"
+                          : "bg-gray-700 text-gray-300 border-gray-600 hover:border-gray-500"
+                      }`}
+                    >
+                      {method === "cash" ? "💵 Cash" : "📱 GCash"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentForm.paymentMethod === "gcash" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Payment Option
+                    </label>
+                    <div className="grid grid-cols-1 gap-3">
+                      <label
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer ${
+                          paymentForm.downpaymentType === "percentage"
+                            ? "border-green-500 bg-green-500/10"
+                            : "border-gray-600 bg-gray-700/50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="downpaymentType"
+                          value="percentage"
+                          checked={paymentForm.downpaymentType === "percentage"}
+                          onChange={(e) =>
+                            handlePaymentFormChange("downpaymentType", e.target.value)
+                          }
+                          className="mr-3"
+                        />
+                        <div>
+                          <p className="text-white font-medium">Downpayment</p>
+                          <p className="text-gray-400 text-xs">
+                            Pay a portion now, balance on event day
+                          </p>
+                        </div>
+                      </label>
+                      <label
+                        className={`flex items-center p-3 rounded-lg border cursor-pointer ${
+                          paymentForm.downpaymentType === "full"
+                            ? "border-green-500 bg-green-500/10"
+                            : "border-gray-600 bg-gray-700/50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="downpaymentType"
+                          value="full"
+                          checked={paymentForm.downpaymentType === "full"}
+                          onChange={(e) =>
+                            handlePaymentFormChange("downpaymentType", e.target.value)
+                          }
+                          className="mr-3"
+                        />
+                        <div>
+                          <p className="text-white font-medium">Full Payment</p>
+                          <p className="text-gray-400 text-xs">
+                            Pay the total amount now
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {paymentForm.downpaymentType === "percentage" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Downpayment Percentage
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[20, 30, 50, 100].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() =>
+                              handlePaymentFormChange("downpaymentPercentage", pct)
+                            }
+                            className={`py-2 rounded-lg text-sm font-semibold transition-colors ${
+                              paymentForm.downpaymentPercentage === pct
+                                ? "bg-green-600 text-white"
+                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                            }`}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      GCash Reference Number
+                    </label>
+                    <input
+                      type="text"
+                      value={paymentForm.paymentReference}
+                      onChange={(e) =>
+                        handlePaymentFormChange("paymentReference", e.target.value)
+                      }
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter 13-digit reference number"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Payment Screenshot
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePaymentProofChange}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                    />
+                    {paymentProofPreview && (
+                      <img
+                        src={paymentProofPreview}
+                        alt="Payment proof"
+                        className="w-full h-48 object-cover rounded-lg border border-gray-600 mt-3"
+                      />
+                    )}
+                    <p className="text-xs text-gray-400 mt-2">
+                      Accepted formats: JPG/PNG, max 5MB
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {paymentForm.paymentMethod === "cash" && (
+                <div className="p-3 bg-yellow-900/20 border border-yellow-700/60 rounded text-xs text-yellow-200">
+                  Cash payments are collected on the event day. Selecting this
+                  option lets the admin know you will settle on-site.
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closePaymentModal}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePaymentSubmitClick}
+                disabled={submittingPayment}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {submittingPayment ? "Submitting..." : "Review & Sign Contract"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Agreement (sign at payment time) */}
+      <BookingAgreement
+        isOpen={showAgreement && !!selectedBookingForPayment}
+        onClose={() => setShowAgreement(false)}
+        onAgree={async (agreementInfo) => {
+          if (!pendingPaymentPayload || !selectedBookingForPayment) return;
+          await submitPaymentToServer({
+            ...pendingPaymentPayload,
+            agreement: agreementInfo,
+          });
+        }}
+        bookingData={{
+          bookingDate: selectedBookingForPayment?.bookingDate,
+          bookingTime: selectedBookingForPayment?.bookingTime,
+          contactInfo: selectedBookingForPayment?.contactInfo || {},
+          paymentMethod: pendingPaymentPayload?.paymentMethod,
+        }}
+        cart={
+          selectedBookingForPayment
+            ? (selectedBookingForPayment.items || []).map((it) => ({
+                name: it.name,
+                quantity: it.quantity,
+                type: it.type,
+                // minimal fields; category/unit may be missing but component is tolerant
+                category: it.category || null,
+                unit: it.unit || null,
+              }))
+            : []
+        }
+        totalAmount={selectedBookingForPayment?.totalAmount || 0}
+        userName={userData?.fullName || userData?.username || "Client"}
+        userEmail={userData?.email || ""}
+      />
       {/* Cancellation Reason Modal */}
       {showCancelModal && selectedBookingForCancel && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

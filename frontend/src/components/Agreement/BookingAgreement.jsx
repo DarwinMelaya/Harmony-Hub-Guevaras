@@ -18,18 +18,13 @@ const BookingAgreement = ({
   const [showError, setShowError] = useState(false);
   const sigCanvas = useRef(null);
 
-  const computedDownpaymentPercentage = bookingData.downpaymentPercentage || 20;
-  const isFullPayment = bookingData.downpaymentType === "full";
-  const downpaymentAmount = isFullPayment
-    ? totalAmount
-    : (totalAmount * computedDownpaymentPercentage) / 100;
-  const remainingBalance = isFullPayment
-    ? 0
-    : bookingData.remainingBalance ?? totalAmount - downpaymentAmount;
-  const paymentMethodLabel = (bookingData.paymentMethod || "N/A").toUpperCase();
-  const paymentOptionLabel = isFullPayment
-    ? "Full Payment"
-    : `${computedDownpaymentPercentage}% Downpayment`;
+  const paymentInfoAvailable = Boolean(bookingData?.paymentMethod);
+  const paymentMethodLabel = paymentInfoAvailable
+    ? (bookingData.paymentMethod || "").toUpperCase()
+    : "To be selected after admin confirmation";
+  const paymentOptionLabel = paymentInfoAvailable
+    ? "Details to follow"
+    : "Pending payment selection";
 
   const clearSignature = () => {
     sigCanvas.current.clear();
@@ -315,60 +310,27 @@ const BookingAgreement = ({
                   </span>
                 </div>
 
-                <div className="space-y-2 text-sm text-gray-300 border-t border-gray-700 pt-3">
+                <div className="space-y-3 text-sm text-gray-300 border-t border-gray-700 pt-3">
                   <div className="flex justify-between items-center">
                     <span>Payment Method:</span>
-                    <span className="text-white font-semibold">
+                    <span className="text-white font-semibold text-right">
                       {paymentMethodLabel}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>Payment Option:</span>
+                    <span>Status:</span>
                     <span className="text-white font-semibold">
                       {paymentOptionLabel}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span>
-                      {isFullPayment ? "Total Paid:" : "Downpayment Paid:"}
-                    </span>
-                    <span className="text-white font-semibold">
-                      ₱{Number(downpaymentAmount).toLocaleString()}
-                    </span>
-                  </div>
-                  {!isFullPayment && (
-                    <div className="flex justify-between items-center">
-                      <span>Remaining Balance:</span>
-                      <span className="text-orange-400 font-semibold">
-                        ₱{Number(remainingBalance).toLocaleString()}
-                      </span>
-                    </div>
+                  {!paymentInfoAvailable && (
+                    <p className="text-xs text-gray-400 italic">
+                      Payment instructions will be provided once an administrator confirms
+                      your booking. You can then submit your preferred method (Cash or
+                      GCash) inside the My Bookings page.
+                    </p>
                   )}
                 </div>
-
-                {bookingData.paymentMethod === "gcash" &&
-                  remainingBalance > 0 && (
-                    <>
-                      <div className="flex justify-between items-center py-2 border-t border-gray-700 mt-3">
-                        <span className="text-gray-300">Payment Date:</span>
-                        <span className="text-white">
-                          {new Date().toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-orange-400 font-bold">
-                          BALANCE:
-                        </span>
-                        <span className="text-orange-400 font-bold text-xl">
-                          ₱{Number(remainingBalance).toLocaleString()}
-                        </span>
-                      </div>
-                    </>
-                  )}
               </div>
             </div>
           </div>
@@ -388,9 +350,9 @@ const BookingAgreement = ({
 
               <div className="bg-gray-800/50 p-3 rounded space-y-2">
                 <p className="text-white">
-                  * {computedDownpaymentPercentage}% Down payment should be
-                  given at the time of signing this contract. After the event,
-                  remaining balance must be paid.
+                  * A downpayment or full payment will be required after the
+                  admin confirms your booking. Detailed instructions will be
+                  provided together with the payment request.
                 </p>
                 <p className="text-orange-300">
                   * In case of cancellation, only 20% of the total amount paid

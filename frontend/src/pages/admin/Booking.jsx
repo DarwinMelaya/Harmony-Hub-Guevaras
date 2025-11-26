@@ -68,6 +68,13 @@ const Booking = () => {
   const [processingExtensionPayment, setProcessingExtensionPayment] =
     useState(false);
 
+  const canAdminSign =
+    selectedBooking &&
+    selectedBooking.paymentStatus === "submitted" &&
+    selectedBooking.agreement &&
+    selectedBooking.agreement.signature &&
+    !selectedBooking.agreement.adminSignature;
+
   const hasIssues = (booking) => {
     return (
       booking.issueType &&
@@ -246,6 +253,32 @@ const Booking = () => {
         return <CheckCircle className="w-4 h-4" />;
       default:
         return <AlertCircle className="w-4 h-4" />;
+    }
+  };
+
+  const getPaymentStatusMeta = (status) => {
+    switch (status) {
+      case "awaiting_selection":
+        return {
+          label: "Awaiting customer payment selection",
+          classes: "bg-yellow-900/40 text-yellow-200 border-yellow-600/40",
+        };
+      case "submitted":
+        return {
+          label: "Payment submitted (awaiting review)",
+          classes: "bg-blue-900/40 text-blue-200 border-blue-600/40",
+        };
+      case "verified":
+        return {
+          label: "Payment verified",
+          classes: "bg-green-900/40 text-green-200 border-green-600/40",
+        };
+      case "awaiting_confirmation":
+      default:
+        return {
+          label: "Pending admin confirmation",
+          classes: "bg-gray-700 text-gray-300 border-gray-600",
+        };
     }
   };
 
@@ -1010,14 +1043,26 @@ const Booking = () => {
                         ) : (
                           <button
                             onClick={() => {
-                              setSigningBooking(selectedBooking);
-                              setShowAdminSignModal(true);
+                              if (canAdminSign) {
+                                setSigningBooking(selectedBooking);
+                                setShowAdminSignModal(true);
+                              }
                             }}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                            disabled={!canAdminSign}
+                            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                              canAdminSign
+                                ? "bg-green-600 hover:bg-green-700 text-white"
+                                : "bg-gray-600 text-gray-300 cursor-not-allowed"
+                            }`}
                           >
                             <FileText className="w-4 h-4" />
                             Sign as Admin
                           </button>
+                        )}
+                        {!selectedBooking.agreement.adminSignature && !canAdminSign && (
+                          <p className="text-xs text-orange-300 mt-2">
+                            Require client payment submission before signing.
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1091,95 +1136,125 @@ const Booking = () => {
                   Payment Information
                 </h3>
                 <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-400 text-sm">Payment Method</p>
-                      <p className="text-white font-medium capitalize">
-                        {selectedBooking.paymentMethod === "gcash"
-                          ? "GCash"
-                          : "Cash"}
-                      </p>
-                    </div>
-                    {selectedBooking.paymentReference && (
-                      <div>
-                        <p className="text-gray-400 text-sm">
-                          Reference Number
-                        </p>
-                        <p className="text-white font-mono">
-                          {selectedBooking.paymentReference}
-                        </p>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 mb-4">
+                    <p className="text-gray-400 text-sm">Payment Status:</p>
+                    {(() => {
+                      const meta = getPaymentStatusMeta(
+                        selectedBooking.paymentStatus
+                      );
+                      return (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold border ${meta.classes}`}
+                        >
+                          {meta.label}
+                        </span>
+                      );
+                    })()}
                   </div>
 
-                  {/* Downpayment Information for GCash */}
-                  {selectedBooking.paymentMethod === "gcash" && (
-                    <div className="mt-4 pt-4 border-t border-gray-600">
-                      <h4 className="text-white font-medium mb-3">
-                        Payment Breakdown
-                      </h4>
+                  {!selectedBooking.paymentMethod ? (
+                    <div className="p-4 bg-gray-800 rounded-lg border border-gray-600 text-sm text-gray-300">
+                      <p>
+                        The client has not submitted payment details yet. Once
+                        their booking is confirmed, they can choose Cash or
+                        GCash from the customer portal, and the details will
+                        appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-gray-400 text-sm">Payment Type</p>
-                          <p className="text-white capitalize">
-                            {selectedBooking.downpaymentType === "full"
-                              ? "Full Payment"
-                              : `Downpayment (${
-                                  selectedBooking.downpaymentPercentage || 50
-                                }%)`}
+                          <p className="text-gray-400 text-sm">Payment Method</p>
+                          <p className="text-white font-medium capitalize">
+                            {selectedBooking.paymentMethod === "gcash"
+                              ? "GCash"
+                              : "Cash"}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-gray-400 text-sm">Amount Paid</p>
-                          <p className="text-green-400 font-bold">
-                            ₱
-                            {Number(
-                              selectedBooking.downpaymentAmount ||
-                                selectedBooking.totalAmount
-                            ).toLocaleString()}
-                          </p>
-                        </div>
-                        {selectedBooking.downpaymentType === "percentage" &&
-                          selectedBooking.remainingBalance > 0 && (
-                            <div>
-                              <p className="text-gray-400 text-sm">
-                                Remaining Balance
-                              </p>
-                              <p className="text-orange-400 font-bold">
-                                ₱
-                                {Number(
-                                  selectedBooking.remainingBalance || 0
-                                ).toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                      </div>
-                      {selectedBooking.downpaymentType === "percentage" &&
-                        selectedBooking.remainingBalance > 0 && (
-                          <div className="mt-3 p-3 bg-orange-900/20 border border-orange-700/50 rounded-lg">
-                            <p className="text-orange-300 text-sm">
-                              ⚠️ Remaining balance of ₱
-                              {Number(
-                                selectedBooking.remainingBalance || 0
-                              ).toLocaleString()}{" "}
-                              to be collected on service day
+                        {selectedBooking.paymentReference && (
+                          <div>
+                            <p className="text-gray-400 text-sm">
+                              Reference Number
+                            </p>
+                            <p className="text-white font-mono">
+                              {selectedBooking.paymentReference}
                             </p>
                           </div>
                         )}
-                    </div>
-                  )}
+                      </div>
 
-                  {selectedBooking.paymentImage && (
-                    <div className="mt-4">
-                      <p className="text-gray-400 text-sm mb-2">
-                        Payment Screenshot
-                      </p>
-                      <img
-                        src={selectedBooking.paymentImage}
-                        alt="Payment screenshot"
-                        className="w-48 h-48 object-cover rounded-lg border border-gray-600"
-                      />
-                    </div>
+                      {selectedBooking.paymentMethod === "gcash" && (
+                        <div className="mt-4 pt-4 border-t border-gray-600">
+                          <h4 className="text-white font-medium mb-3">
+                            Payment Breakdown
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-gray-400 text-sm">
+                                Payment Type
+                              </p>
+                              <p className="text-white capitalize">
+                                {selectedBooking.downpaymentType === "full"
+                                  ? "Full Payment"
+                                  : `Downpayment (${
+                                      selectedBooking.downpaymentPercentage || 50
+                                    }%)`}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Amount Paid</p>
+                              <p className="text-green-400 font-bold">
+                                ₱
+                                {Number(
+                                  selectedBooking.downpaymentAmount ||
+                                    selectedBooking.totalAmount
+                                ).toLocaleString()}
+                              </p>
+                            </div>
+                            {selectedBooking.downpaymentType === "percentage" &&
+                              selectedBooking.remainingBalance > 0 && (
+                                <div>
+                                  <p className="text-gray-400 text-sm">
+                                    Remaining Balance
+                                  </p>
+                                  <p className="text-orange-400 font-bold">
+                                    ₱
+                                    {Number(
+                                      selectedBooking.remainingBalance || 0
+                                    ).toLocaleString()}
+                                  </p>
+                                </div>
+                              )}
+                          </div>
+                          {selectedBooking.downpaymentType === "percentage" &&
+                            selectedBooking.remainingBalance > 0 && (
+                              <div className="mt-3 p-3 bg-orange-900/20 border border-orange-700/50 rounded-lg">
+                                <p className="text-orange-300 text-sm">
+                                  ⚠️ Remaining balance of ₱
+                                  {Number(
+                                    selectedBooking.remainingBalance || 0
+                                  ).toLocaleString()}{" "}
+                                  to be collected on service day
+                                </p>
+                              </div>
+                            )}
+                        </div>
+                      )}
+
+                      {selectedBooking.paymentImage && (
+                        <div className="mt-4">
+                          <p className="text-gray-400 text-sm mb-2">
+                            Payment Screenshot
+                          </p>
+                          <img
+                            src={selectedBooking.paymentImage}
+                            alt="Payment screenshot"
+                            className="w-48 h-48 object-cover rounded-lg border border-gray-600"
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

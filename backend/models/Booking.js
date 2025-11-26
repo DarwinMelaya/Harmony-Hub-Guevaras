@@ -75,7 +75,7 @@ const BookingSchema = new mongoose.Schema({
   paymentMethod: {
     type: String,
     enum: ["cash", "gcash"],
-    default: "cash",
+    default: null,
   },
   paymentReference: {
     type: String,
@@ -87,13 +87,13 @@ const BookingSchema = new mongoose.Schema({
   downpaymentType: {
     type: String,
     enum: ["full", "percentage"],
-    default: "full",
+    default: null,
   },
   downpaymentPercentage: {
     type: Number,
     min: 0,
     max: 100,
-    default: 100,
+    default: null,
   },
   downpaymentAmount: {
     type: Number,
@@ -103,6 +103,25 @@ const BookingSchema = new mongoose.Schema({
     type: Number,
     min: 0,
     default: 0,
+  },
+  paymentStatus: {
+    type: String,
+    enum: [
+      "awaiting_confirmation",
+      "awaiting_selection",
+      "submitted",
+      "verified",
+    ],
+    default: "awaiting_confirmation",
+  },
+  paymentSelectionAt: {
+    type: Date,
+  },
+  paymentSubmittedAt: {
+    type: Date,
+  },
+  paymentVerifiedAt: {
+    type: Date,
   },
   // ✅ New Fields for Completion Issues
   issueType: {

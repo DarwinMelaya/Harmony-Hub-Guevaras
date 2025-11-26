@@ -53,13 +53,6 @@ const UserHome = () => {
       email: "",
       address: "",
     },
-    paymentMethod: "cash",
-    paymentReference: "",
-    paymentImage: null,
-    downpaymentType: "percentage",
-    downpaymentPercentage: 50,
-    downpaymentAmount: 0,
-    remainingBalance: 0,
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -471,29 +464,11 @@ const UserHome = () => {
       return;
     }
 
-    // Validate GCash payment requirements
-    if (dataToUse.paymentMethod === "gcash") {
-      if (!dataToUse.paymentReference || !dataToUse.paymentImage) {
-        setError(
-          "Payment reference and image are required for GCash payments."
-        );
-        return;
-      }
-    }
-
     setBookingLoading(true);
     setError(null);
 
     try {
       const token = localStorage.getItem("token");
-
-      // Calculate downpayment amounts
-      const total = getCartTotal();
-      const downpaymentAmount =
-        dataToUse.downpaymentType === "full"
-          ? total
-          : (total * dataToUse.downpaymentPercentage) / 100;
-      const remainingBalance = total - downpaymentAmount;
 
       const bookingPayload = {
         items: cart.map((item) => ({
@@ -510,13 +485,6 @@ const UserHome = () => {
         duration: dataToUse.duration,
         notes: dataToUse.notes,
         contactInfo: dataToUse.contactInfo,
-        paymentMethod: dataToUse.paymentMethod,
-        paymentReference: dataToUse.paymentReference,
-        paymentImage: dataToUse.paymentImage,
-        downpaymentType: dataToUse.downpaymentType,
-        downpaymentPercentage: dataToUse.downpaymentPercentage,
-        downpaymentAmount: downpaymentAmount,
-        remainingBalance: remainingBalance,
         agreement: dataToUse.agreement, // Add agreement data
       };
 
@@ -549,13 +517,6 @@ const UserHome = () => {
             email: "",
             address: "",
           },
-          paymentMethod: "cash",
-          paymentReference: "",
-          paymentImage: null,
-          downpaymentType: "percentage",
-          downpaymentPercentage: 50,
-          downpaymentAmount: 0,
-          remainingBalance: 0,
         });
       }
     } catch (err) {

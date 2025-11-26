@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { provinces, cities, barangays } from "select-philippines-address";
 import { useState, useEffect } from "react";
-import BookingAgreement from "../../Agreement/BookingAgreement";
 
 const BookingModal = ({
   showBookingModal,
@@ -35,11 +34,7 @@ const BookingModal = ({
   const [barangayAddr, setBarangayAddr] = useState("");
 
   const [showPolicyReminder, setShowPolicyReminder] = useState(false);
-  const [downpaymentType, setDownpaymentType] = useState("percentage"); // 'percentage' or 'full'
-  const [downpaymentPercentage, setDownpaymentPercentage] = useState(50); // Default 50%
   const [setupDateError, setSetupDateError] = useState("");
-  const [showAgreement, setShowAgreement] = useState(false);
-  const [agreementData, setAgreementData] = useState(null);
 
   useEffect(() => {
     provinces("17").then((response) => {
@@ -58,18 +53,6 @@ const BookingModal = ({
       handleBookingDataChange("contactInfo.email", userEmail);
     }
   }, [showBookingModal, userEmail]);
-
-  // Calculate downpayment amount
-  const calculateDownpayment = () => {
-    const total = getCartTotal();
-    if (downpaymentType === "full") {
-      return total;
-    }
-    return (total * downpaymentPercentage) / 100;
-  };
-
-  const downpaymentAmount = calculateDownpayment();
-  const remainingBalance = getCartTotal() - downpaymentAmount;
 
   // Validate setup date and time
   const validateSetupDateTime = () => {
@@ -168,8 +151,8 @@ const BookingModal = ({
 
                 setShowPolicyReminder(false);
 
-                // Show agreement modal instead of directly submitting
-                setShowAgreement(true);
+                // Directly submit booking (no contract/signature yet)
+                handleBookingSubmit(e);
               }}
               className="p-6 overflow-y-auto max-h-[70vh]"
             >
@@ -407,359 +390,52 @@ const BookingModal = ({
                   />
                 </div>
 
-                {/* Payment Method */}
+                {/* Payment Reminder */}
                 <div className="border-t border-gray-600 pt-4">
                   <h4 className="text-lg font-semibold text-white mb-3">
-                    Payment Method
+                    Payment & Approval Timeline
                   </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Select Payment Method
-                      </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <label
-                          className={`flex items-center justify-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                            bookingData.paymentMethod === "cash"
-                              ? "border-blue-500 bg-blue-500/10"
-                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="cash"
-                            checked={bookingData.paymentMethod === "cash"}
-                            onChange={(e) =>
-                              handleBookingDataChange(
-                                "paymentMethod",
-                                e.target.value
-                              )
-                            }
-                            className="mr-2"
-                          />
-                          <span className="text-white font-medium">
-                            💵 Cash
-                          </span>
-                        </label>
-                        <label
-                          className={`flex items-center justify-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                            bookingData.paymentMethod === "gcash"
-                              ? "border-blue-500 bg-blue-500/10"
-                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="gcash"
-                            checked={bookingData.paymentMethod === "gcash"}
-                            onChange={(e) =>
-                              handleBookingDataChange(
-                                "paymentMethod",
-                                e.target.value
-                              )
-                            }
-                            className="mr-2"
-                          />
-                          <span className="text-white font-medium">
-                            📱 GCash
-                          </span>
-                        </label>
-                      </div>
+                  <div className="bg-gray-800/70 p-4 rounded-lg border border-gray-700 space-y-3 text-sm text-gray-300">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">①</span>
+                      <p>
+                        Submit your booking details and sign the contract so we
+                        can review your request.
+                      </p>
                     </div>
-
-                    {/* Downpayment Options (Cash and GCash) */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-3">
-                        Payment Option
-                      </label>
-                      <div className="grid grid-cols-1 gap-3">
-                        <label
-                          className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                            downpaymentType === "percentage"
-                              ? "border-green-500 bg-green-500/10"
-                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="downpaymentType"
-                            value="percentage"
-                            checked={downpaymentType === "percentage"}
-                            onChange={(e) => setDownpaymentType(e.target.value)}
-                            className="mr-3"
-                          />
-                          <div className="flex-1">
-                            <span className="text-white font-medium block">
-                              Downpayment
-                            </span>
-                            <span className="text-gray-400 text-xs">
-                              Pay a percentage now, rest on service day
-                            </span>
-                          </div>
-                        </label>
-                        <label
-                          className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                            downpaymentType === "full"
-                              ? "border-green-500 bg-green-500/10"
-                              : "border-gray-600 bg-gray-700/50 hover:border-gray-500"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="downpaymentType"
-                            value="full"
-                            checked={downpaymentType === "full"}
-                            onChange={(e) => setDownpaymentType(e.target.value)}
-                            className="mr-3"
-                          />
-                          <div className="flex-1">
-                            <span className="text-white font-medium block">
-                              Full Payment
-                            </span>
-                            <span className="text-gray-400 text-xs">
-                              Pay the total amount now
-                            </span>
-                          </div>
-                        </label>
-                      </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">②</span>
+                      <p>
+                        An admin or the owner will confirm the schedule. You will
+                        receive an update once your booking status becomes{" "}
+                        <span className="text-blue-300 font-semibold">
+                          confirmed
+                        </span>
+                        .
+                      </p>
                     </div>
-
-                    {/* Downpayment Percentage Selector */}
-                    {downpaymentType === "percentage" && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-3">
-                          Select Downpayment Percentage
-                        </label>
-                        <div className="grid grid-cols-4 gap-2">
-                          {[20, 30, 50, 100].map((percentage) => (
-                            <button
-                              key={percentage}
-                              type="button"
-                              onClick={() => {
-                                setDownpaymentPercentage(percentage);
-                                if (percentage === 100) {
-                                  setDownpaymentType("full");
-                                }
-                              }}
-                              className={`py-2 px-3 rounded-lg font-medium transition-all ${
-                                downpaymentPercentage === percentage
-                                  ? "bg-green-600 text-white"
-                                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                              }`}
-                            >
-                              {percentage}%
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Payment Breakdown (Cash and GCash) */}
-                    <div className="bg-gray-800/70 p-4 rounded-lg border border-gray-700">
-                      <h5 className="text-white font-semibold mb-3">
-                        Payment Breakdown
-                      </h5>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between py-1">
-                          <span className="text-gray-400">Total Amount:</span>
-                          <span className="text-white">
-                            ₱{Number(getCartTotal()).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-1 border-t border-gray-700 pt-2">
-                          <span className="text-gray-400">
-                            {downpaymentType === "full"
-                              ? "Full Payment:"
-                              : `Downpayment (${downpaymentPercentage}%):`}
-                          </span>
-                          <span className="text-green-400 font-bold text-lg">
-                            ₱{Number(downpaymentAmount).toLocaleString()}
-                          </span>
-                        </div>
-                        {downpaymentType === "percentage" && (
-                          <div className="flex justify-between py-1">
-                            <span className="text-gray-400">
-                              Remaining Balance:
-                            </span>
-                            <span className="text-orange-400 font-medium">
-                              ₱{Number(remainingBalance).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      {downpaymentType === "percentage" && (
-                        <div className="mt-3 p-2 bg-orange-900/20 border border-orange-700/50 rounded text-xs text-orange-300">
-                          💡 Remaining balance (₱
-                          {Number(remainingBalance).toLocaleString()}) to be
-                          paid on service day
-                        </div>
-                      )}
-                      <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-700/40 rounded text-xs text-yellow-200">
-                        ⚖️ Cancellation Policy: Regardless of how much you pay
-                        upfront (including full payment), only 20% of the total
-                        payment is refundable if you cancel your booking.
-                      </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">③</span>
+                      <p>
+                        After confirmation, you can choose your preferred payment
+                        method (Cash or GCash) inside{" "}
+                        <span className="text-white font-semibold">
+                          My Bookings
+                        </span>{" "}
+                        and upload proof if needed.
+                      </p>
                     </div>
-
-                    {/* GCash-specific details and requirements */}
-                    {bookingData.paymentMethod === "gcash" && (
-                      <div className="space-y-4 bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
-                        {/* GCash Account Information */}
-                        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-                          <h5 className="text-white font-semibold mb-3 flex items-center">
-                            <span className="text-2xl mr-2">📱</span>
-                            GCash Payment Details
-                          </h5>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between items-center py-2 border-b border-gray-700">
-                              <span className="text-gray-400">
-                                Account Name:
-                              </span>
-                              <span className="text-white font-medium">
-                                Guevarra Lights and Sounds
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 border-b border-gray-700">
-                              <span className="text-gray-400">
-                                GCash Number:
-                              </span>
-                              <span className="text-white font-mono font-medium">
-                                09XX-XXX-XXXX
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2">
-                              <span className="text-gray-400">
-                                Account Type:
-                              </span>
-                              <span className="text-green-400 font-medium">
-                                ✓ Verified Business
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Payment Instructions */}
-                        <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
-                          <h5 className="text-blue-300 font-semibold text-sm mb-2">
-                            Payment Instructions:
-                          </h5>
-                          <ol className="text-xs text-gray-300 space-y-1 list-decimal list-inside">
-                            <li>Open your GCash app</li>
-                            <li>
-                              Send ₱{Number(downpaymentAmount).toLocaleString()}{" "}
-                              to the account above
-                            </li>
-                            <li>Take a screenshot of the confirmation</li>
-                            <li>Enter the reference number below</li>
-                            <li>Upload the screenshot</li>
-                          </ol>
-                        </div>
-
-                        {/* Reference Number Input */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            GCash Reference Number *
-                          </label>
-                          <input
-                            type="text"
-                            value={bookingData.paymentReference}
-                            onChange={(e) => {
-                              const value = e.target.value.toUpperCase();
-                              handleBookingDataChange(
-                                "paymentReference",
-                                value
-                              );
-                            }}
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                            placeholder="e.g., 1234567890123"
-                            pattern="[0-9]{13}"
-                            title="Please enter a 13-digit reference number"
-                            required
-                          />
-                          <p className="text-xs text-gray-400 mt-1">
-                            Enter the 13-digit reference number from your GCash
-                            transaction
-                          </p>
-                        </div>
-
-                        {/* Screenshot Upload */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
-                            Payment Screenshot *
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                  // Validate file size (max 5MB)
-                                  if (file.size > 5 * 1024 * 1024) {
-                                    alert("File size must be less than 5MB");
-                                    e.target.value = "";
-                                    return;
-                                  }
-                                  const reader = new FileReader();
-                                  reader.onload = (event) => {
-                                    handleBookingDataChange(
-                                      "paymentImage",
-                                      event.target.result
-                                    );
-                                  };
-                                  reader.readAsDataURL(file);
-                                }
-                              }}
-                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
-                              required
-                            />
-                          </div>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Max file size: 5MB. Accepted formats: JPG, PNG, JPEG
-                          </p>
-                          {bookingData.paymentImage && (
-                            <div className="mt-3 relative">
-                              <img
-                                src={bookingData.paymentImage}
-                                alt="Payment screenshot"
-                                className="w-full max-w-xs h-48 object-cover rounded-lg border-2 border-green-600"
-                              />
-                              <div className="absolute top-2 right-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleBookingDataChange(
-                                      "paymentImage",
-                                      null
-                                    )
-                                  }
-                                  className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                              <div className="mt-2 flex items-center text-green-400 text-sm">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Screenshot uploaded successfully
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Security Note */}
-                        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex items-start">
-                          <AlertTriangle className="w-5 h-5 text-yellow-400 mr-2 flex-shrink-0 mt-0.5" />
-                          <div className="text-xs text-gray-300">
-                            <span className="font-semibold text-yellow-400">
-                              Security Note:
-                            </span>{" "}
-                            Your payment information is secure. We'll verify
-                            your payment before confirming your booking.
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">④</span>
+                      <p>
+                        Once payment details are submitted, the admin will sign
+                        the contract to finalize your reservation.
+                      </p>
+                    </div>
+                    <div className="p-3 bg-yellow-900/20 border border-yellow-700/50 rounded text-xs text-yellow-200">
+                      ⚖️ Cancellation Policy: Only 20% of the total payment is
+                      refundable when a confirmed booking is cancelled.
+                    </div>
                   </div>
                 </div>
 
@@ -962,45 +638,6 @@ const BookingModal = ({
         </div>
       )}
 
-      {/* Booking Agreement Modal */}
-      <BookingAgreement
-        isOpen={showAgreement}
-        onClose={() => setShowAgreement(false)}
-        onAgree={(agreementInfo) => {
-          setAgreementData(agreementInfo);
-          setShowAgreement(false);
-
-          // Add agreement data to booking data
-          const eventWithAgreement = {
-            ...bookingData,
-            agreement: agreementInfo,
-            downpaymentType,
-            downpaymentPercentage,
-          };
-
-          // Create a synthetic event to pass to handleBookingSubmit
-          const syntheticEvent = {
-            preventDefault: () => {},
-            target: { checkValidity: () => true },
-          };
-
-          // Submit the booking with agreement data
-          handleBookingSubmit(syntheticEvent, eventWithAgreement);
-        }}
-        bookingData={{
-          ...bookingData,
-          downpaymentType,
-          downpaymentPercentage,
-          remainingBalance:
-            downpaymentType === "percentage"
-              ? getCartTotal() - (getCartTotal() * downpaymentPercentage) / 100
-              : 0,
-        }}
-        cart={cart}
-        totalAmount={getCartTotal()}
-        userName={userName}
-        userEmail={userEmail}
-      />
     </>
   );
 };

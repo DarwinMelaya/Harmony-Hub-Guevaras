@@ -7,6 +7,7 @@ const {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  submitPaymentDetails,
   getArtistBookings,
   checkArtistAvailability,
   getPublicCalendarBookings,
@@ -53,6 +54,13 @@ router.patch(
 
 // Cancel booking (user can cancel their own)
 router.patch("/:id/cancel", cancelBooking);
+
+// Client submits payment details after confirmation
+router.patch(
+  "/:id/payment",
+  requireRole(["client"]),
+  submitPaymentDetails
+);
 
 // Download booking agreement PDF (user can download their own, admin can download any)
 router.get("/:id/agreement/download", downloadBookingAgreement);

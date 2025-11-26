@@ -20,13 +20,6 @@ const createBooking = async (req, res) => {
       setupTime,
       notes,
       contactInfo,
-      paymentMethod = "cash",
-      paymentReference,
-      paymentImage,
-      downpaymentType = "full",
-      downpaymentPercentage = 100,
-      downpaymentAmount,
-      remainingBalance,
       agreement,
     } = req.body;
 
@@ -54,25 +47,6 @@ const createBooking = async (req, res) => {
         success: false,
         message: "Booking date, time, setup date, and setup time are required",
       });
-    }
-
-    // Validate payment method
-    if (!["cash", "gcash"].includes(paymentMethod)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment method",
-      });
-    }
-
-    // Validate GCash payment requirements
-    if (paymentMethod === "gcash") {
-      if (!paymentReference || !paymentImage) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Payment reference and image are required for GCash payments",
-        });
-      }
     }
 
     // Validate booking date is not in the past and validate setup date
@@ -234,26 +208,6 @@ const createBooking = async (req, res) => {
       totalAmount += price * normalizedQuantity;
     }
 
-    // Calculate downpayment if not provided
-    let calculatedDownpayment = downpaymentAmount;
-    let calculatedRemainingBalance = remainingBalance;
-
-    if (paymentMethod === "gcash") {
-      if (!calculatedDownpayment) {
-        calculatedDownpayment =
-          downpaymentType === "full"
-            ? totalAmount
-            : (totalAmount * downpaymentPercentage) / 100;
-      }
-      if (!calculatedRemainingBalance) {
-        calculatedRemainingBalance = totalAmount - calculatedDownpayment;
-      }
-    } else {
-      // For cash payment, no downpayment concept
-      calculatedDownpayment = 0;
-      calculatedRemainingBalance = totalAmount;
-    }
-
     // Prepare agreement data with client information
     let agreementData = null;
     if (agreement) {
@@ -276,13 +230,14 @@ const createBooking = async (req, res) => {
       setupTime,
       notes,
       contactInfo,
-      paymentMethod,
-      paymentReference,
-      paymentImage,
-      downpaymentType,
-      downpaymentPercentage,
-      downpaymentAmount: calculatedDownpayment,
-      remainingBalance: calculatedRemainingBalance,
+      paymentMethod: null,
+      paymentReference: null,
+      paymentImage: null,
+      downpaymentType: null,
+      downpaymentPercentage: null,
+      downpaymentAmount: 0,
+      remainingBalance: totalAmount,
+      paymentStatus: "awaiting_confirmation",
       agreement: agreementData,
     });
 
@@ -495,6 +450,13 @@ const updateBookingStatus = async (req, res) => {
     const previousStatus = booking.status;
     booking.status = status;
 
+    if (previousStatus !== "confirmed" && status === "confirmed") {
+      booking.paymentStatus = "awaiting_selection";
+      booking.paymentSelectionAt = null;
+      booking.paymentSubmittedAt = null;
+      booking.paymentVerifiedAt = null;
+    }
+
     if (status === "completed") {
       if (issueType) booking.issueType = issueType; // "lost" | "damaged"
       if (affectedItems && Array.isArray(affectedItems)) {
@@ -687,6 +649,146 @@ const cancelBooking = async (req, res) => {
     });
   } catch (error) {
     console.error("Error cancelling booking:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Client: submit or update payment details after admin confirmation
+const submitPaymentDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const {
+      paymentMethod,
+      paymentReference,
+      paymentImage,
+      downpaymentType = "percentage",
+      downpaymentPercentage = 50,
+      agreement,
+    } = req.body;
+
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    if (booking.user.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    if (booking.status !== "confirmed") {
+      return res.status(400).json({
+        success: false,
+        message: "Booking must be confirmed by admin before selecting payment method",
+      });
+    }
+
+    if (!["cash", "gcash"].includes(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment method",
+      });
+    }
+
+    // Require contract/agreement to be signed together with payment
+    if (!agreement || !agreement.signature) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Client must sign the booking agreement together with payment details",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    let computedDownpaymentType = null;
+    let computedDownpaymentPercentage = null;
+    let computedDownpaymentAmount = 0;
+    let computedRemainingBalance = booking.totalAmount;
+
+    if (paymentMethod === "gcash") {
+      if (!paymentReference || !paymentImage) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment reference and screenshot are required for GCash",
+        });
+      }
+
+      computedDownpaymentType =
+        downpaymentType === "full" ? "full" : "percentage";
+
+      if (computedDownpaymentType === "percentage") {
+        const sanitizedPercentage = Number(downpaymentPercentage) || 50;
+        if (sanitizedPercentage <= 0 || sanitizedPercentage > 100) {
+          return res.status(400).json({
+            success: false,
+            message: "Downpayment percentage must be between 1 and 100",
+          });
+        }
+        computedDownpaymentPercentage = sanitizedPercentage;
+        computedDownpaymentAmount =
+          (booking.totalAmount * sanitizedPercentage) / 100;
+      } else {
+        computedDownpaymentPercentage = 100;
+        computedDownpaymentAmount = booking.totalAmount;
+      }
+
+      computedRemainingBalance =
+        booking.totalAmount - computedDownpaymentAmount;
+    } else {
+      // Cash payments are collected on event day
+      computedDownpaymentType = null;
+      computedDownpaymentPercentage = null;
+      computedDownpaymentAmount = 0;
+      computedRemainingBalance = booking.totalAmount;
+    }
+
+    // Update agreement with latest client signature/info
+    booking.agreement = {
+      ...(booking.agreement || {}),
+      ...agreement,
+      clientName: user.fullName || user.username,
+      clientEmail: user.email,
+    };
+
+    booking.paymentMethod = paymentMethod;
+    booking.paymentReference = paymentMethod === "gcash" ? paymentReference : null;
+    booking.paymentImage = paymentMethod === "gcash" ? paymentImage : null;
+    booking.downpaymentType = computedDownpaymentType;
+    booking.downpaymentPercentage = computedDownpaymentPercentage;
+    booking.downpaymentAmount = computedDownpaymentAmount;
+    booking.remainingBalance = computedRemainingBalance;
+    booking.paymentStatus = "submitted";
+    booking.paymentSelectionAt = booking.paymentSelectionAt || new Date();
+    booking.paymentSubmittedAt = new Date();
+
+    await booking.save();
+    await booking.populate("user", "fullName email username");
+
+    res.json({
+      success: true,
+      message: "Payment details submitted successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Error submitting payment details:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -987,11 +1089,21 @@ const adminSignAgreement = async (req, res) => {
       });
     }
 
+    if (booking.paymentStatus !== "submitted") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Client must select a payment method and submit payment details before admin can sign",
+      });
+    }
+
     // Update booking with admin signature
     booking.agreement.adminSignature = adminSignature;
     booking.agreement.adminSignedAt = new Date();
     booking.agreement.adminSignerName = adminSignerName;
     booking.agreement.adminSignerId = userId;
+    booking.paymentStatus = "verified";
+    booking.paymentVerifiedAt = new Date();
 
     // Update technical staff if provided
     if (technicalStaff) {
@@ -1267,6 +1379,7 @@ module.exports = {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  submitPaymentDetails,
   getArtistBookings,
   checkArtistAvailability,
   getPublicCalendarBookings,
