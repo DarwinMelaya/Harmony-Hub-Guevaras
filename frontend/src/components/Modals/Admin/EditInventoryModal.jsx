@@ -7,11 +7,19 @@ const EditInventoryModal = memo(({
   onSave, 
   onChange,
   onImageChange,
+  onImageRemove,
   error,
   units = [],
   categories = []
 }) => {
   if (!editingItem) return null;
+
+  const galleryImages =
+    editingItem.images?.length > 0
+      ? editingItem.images
+      : editingItem.image
+      ? [editingItem.image]
+      : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto">
@@ -154,24 +162,54 @@ const EditInventoryModal = memo(({
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">
-              Image
-            </label>
-            {editingItem.image && (
-              <div className="mb-2">
-                <img
-                  src={editingItem.image}
-                  alt="preview"
-                  className="h-20 w-20 object-cover rounded border border-gray-700"
-                />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs text-gray-400">
+                Images
+              </label>
+              <span className="text-[11px] text-gray-500">
+                {galleryImages.length} selected
+              </span>
+            </div>
+            {galleryImages.length > 0 ? (
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {galleryImages.map((img, idx) => (
+                  <div
+                    key={`${img}-${idx}`}
+                    className="relative"
+                  >
+                    <img
+                      src={img}
+                      alt={`Inventory ${idx + 1}`}
+                      className="h-16 w-full object-cover rounded border border-gray-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onImageRemove?.(idx)}
+                      className="absolute top-1 right-1 text-[10px] px-1.5 py-0.5 bg-black/70 text-white rounded"
+                    >
+                      Remove
+                    </button>
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 text-[10px] bg-blue-600/80 text-white px-1.5 py-0.5 rounded">
+                        Primary
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
+            ) : (
+              <p className="text-xs text-gray-500 mb-3">No images uploaded yet.</p>
             )}
             <input
               type="file"
               accept="image/*"
+              multiple
               onChange={onImageChange}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded"
             />
+            <p className="text-[11px] text-gray-500 mt-1">
+              Adding new images will append them to the gallery. The first image is shown publicly.
+            </p>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-3">

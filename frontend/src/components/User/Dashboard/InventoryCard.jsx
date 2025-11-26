@@ -1,12 +1,45 @@
-import { ShoppingCart, Heart, Eye } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ShoppingCart,
+  Heart,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 const InventoryCard = ({ item, onAdd }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const imageSources =
+    item.images?.length > 0
+      ? item.images
+      : item.image
+      ? [item.image]
+      : [];
+  const activeImage =
+    imageSources.length > 0 ? imageSources[currentImageIndex] : null;
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [item._id, imageSources.length]);
+
+  const showPrevImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? imageSources.length - 1 : prev - 1
+    );
+  };
+
+  const showNextImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === imageSources.length - 1 ? 0 : prev + 1
+    );
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 group flex flex-col">
       <div className="relative">
-        {item.image ? (
+        {activeImage ? (
           <img
-            src={item.image}
+            src={activeImage}
             alt={item.name}
             id={`${item._id}-img-inv`}
             className="w-full h-40 sm:h-48 object-cover group-hover:scale-105 transition-transform duration-200"
@@ -15,6 +48,27 @@ const InventoryCard = ({ item, onAdd }) => {
           <div className="w-full h-40 sm:h-48 bg-gray-700 flex items-center justify-center">
             <ShoppingCart className="w-12 h-12 text-gray-500" />
           </div>
+        )}
+        {imageSources.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={showPrevImage}
+              className="absolute top-1/2 left-3 -translate-y-1/2 bg-black/60 text-white p-1 rounded-full hover:bg-black/80 transition-opacity opacity-0 group-hover:opacity-100"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={showNextImage}
+              className="absolute top-1/2 right-3 -translate-y-1/2 bg-black/60 text-white p-1 rounded-full hover:bg-black/80 transition-opacity opacity-0 group-hover:opacity-100"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
+              {currentImageIndex + 1}/{imageSources.length}
+            </div>
+          </>
         )}
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button className="bg-gray-800/80 hover:bg-gray-700/80 p-2 rounded-full">

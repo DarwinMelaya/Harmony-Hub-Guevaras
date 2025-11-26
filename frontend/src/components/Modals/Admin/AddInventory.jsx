@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, AlertCircle } from "lucide-react";
+import { Plus, AlertCircle, ImagePlus, X } from "lucide-react";
 import axios from "axios";
 
 const AddInventory = ({ isOpen, onClose, onSuccess }) => {
@@ -9,18 +9,18 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
     quantity: "",
     unit: "",
     category: "",
-    image: "",
+    images: [],
     condition: "excellent",
     status: "available",
     maintenanceIntervalDays: "90",
     notes: "",
   });
-  const [imagePreview, setImagePreview] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [units, setUnits] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
+  const MAX_IMAGES = 5;
 
   // Fetch units and categories when modal opens
   useEffect(() => {
@@ -50,16 +50,43 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
     fetchOptions();
   }, [isOpen]);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  const readFileAsBase64 = (file) =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, image: reader.result }));
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+
+  const handleImagesChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const availableSlots = MAX_IMAGES - formData.images.length;
+    const filesToProcess = files.slice(0, availableSlots);
+
+    try {
+      const base64Images = await Promise.all(
+        filesToProcess.map((file) => readFileAsBase64(file))
+      );
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...base64Images],
+      }));
+    } catch (readErr) {
+      console.error("Failed to read image file:", readErr);
+      setError("Failed to read one of the selected images.");
+    } finally {
+      e.target.value = "";
     }
+  };
+
+  const removeImage = (index) => {
+    setFormData((prev) => {
+      const updated = [...prev.images];
+      updated.splice(index, 1);
+      return { ...prev, images: updated };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -72,7 +99,7 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
         name: formData.name,
         price: formData.price,
         quantity: formData.quantity,
-        image: formData.image,
+        images: formData.images,
         condition: formData.condition,
         status: formData.status,
         maintenanceIntervalDays: formData.maintenanceIntervalDays,
@@ -99,13 +126,12 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
         quantity: "",
         unit: "",
         category: "",
-        image: "",
+        images: [],
         condition: "excellent",
         status: "available",
         maintenanceIntervalDays: "90",
         notes: "",
       });
-      setImagePreview(null);
       onSuccess();
       onClose();
     } catch (err) {
@@ -122,13 +148,12 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
       quantity: "",
       unit: "",
       category: "",
-      image: "",
+      images: [],
       condition: "excellent",
       status: "available",
       maintenanceIntervalDays: "90",
       notes: "",
     });
-    setImagePreview(null);
     setError(null);
     onClose();
   };
@@ -237,21 +262,57 @@ const AddInventory = ({ isOpen, onClose, onSuccess }) => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Image
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="w-full px-3 py-2 bg-gray-700/80 backdrop-blur-sm border border-gray-600/50 rounded-lg text-white"
-            />
-            {imagePreview && (
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="mt-2 h-24 rounded border border-gray-600"
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Images
+              </label>
+              <span className="text-xs text-gray-400">
+                {formData.images.length}/{MAX_IMAGES}
+              </span>
+            </div>
+            <label className="flex items-center gap-2 px-3 py-2 bg-gray-700/80 border border-dashed border-gray-500 rounded-lg text-sm text-gray-300 cursor-pointer hover:border-blue-500 hover:text-blue-300 transition-colors">
+              <ImagePlus className="w-4 h-4" />
+              <span>Add Images</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImagesChange}
+                className="hidden"
+                disabled={formData.images.length >= MAX_IMAGES}
               />
+            </label>
+            <p className="text-xs text-gray-400 mt-2">
+              Upload up to {MAX_IMAGES} images. The first image will be the
+              primary display photo.
+            </p>
+            {formData.images.length > 0 && (
+              <div className="grid grid-cols-3 gap-3 mt-3">
+                {formData.images.map((img, idx) => (
+                  <div
+                    key={`${img}-${idx}`}
+                    className="relative group rounded-lg overflow-hidden border border-gray-600"
+                  >
+                    <img
+                      src={img}
+                      alt={`Inventory preview ${idx + 1}`}
+                      className="h-24 w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 rounded-full p-1 text-white transition-opacity opacity-0 group-hover:opacity-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 text-xs bg-blue-600/80 px-2 py-0.5 rounded-full text-white">
+                        Primary
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           <div className="grid grid-cols-2 gap-4">

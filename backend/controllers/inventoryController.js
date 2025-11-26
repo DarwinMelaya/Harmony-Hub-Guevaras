@@ -4,6 +4,23 @@ const {
   deleteImageFromSupabase,
 } = require("../utils/supabaseImageUpload");
 
+const uploadImagesBatch = async (base64Images = []) => {
+  const uploadedUrls = [];
+
+  for (const base64Image of base64Images) {
+    const uploadResult = await uploadImageToSupabase(base64Image, "inventory");
+    if (!uploadResult.success) {
+      await Promise.all(
+        uploadedUrls.map((url) => deleteImageFromSupabase(url))
+      );
+      return { success: false, error: uploadResult.error };
+    }
+    uploadedUrls.push(uploadResult.url);
+  }
+
+  return { success: true, urls: uploadedUrls };
+};
+
 // Add new inventory item (admin only)
 exports.addInventory = async (req, res) => {
   try {
@@ -14,6 +31,7 @@ exports.addInventory = async (req, res) => {
       unit,
       category,
       image,
+      images,
       condition,
       status,
       maintenanceIntervalDays,
@@ -33,17 +51,33 @@ exports.addInventory = async (req, res) => {
       status: status || "available",
       maintenanceIntervalDays: maintenanceIntervalDays || 90,
       notes,
+      images: [],
     };
 
     // Add unit and category if provided
     if (unit) inventoryData.unit = unit;
     if (category) inventoryData.category = category;
 
-    // Upload image to Supabase Storage if provided
-    if (image) {
+    const normalizedImages =
+      Array.isArray(images) && images.length > 0
+        ? images.filter(Boolean)
+        : [];
+
+    if (normalizedImages.length > 0) {
+      const uploadResult = await uploadImagesBatch(normalizedImages);
+      if (!uploadResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: `Failed to upload image: ${uploadResult.error}`,
+        });
+      }
+      inventoryData.images = uploadResult.urls;
+      inventoryData.image = uploadResult.urls[0];
+    } else if (image) {
       const uploadResult = await uploadImageToSupabase(image, "inventory");
       if (uploadResult.success) {
         inventoryData.image = uploadResult.url;
+        inventoryData.images = [uploadResult.url];
       } else {
         return res.status(400).json({
           success: false,
@@ -103,6 +137,7 @@ exports.getPublicInventory = async (req, res) => {
         unit: 1,
         category: 1,
         image: 1,
+        images: 1,
         condition: 1,
         status: 1,
         createdAt: 1,
@@ -133,6 +168,7 @@ exports.updateInventory = async (req, res) => {
       unit,
       category,
       image,
+      images,
       condition,
       status,
       maintenanceIntervalDays,
@@ -159,22 +195,87 @@ exports.updateInventory = async (req, res) => {
       update.maintenanceIntervalDays = maintenanceIntervalDays;
     if (notes !== undefined) update.notes = notes;
 
-    // Handle image upload if new image is provided
-    if (image !== undefined) {
-      // Delete old image from Supabase if exists
-      if (existingItem.image) {
-        await deleteImageFromSupabase(existingItem.image);
-      }
-
-      // Upload new image to Supabase Storage
-      const uploadResult = await uploadImageToSupabase(image, "inventory");
-      if (uploadResult.success) {
-        update.image = uploadResult.url;
-      } else {
+    if (images !== undefined) {
+      if (!Array.isArray(images)) {
         return res.status(400).json({
           success: false,
-          message: `Failed to upload image: ${uploadResult.error}`,
+          message: "Images must be provided as an array.",
         });
+      }
+
+      const processedImageUrls = [];
+      const uploadedUrls = [];
+
+      for (const img of images) {
+        if (typeof img !== "string" || !img.trim()) {
+          continue;
+        }
+
+        if (img.startsWith("data:")) {
+          const uploadResult = await uploadImageToSupabase(img, "inventory");
+          if (!uploadResult.success) {
+            await Promise.all(
+              uploadedUrls.map((url) => deleteImageFromSupabase(url))
+            );
+            return res.status(400).json({
+              success: false,
+              message: `Failed to upload image: ${uploadResult.error}`,
+            });
+          }
+          processedImageUrls.push(uploadResult.url);
+          uploadedUrls.push(uploadResult.url);
+        } else {
+          processedImageUrls.push(img);
+        }
+      }
+
+      const previousImages =
+        existingItem.images?.length > 0
+          ? existingItem.images
+          : existingItem.image
+          ? [existingItem.image]
+          : [];
+
+      const imagesToDelete = previousImages.filter(
+        (url) => !processedImageUrls.includes(url)
+      );
+
+      await Promise.all(
+        imagesToDelete.map((url) => deleteImageFromSupabase(url))
+      );
+
+      update.images = processedImageUrls;
+      update.image = processedImageUrls[0] || null;
+    } else if (image !== undefined) {
+      if (image === null || image === "") {
+        const allImages = [
+          ...(existingItem.images || []),
+          existingItem.image,
+        ].filter(Boolean);
+        await Promise.all(
+          allImages.map((url) => deleteImageFromSupabase(url))
+        );
+        update.image = null;
+        update.images = [];
+      } else if (typeof image === "string" && image.startsWith("data:")) {
+        const allImages = [
+          ...(existingItem.images || []),
+          existingItem.image,
+        ].filter(Boolean);
+        await Promise.all(
+          allImages.map((url) => deleteImageFromSupabase(url))
+        );
+
+        const uploadResult = await uploadImageToSupabase(image, "inventory");
+        if (uploadResult.success) {
+          update.image = uploadResult.url;
+          update.images = [uploadResult.url];
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: `Failed to upload image: ${uploadResult.error}`,
+          });
+        }
       }
     }
 
@@ -213,9 +314,14 @@ exports.deleteInventory = async (req, res) => {
         .json({ success: false, message: "Inventory item not found." });
     }
 
-    // Delete image from Supabase Storage if exists
-    if (deleted.image) {
-      await deleteImageFromSupabase(deleted.image);
+    const imageSet = new Set(
+      [...(deleted.images || []), deleted.image].filter(Boolean)
+    );
+
+    if (imageSet.size > 0) {
+      await Promise.all(
+        Array.from(imageSet).map((url) => deleteImageFromSupabase(url))
+      );
     }
 
     res

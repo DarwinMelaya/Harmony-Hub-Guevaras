@@ -63,8 +63,12 @@ const InventorySchema = new mongoose.Schema({
     required: false,
   },
   image: {
-    type: String, // Supabase Storage URL
+    type: String, // Supabase Storage URL (primary image for backward compatibility)
     required: false,
+  },
+  images: {
+    type: [String], // Full gallery of images
+    default: [],
   },
   // Equipment condition tracking
   condition: {
@@ -141,6 +145,16 @@ InventorySchema.methods.calculateNextMaintenance = function () {
 // Ensure virtuals are included in JSON
 InventorySchema.set("toJSON", { virtuals: true });
 InventorySchema.set("toObject", { virtuals: true });
+
+// Ensure primary image stays in sync with gallery
+InventorySchema.pre("save", function (next) {
+  if (Array.isArray(this.images) && this.images.length > 0) {
+    this.image = this.images[0];
+  } else {
+    this.images = this.image ? [this.image] : [];
+  }
+  next();
+});
 
 // Add indexes for better query performance
 InventorySchema.index({ quantity: 1, status: 1 }); // For public inventory queries

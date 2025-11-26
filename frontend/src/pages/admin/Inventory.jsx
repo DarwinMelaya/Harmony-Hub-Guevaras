@@ -77,9 +77,28 @@ const capitalizeStatus = (status) => {
     .join(" ");
 };
 
+const getPrimaryImage = (item) => {
+  if (!item) return null;
+  if (Array.isArray(item.images) && item.images.length > 0) {
+    return item.images[0];
+  }
+  return item.image || null;
+};
+
+const getImageCount = (item) => {
+  if (!item) return 0;
+  if (Array.isArray(item.images) && item.images.length > 0) {
+    return item.images.length;
+  }
+  return item.image ? 1 : 0;
+};
+
 // Memoized table row component
 const InventoryRow = memo(
   ({ item, onEdit, onMaintenance, onViewHistory, onDelete }) => {
+    const primaryImage = getPrimaryImage(item);
+    const totalImages = getImageCount(item);
+
     return (
       <tr
         className={`hover:bg-gray-700/30 transition-colors ${
@@ -93,17 +112,24 @@ const InventoryRow = memo(
         {/* Item Column - Image + Name */}
         <td className="px-4 py-3">
           <div className="flex items-center gap-3">
-            {item.image ? (
-              <img
-                src={item.image}
-                alt={item.name}
-                className="h-12 w-12 rounded-lg object-cover border border-gray-600 flex-shrink-0"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-lg bg-gray-700 border border-gray-600 flex items-center justify-center flex-shrink-0">
-                <Box className="w-6 h-6 text-gray-500" />
-              </div>
-            )}
+            <div className="relative flex-shrink-0">
+              {primaryImage ? (
+                <img
+                  src={primaryImage}
+                  alt={item.name}
+                  className="h-12 w-12 rounded-lg object-cover border border-gray-600"
+                />
+              ) : (
+                <div className="h-12 w-12 rounded-lg bg-gray-700 border border-gray-600 flex items-center justify-center">
+                  <Box className="w-6 h-6 text-gray-500" />
+                </div>
+              )}
+              {totalImages > 1 && (
+                <span className="absolute -top-1.5 -right-1.5 rounded-full bg-black/80 text-[10px] px-1.5 py-0.5 text-white border border-gray-600">
+                  +{totalImages - 1}
+                </span>
+              )}
+            </div>
             <div className="min-w-0 flex-1">
               <div className="font-medium text-white text-sm">{item.name}</div>
               {item.notes && (
@@ -301,7 +327,13 @@ const Inventory = () => {
 
   // Edit handlers with useCallback
   const openEdit = useCallback((item) => {
-    setEditingItem({ ...item });
+    const normalizedImages =
+      item.images?.length > 0
+        ? [...item.images]
+        : item.image
+        ? [item.image]
+        : [];
+    setEditingItem({ ...item, images: normalizedImages });
   }, []);
 
   const closeEdit = useCallback(() => {
@@ -313,8 +345,8 @@ const Inventory = () => {
   }, []);
 
   const handleImageChange = useCallback(async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     const toBase64 = (f) =>
       new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -323,11 +355,26 @@ const Inventory = () => {
         reader.readAsDataURL(f);
       });
     try {
-      const base64 = await toBase64(file);
-      setEditingItem((prev) => ({ ...prev, image: base64 }));
+      const base64Images = await Promise.all(files.map((file) => toBase64(file)));
+      setEditingItem((prev) => {
+        if (!prev) return prev;
+        const existingImages = Array.isArray(prev.images) ? prev.images : [];
+        return { ...prev, images: [...existingImages, ...base64Images] };
+      });
     } catch (err) {
-      setError("Failed to read image file");
+      setError("Failed to read image file(s)");
+    } finally {
+      e.target.value = "";
     }
+  }, []);
+
+  const removeEditingImage = useCallback((index) => {
+    setEditingItem((prev) => {
+      if (!prev) return prev;
+      const existingImages = Array.isArray(prev.images) ? [...prev.images] : [];
+      existingImages.splice(index, 1);
+      return { ...prev, images: existingImages };
+    });
   }, []);
 
   const saveEdit = useCallback(async () => {
@@ -342,23 +389,26 @@ const Inventory = () => {
         quantity,
         unit,
         category,
-        image,
         condition,
         status,
         maintenanceIntervalDays,
         notes,
+        images: editImages,
       } = editingItem;
       
       const payload = {
         name,
         price,
         quantity,
-        image,
         condition,
         status,
         maintenanceIntervalDays,
         notes,
       };
+
+      if (Array.isArray(editImages)) {
+        payload.images = editImages;
+      }
 
       // Only include unit and category if they're set
       if (unit) {
@@ -812,6 +862,7 @@ const Inventory = () => {
           onSave={saveEdit}
           onChange={handleEditChange}
           onImageChange={handleImageChange}
+          onImageRemove={removeEditingImage}
           error={error}
           units={units}
           categories={categories}
