@@ -4,6 +4,13 @@ import { formatCurrency, formatDate } from "./utils";
 const SummaryReport = ({ data }) => {
   if (!data) return null;
 
+  // Compute total revenue excluding cancelled bookings
+  const totalRevenueExcludingCancelled =
+    data.bookings?.byStatus?.reduce((sum, item) => {
+      if (!item || item._id === "cancelled") return sum;
+      return sum + (item.totalRevenue || 0);
+    }, 0) ?? data.revenue.totalRevenue;
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -28,7 +35,7 @@ const SummaryReport = ({ data }) => {
             <DollarSign className="w-5 h-5 text-green-500" />
           </div>
           <p className="text-3xl font-bold">
-            {formatCurrency(data.revenue.totalRevenue)}
+            {formatCurrency(totalRevenueExcludingCancelled)}
           </p>
         </div>
         <div className="bg-gray-800 rounded-lg p-6">
@@ -46,7 +53,9 @@ const SummaryReport = ({ data }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {data.bookings.byStatus.map((item) => (
             <div key={item._id} className="bg-gray-700 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1 capitalize">{item._id}</p>
+              <p className="text-gray-400 text-sm mb-1 capitalize">
+                {item._id}
+              </p>
               <p className="text-2xl font-bold">{item.count}</p>
               <p className="text-gray-500 text-sm">
                 {formatCurrency(item.totalRevenue)}
@@ -62,7 +71,9 @@ const SummaryReport = ({ data }) => {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {data.users.byRole.map((item) => (
             <div key={item._id} className="bg-gray-700 rounded-lg p-4">
-              <p className="text-gray-400 text-sm mb-1 capitalize">{item._id}</p>
+              <p className="text-gray-400 text-sm mb-1 capitalize">
+                {item._id}
+              </p>
               <p className="text-2xl font-bold">{item.count}</p>
               <p className="text-gray-500 text-sm">
                 {item.active} active, {item.inactive} inactive
@@ -89,9 +100,7 @@ const SummaryReport = ({ data }) => {
               {data.bookings.recent.map((booking) => (
                 <tr key={booking._id} className="border-b border-gray-700">
                   <td className="p-2">{booking.user?.fullName || "N/A"}</td>
-                  <td className="p-2">
-                    {formatCurrency(booking.totalAmount)}
-                  </td>
+                  <td className="p-2">{formatCurrency(booking.totalAmount)}</td>
                   <td className="p-2">
                     <span
                       className={`px-2 py-1 rounded text-xs ${
@@ -119,4 +128,3 @@ const SummaryReport = ({ data }) => {
 };
 
 export default SummaryReport;
-

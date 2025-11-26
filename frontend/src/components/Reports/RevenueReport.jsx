@@ -3,6 +3,13 @@ import { formatCurrency } from "./utils";
 const RevenueReport = ({ data }) => {
   if (!data) return null;
 
+  // Compute total revenue excluding cancelled bookings
+  const totalRevenueExcludingCancelled =
+    data.byStatus?.reduce((sum, item) => {
+      if (!item || item._id === "cancelled") return sum;
+      return sum + (item.totalRevenue || 0);
+    }, 0) ?? data.statistics.totalRevenue;
+
   return (
     <div className="space-y-6">
       {/* Statistics */}
@@ -10,7 +17,7 @@ const RevenueReport = ({ data }) => {
         <div className="bg-gray-800 rounded-lg p-6">
           <h3 className="text-gray-400 text-sm mb-2">Total Revenue</h3>
           <p className="text-3xl font-bold text-green-400">
-            {formatCurrency(data.statistics.totalRevenue)}
+            {formatCurrency(totalRevenueExcludingCancelled)}
           </p>
         </div>
         <div className="bg-gray-800 rounded-lg p-6">
