@@ -121,19 +121,19 @@ const generateBookingAgreementPDF = (booking, res) => {
       .slice(0, 3)
       .join(" / ");
 
-    drawCell(tableX + 50, currentY, 215, cellHeight, subject, {
+    drawCell(tableX + 50, currentY, 190, cellHeight, subject, {
       fontSize: 8,
     });
 
     // Venue
-    drawCell(tableX + 265, currentY, 50, cellHeight, "Venue:", {
+    drawCell(tableX + 240, currentY, 50, cellHeight, "Venue:", {
       bold: true,
       fontSize: 9,
     });
     drawCell(
-      tableX + 315,
+      tableX + 290,
       currentY,
-      120,
+      100,
       cellHeight,
       booking.contactInfo?.address?.split(",")[0] || "N/A",
       {
@@ -142,14 +142,14 @@ const generateBookingAgreementPDF = (booking, res) => {
     );
 
     // Date
-    drawCell(tableX + 435, currentY, 40, cellHeight, "Date:", {
+    drawCell(tableX + 390, currentY, 40, cellHeight, "Date:", {
       bold: true,
       fontSize: 9,
     });
     drawCell(
-      tableX + 475,
+      tableX + 430,
       currentY,
-      80,
+      75,
       cellHeight,
       new Date(booking.bookingDate).toLocaleDateString("en-US", {
         month: "short",
@@ -163,16 +163,22 @@ const generateBookingAgreementPDF = (booking, res) => {
 
     // Time row (only on the right side)
     currentY += cellHeight;
-    drawCell(tableX, currentY, 265, cellHeight, "", { border: false });
-    drawCell(tableX + 265, currentY, 50, cellHeight, "", { border: false });
-    drawCell(tableX + 315, currentY, 120, cellHeight, "", { border: false });
-    drawCell(tableX + 435, currentY, 40, cellHeight, "Time:", {
+    // Fill left side to keep grid but leave space on the right margin
+    drawCell(tableX, currentY, 430, cellHeight, "", { border: false });
+    drawCell(tableX + 390, currentY, 40, cellHeight, "Time:", {
       bold: true,
       fontSize: 9,
     });
-    drawCell(tableX + 475, currentY, 80, cellHeight, booking.bookingTime, {
-      fontSize: 8,
-    });
+    drawCell(
+      tableX + 430,
+      currentY,
+      75,
+      cellHeight,
+      booking.bookingTime,
+      {
+        fontSize: 8,
+      }
+    );
 
     currentY += cellHeight + 10;
 
@@ -546,12 +552,6 @@ const generateBookingAgreementPDF = (booking, res) => {
 
     currentY += 5;
 
-    // Add page break if needed
-    if (currentY > 650) {
-      doc.addPage();
-      currentY = 60;
-    }
-
     // NOTE Section
     const downpaymentPercentage = booking.downpaymentPercentage || 20;
     const noteRowHeight = 20;
@@ -609,12 +609,6 @@ const generateBookingAgreementPDF = (booking, res) => {
       });
       currentY += rowH;
     });
-
-    // Add page break for signature if needed
-    if (currentY > 600) {
-      doc.addPage();
-      currentY = 60;
-    }
 
     currentY += 10;
 
