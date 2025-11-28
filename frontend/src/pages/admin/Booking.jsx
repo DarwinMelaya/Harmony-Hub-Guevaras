@@ -19,12 +19,17 @@ import {
   Download,
 } from "lucide-react";
 import axios from "axios";
-import AdminCalendar from "../../components/Admin/Dashboard/AdminCalendar";
 import CompletionModal from "../../components/Modals/Admin/CompletionModal";
 import AdminSignatureModal from "../../components/Modals/Admin/AdminSignatureModal";
-import InventoryCard from "../../components/User/Dashboard/InventoryCard";
-import PackagesCard from "../../components/User/Dashboard/PackagesCard";
-import ArtistCard from "../../components/User/Dashboard/ArtistCard";
+import BookingDetailsModal from "../../components/Modals/Admin/Booking/BookingDetailsModal";
+import BookingCalendarModal from "../../components/Modals/Admin/Booking/BookingCalendarModal";
+import RemainingBalanceModal from "../../components/Modals/Admin/Booking/RemainingBalanceModal";
+import RemoveItemModal from "../../components/Modals/Admin/Booking/RemoveItemModal";
+import CancellationModal from "../../components/Modals/Admin/Booking/CancellationModal";
+import RefundProcessingModal from "../../components/Modals/Admin/Booking/RefundProcessingModal";
+import ExtensionChargeModal from "../../components/Modals/Admin/Booking/ExtensionChargeModal";
+import ExtensionPaymentModal from "../../components/Modals/Admin/Booking/ExtensionPaymentModal";
+import AddItemModal from "../../components/Modals/Admin/Booking/AddItemModal";
 
 const Booking = () => {
   const [bookings, setBookings] = useState([]);
@@ -1059,879 +1064,185 @@ const Booking = () => {
       </div>
 
       {/* Booking Details Modal */}
-      {showDetailsModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
-              <h2 className="text-xl font-bold text-white">Booking Details</h2>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex-1">
-              {/* Customer Info */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Customer Information
-                </h3>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-400 text-sm">Name</p>
-                      <p className="text-white font-medium">
-                        {selectedBooking.user?.fullName ||
-                          selectedBooking.user?.username}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">Email</p>
-                      <p className="text-white">
-                        {selectedBooking.user?.email}
-                      </p>
-                    </div>
-                    {selectedBooking.contactInfo?.phone && (
-                      <div>
-                        <p className="text-gray-400 text-sm">Phone</p>
-                        <p className="text-white">
-                          {selectedBooking.contactInfo.phone}
-                        </p>
-                      </div>
-                    )}
-                    {selectedBooking.contactInfo?.address && (
-                      <div>
-                        <p className="text-gray-400 text-sm">Address</p>
-                        <p className="text-white">
-                          {selectedBooking.contactInfo.address}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Booking Details */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Booking Information
-                </h3>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div>
-                      <p className="text-gray-400 text-sm">Date</p>
-                      <p className="text-white font-medium">
-                        {formatDate(selectedBooking.bookingDate)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">Time</p>
-                      <p className="text-white">
-                        {formatTime(selectedBooking.bookingTime)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">⏰ Setup Date</p>
-                      <p className="text-white">
-                        {selectedBooking.setupDate
-                          ? formatDate(selectedBooking.setupDate)
-                          : "Not specified"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">⏰ Setup Time</p>
-                      <p className="text-white">
-                        {selectedBooking.setupTime
-                          ? formatTime(selectedBooking.setupTime)
-                          : "Not specified"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-400 text-sm">Duration</p>
-                      <p className="text-white">
-                        {selectedBooking.duration} hours
-                      </p>
-                    </div>
-                  </div>
-                  {selectedBooking.notes && (
-                    <div className="mt-4">
-                      <p className="text-gray-400 text-sm">Notes</p>
-                      <p className="text-white">{selectedBooking.notes}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Agreement Section */}
-              {selectedBooking.agreement &&
-                selectedBooking.agreement.signature && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                      <FileText className="w-5 h-5 mr-2 text-blue-400" />
-                      Signed Agreement
-                    </h3>
-                    <div className="bg-gradient-to-br from-blue-900/20 to-blue-800/10 p-4 rounded-lg border border-blue-700/30">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <p className="text-white font-medium mb-1">
-                            Client has signed the booking agreement
-                          </p>
-                          <p className="text-gray-400 text-sm">
-                            Signed on:{" "}
-                            {new Date(
-                              selectedBooking.agreement.agreedAt
-                            ).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                          <p className="text-gray-400 text-sm">
-                            Signed by: {selectedBooking.agreement.clientName}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {selectedBooking.agreement.adminSignature ? (
-                            <button
-                              onClick={() =>
-                                handleDownloadAgreement(selectedBooking._id)
-                              }
-                              disabled={
-                                downloadingAgreement === selectedBooking._id
-                              }
-                              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                            >
-                              {downloadingAgreement === selectedBooking._id ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                  Downloading...
-                                </>
-                              ) : (
-                                <>
-                                  <Download className="w-4 h-4" />
-                                  Download PDF
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                if (canAdminSign) {
-                                  setSigningBooking(selectedBooking);
-                                  setShowAdminSignModal(true);
-                                }
-                              }}
-                              disabled={!canAdminSign}
-                              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-                                canAdminSign
-                                  ? "bg-green-600 hover:bg-green-700 text-white"
-                                  : "bg-gray-600 text-gray-300 cursor-not-allowed"
-                              }`}
-                            >
-                              <FileText className="w-4 h-4" />
-                              Sign as Admin
-                            </button>
-                          )}
-                          {!selectedBooking.agreement.adminSignature &&
-                            !canAdminSign && (
-                              <p className="text-xs text-orange-300 mt-2">
-                                Require client payment submission before
-                                signing.
-                              </p>
-                            )}
-                        </div>
-                      </div>
-
-                      {/* Client Signature Preview */}
-                      <div className="mb-4 pt-4 border-t border-blue-700/30">
-                        <p className="text-gray-400 text-sm mb-2">
-                          Client Signature:
-                        </p>
-                        <div className="bg-white rounded-lg p-3">
-                          <img
-                            src={selectedBooking.agreement.signature}
-                            alt="Client Signature"
-                            className="h-24 object-contain mx-auto"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Admin Signature Status */}
-                      {selectedBooking.agreement.adminSignature ? (
-                        <div className="pt-4 border-t border-blue-700/30">
-                          <div className="flex items-center mb-2">
-                            <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
-                            <p className="text-green-400 font-medium">
-                              Admin has signed the agreement
-                            </p>
-                          </div>
-                          <p className="text-gray-400 text-sm mb-2">
-                            Signed by:{" "}
-                            {selectedBooking.agreement.adminSignerName}
-                          </p>
-                          <p className="text-gray-400 text-xs mb-3">
-                            On:{" "}
-                            {new Date(
-                              selectedBooking.agreement.adminSignedAt
-                            ).toLocaleString("en-US", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                          <p className="text-gray-400 text-sm mb-2">
-                            Admin Signature:
-                          </p>
-                          <div className="bg-white rounded-lg p-3">
-                            <img
-                              src={selectedBooking.agreement.adminSignature}
-                              alt="Admin Signature"
-                              className="h-24 object-contain mx-auto"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="pt-4 border-t border-blue-700/30">
-                          <div className="flex items-center">
-                            <AlertTriangle className="w-5 h-5 text-orange-400 mr-2" />
-                            <p className="text-orange-400 font-medium">
-                              Waiting for admin signature
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {/* Payment Information */}
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Payment Information
-                </h3>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-4">
-                    <p className="text-gray-400 text-sm">Payment Status:</p>
-                    {(() => {
-                      const meta = getPaymentStatusMeta(
-                        selectedBooking.paymentStatus
-                      );
-                      return (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border ${meta.classes}`}
-                        >
-                          {meta.label}
-                        </span>
-                      );
-                    })()}
-                  </div>
-
-                  {!selectedBooking.paymentMethod ? (
-                    <div className="p-4 bg-gray-800 rounded-lg border border-gray-600 text-sm text-gray-300">
-                      <p>
-                        The client has not submitted payment details yet. Once
-                        their booking is confirmed, they can choose Cash or
-                        GCash from the customer portal, and the details will
-                        appear here.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-gray-400 text-sm">
-                            Payment Method
-                          </p>
-                          <p className="text-white font-medium capitalize">
-                            {selectedBooking.paymentMethod === "gcash"
-                              ? "GCash"
-                              : "Cash"}
-                          </p>
-                        </div>
-                        {selectedBooking.paymentReference && (
-                          <div>
-                            <p className="text-gray-400 text-sm">
-                              Reference Number
-                            </p>
-                            <p className="text-white font-mono">
-                              {selectedBooking.paymentReference}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {selectedBooking.paymentMethod === "gcash" && (
-                        <div className="mt-4 pt-4 border-t border-gray-600">
-                          <h4 className="text-white font-medium mb-3">
-                            Payment Breakdown
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-gray-400 text-sm">
-                                Payment Type
-                              </p>
-                              <p className="text-white capitalize">
-                                {selectedBooking.downpaymentType === "full"
-                                  ? "Full Payment"
-                                  : `Downpayment (${
-                                      selectedBooking.downpaymentPercentage ||
-                                      50
-                                    }%)`}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-400 text-sm">
-                                Amount Paid
-                              </p>
-                              <p className="text-green-400 font-bold">
-                                ₱
-                                {Number(
-                                  selectedBooking.downpaymentAmount ||
-                                    selectedBooking.totalAmount
-                                ).toLocaleString()}
-                              </p>
-                            </div>
-                            {selectedBooking.downpaymentType === "percentage" &&
-                              selectedBooking.remainingBalance > 0 && (
-                                <div>
-                                  <p className="text-gray-400 text-sm">
-                                    Remaining Balance
-                                  </p>
-                                  <p className="text-orange-400 font-bold">
-                                    ₱
-                                    {Number(
-                                      selectedBooking.remainingBalance || 0
-                                    ).toLocaleString()}
-                                  </p>
-                                </div>
-                              )}
-                          </div>
-                          {selectedBooking.downpaymentType === "percentage" &&
-                            selectedBooking.remainingBalance > 0 && (
-                              <div className="mt-3 p-3 bg-orange-900/20 border border-orange-700/50 rounded-lg">
-                                <p className="text-orange-300 text-sm">
-                                  ⚠️ Remaining balance of ₱
-                                  {Number(
-                                    selectedBooking.remainingBalance || 0
-                                  ).toLocaleString()}{" "}
-                                  to be collected on service day
-                                </p>
-                              </div>
-                            )}
-                        </div>
-                      )}
-
-                      {selectedBooking.paymentImage && (
-                        <div className="mt-4">
-                          <p className="text-gray-400 text-sm mb-2">
-                            Payment Screenshot
-                          </p>
-                          <img
-                            src={selectedBooking.paymentImage}
-                            alt="Payment screenshot"
-                            className="w-48 h-48 object-cover rounded-lg border border-gray-600"
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Extension Charges */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-white">
-                    Extension Charges
-                  </h3>
-                  <button
-                    onClick={() => openExtensionModal(selectedBooking)}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                  >
-                    Add Extension
-                  </button>
-                </div>
-                {selectedBooking.extensions &&
-                selectedBooking.extensions.length > 0 ? (
-                  <div className="space-y-3">
-                    {selectedBooking.extensions.map((extension) => (
-                      <div
-                        key={extension._id || extension.createdAt}
-                        className="bg-gray-700 p-4 rounded-lg border border-gray-600"
-                      >
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                          <div>
-                            <p className="text-white font-semibold">
-                              ₱{Number(extension.amount || 0).toLocaleString()}
-                            </p>
-                            <p className="text-gray-300 text-sm">
-                              {extension.description || "Extension charge"}
-                            </p>
-                            <div className="text-xs text-gray-400 mt-2 flex flex-wrap gap-3">
-                              {extension.hours !== null &&
-                                extension.hours !== undefined && (
-                                  <span>{extension.hours} hr(s)</span>
-                                )}
-                              {extension.rate !== null &&
-                                extension.rate !== undefined && (
-                                  <span>
-                                    @ ₱
-                                    {Number(
-                                      extension.rate || 0
-                                    ).toLocaleString()}
-                                    /hr
-                                  </span>
-                                )}
-                              <span className="capitalize">
-                                Method: {extension.paymentMethod || "cash"}
-                              </span>
-                              <span>
-                                Recorded:{" "}
-                                {extension.createdAt
-                                  ? new Date(
-                                      extension.createdAt
-                                    ).toLocaleString()
-                                  : "-"}
-                              </span>
-                              {extension.paidAt && (
-                                <span>
-                                  Paid on:{" "}
-                                  {new Date(extension.paidAt).toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                                extension.status === "paid"
-                                  ? "bg-green-900/40 text-green-300 border-green-500/30"
-                                  : "bg-yellow-900/40 text-yellow-300 border-yellow-500/30"
-                              }`}
-                            >
-                              {extension.status === "paid" ? "Paid" : "Pending"}
-                            </span>
-                            {extension.status !== "paid" && (
-                              <button
-                                onClick={() =>
-                                  openExtensionPaymentModal(
-                                    selectedBooking,
-                                    extension
-                                  )
-                                }
-                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
-                              >
-                                Mark as Paid
-                              </button>
-                            )}
-                            {extension.paymentProof && (
-                              <a
-                                href={extension.paymentProof}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-300 text-xs underline"
-                              >
-                                View Proof
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-gray-700 rounded-lg p-4 text-gray-400 text-sm border border-gray-600">
-                    No extension charges recorded yet.
-                  </div>
-                )}
-                <div className="mt-4 p-3 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-between text-sm">
-                  <span className="text-gray-300">
-                    Outstanding Extension Balance
-                  </span>
-                  <span className="text-white font-semibold">
-                    ₱
-                    {Number(
-                      selectedBooking.extensionBalance || 0
-                    ).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Items */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-white">
-                    Booked Items
-                  </h3>
-                  {["pending", "confirmed"].includes(
-                    selectedBooking.status
-                  ) && (
-                    <button
-                      onClick={() => openAddItemModal(selectedBooking)}
-                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
-                    >
-                      Add Item
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  {selectedBooking.items.map((item, index) => (
-                    <div
-                      key={item._id || index}
-                      className="bg-gray-700 p-4 rounded-lg"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center space-x-3">
-                          {getItemIcon(item.type)}
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-white font-medium">
-                                {item.name}
-                              </p>
-                              {item.isAdditional && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-900/50 text-green-300 border border-green-600/60">
-                                  New
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-gray-400 text-sm capitalize">
-                              {item.type === "bandArtist"
-                                ? "Band Artist"
-                                : item.type}
-                            </p>
-                            {item.addedAt && (
-                              <p className="text-gray-500 text-xs mt-1">
-                                Added: {new Date(item.addedAt).toLocaleString()}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="text-white font-medium">
-                              x{item.quantity}
-                            </p>
-                            <p className="text-green-400 font-bold">
-                              ₱
-                              {Number(
-                                item.price * item.quantity
-                              ).toLocaleString()}
-                            </p>
-                          </div>
-                          {["pending", "confirmed"].includes(
-                            selectedBooking.status
-                          ) && (
-                            <button
-                              onClick={() => {
-                                setItemToRemove(item);
-                                setShowRemoveItemModal(true);
-                              }}
-                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Display package items if this is a package */}
-                      {item.type === "package" &&
-                        item.itemId &&
-                        item.itemId.items && (
-                          <div className="mt-3 pt-3 border-t border-gray-600">
-                            <p className="text-gray-300 text-sm font-medium mb-2">
-                              Package Contents:
-                            </p>
-                            <div className="space-y-2">
-                              {item.itemId.items.map((packageItem, pIndex) => (
-                                <div
-                                  key={pIndex}
-                                  className="flex items-center justify-between bg-gray-600 p-2 rounded"
-                                >
-                                  <div className="flex items-center space-x-2">
-                                    <ShoppingCart className="w-3 h-3 text-gray-400" />
-                                    <span className="text-gray-300 text-sm">
-                                      {packageItem.inventoryItem?.name ||
-                                        "Unknown Item"}
-                                    </span>
-                                    <span className="text-gray-400 text-xs">
-                                      x{packageItem.quantity}
-                                    </span>
-                                  </div>
-                                  <span className="text-green-400 text-sm font-medium">
-                                    ₱
-                                    {Number(
-                                      packageItem.inventoryItem?.price *
-                                        packageItem.quantity || 0
-                                    ).toLocaleString()}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-600">
-                  <div className="flex justify-between items-center">
-                    <span className="text-white font-bold text-lg">
-                      Total Amount:
-                    </span>
-                    <span className="text-green-400 font-bold text-xl">
-                      ₱{Number(selectedBooking.totalAmount).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Cancellation and Refund Section */}
-              {(selectedBooking.status === "cancelled" ||
-                selectedBooking.status === "refunded") && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                    <XCircle className="w-5 h-5 mr-2 text-red-400" />
-                    Cancellation Information
-                  </h3>
-                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
-                    {selectedBooking.cancellationReason && (
-                      <div className="mb-4">
-                        <p className="text-gray-300 text-sm mb-2 font-medium">
-                          Cancellation Reason:
-                        </p>
-                        <p className="text-white text-sm italic">
-                          {selectedBooking.cancellationReason}
-                        </p>
-                      </div>
-                    )}
-                    {selectedBooking.refundAmount > 0 && (
-                      <div className="mt-4 pt-4 border-t border-red-700">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-gray-300 text-sm mb-1">
-                              Refund Amount:
-                            </p>
-                            <p className="text-green-400 font-bold text-lg">
-                              ₱
-                              {Number(
-                                selectedBooking.refundAmount
-                              ).toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-300 text-sm mb-1">
-                              Refund Status:
-                            </p>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                selectedBooking.refundStatus === "processed"
-                                  ? "bg-green-100 text-green-800"
-                                  : selectedBooking.refundStatus === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {selectedBooking.refundStatus === "processed"
-                                ? "Processed"
-                                : selectedBooking.refundStatus === "pending"
-                                ? "Pending"
-                                : "Not Applicable"}
-                            </span>
-                          </div>
-                        </div>
-                        {selectedBooking.refundedAt && (
-                          <div className="mt-3">
-                            <p className="text-gray-400 text-xs">
-                              Refunded on:{" "}
-                              {new Date(
-                                selectedBooking.refundedAt
-                              ).toLocaleString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </div>
-                        )}
-                        {selectedBooking.refundProof && (
-                          <div className="mt-3">
-                            <p className="text-gray-300 text-sm mb-2 font-medium">
-                              Refund Proof:
-                            </p>
-                            <img
-                              src={selectedBooking.refundProof}
-                              alt="Refund proof"
-                              className="w-48 h-48 object-cover rounded-lg border border-gray-600"
-                            />
-                          </div>
-                        )}
-                        {selectedBooking.refundStatus === "pending" && (
-                          <div className="mt-4 pt-4 border-t border-red-700">
-                            <button
-                              onClick={() => {
-                                setShowRefundModal(true);
-                                setRefundProof("");
-                                setRefundProofPreview(null);
-                                setError(null);
-                              }}
-                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
-                            >
-                              {selectedBooking.paymentMethod === "gcash"
-                                ? "Upload Refund Proof"
-                                : "Mark as Refunded"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Issues Section */}
-              {hasIssues(selectedBooking) && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-2 text-red-400" />
-                    Reported Issues
-                  </h3>
-                  <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
-                    <div className="flex items-center mb-3">
-                      {getIssueIcon(selectedBooking.issueType)}
-                      <span className="text-red-300 font-medium ml-2 capitalize">
-                        {selectedBooking.issueType} Items
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-gray-300 text-sm mb-2">
-                        Affected Items:
-                      </p>
-                      {selectedBooking.affectedItems.map((itemName, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center space-x-2"
-                        >
-                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                          <span className="text-white text-sm">{itemName}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 border-t border-gray-700 flex-shrink-0">
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowDetailsModal(false)}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-                >
-                  Close
-                </button>
-                {selectedBooking.status === "pending" && (
-                  <>
-                    <button
-                      onClick={() => {
-                        updateBookingStatus(selectedBooking._id, "confirmed");
-                        setShowDetailsModal(false);
-                      }}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
-                    >
-                      Confirm Booking
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowCancelModal(true);
-                        setCancellationReason("");
-                      }}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                    >
-                      Cancel Booking
-                    </button>
-                  </>
-                )}
-                {selectedBooking.status === "confirmed" && (
-                  <button
-                    onClick={() => {
-                      setShowDetailsModal(false);
-                      handleMarkAsCompleted(selectedBooking);
-                    }}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                  >
-                    Mark as Completed
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <BookingDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        selectedBooking={selectedBooking}
+        canAdminSign={canAdminSign}
+        downloadingAgreement={downloadingAgreement}
+        onDownloadAgreement={handleDownloadAgreement}
+        onSignAsAdmin={() => {
+          if (canAdminSign) {
+            setSigningBooking(selectedBooking);
+            setShowAdminSignModal(true);
+          }
+        }}
+        onOpenExtensionModal={openExtensionModal}
+        onOpenExtensionPaymentModal={openExtensionPaymentModal}
+        onOpenAddItemModal={openAddItemModal}
+        onRemoveItem={(item) => {
+          setItemToRemove(item);
+          setShowRemoveItemModal(true);
+        }}
+        onOpenCancelModal={() => {
+          setShowCancelModal(true);
+          setCancellationReason("");
+        }}
+        onOpenRefundModal={() => {
+          setShowRefundModal(true);
+          setRefundProof("");
+          setRefundProofPreview(null);
+          setError(null);
+        }}
+        onConfirmBooking={() => {
+          updateBookingStatus(selectedBooking._id, "confirmed");
+          setShowDetailsModal(false);
+        }}
+        onMarkAsCompleted={() => {
+          setShowDetailsModal(false);
+          handleMarkAsCompleted(selectedBooking);
+        }}
+        updatingStatus={updatingStatus}
+      />
 
       {/* Calendar Modal */}
-      {showCalendar && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-700">
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h2 className="text-lg font-semibold text-white">
-                Bookings Calendar
-              </h2>
-              <button
-                onClick={() => setShowCalendar(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            {/* Color Legend */}
-            <div className="p-4 border-b border-gray-700">
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-yellow-600 rounded"></div>
-                  <span className="text-gray-300">Pending</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-600 rounded"></div>
-                  <span className="text-gray-300">Confirmed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span className="text-gray-300">Completed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-600 rounded"></div>
-                  <span className="text-gray-300">Cancelled</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-600 rounded"></div>
-                  <span className="text-gray-300">Refunded</span>
-                </div>
-              </div>
-            </div>
-            <div className="p-4 flex-1 overflow-auto">
-              <AdminCalendar
-                monthNow={calendarMonth}
-                yearNow={calendarYear}
-                schedules={schedulesByDate}
-                onDateClick={handleDateClick}
-                onScheduleClick={handleScheduleClick}
-                onMonthChange={handleMonthChange}
-                selectedVenue={null}
-                isLightText
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <BookingCalendarModal
+        isOpen={showCalendar}
+        onClose={() => setShowCalendar(false)}
+        bookings={bookings}
+        calendarMonth={calendarMonth}
+        calendarYear={calendarYear}
+        onMonthChange={handleMonthChange}
+        onScheduleClick={(e, schedule) => {
+          e.stopPropagation();
+          const booking = bookings.find((b) => b._id === schedule.id);
+          if (booking) {
+            setSelectedBooking(booking);
+            setShowDetailsModal(true);
+            setShowCalendar(false);
+          }
+        }}
+      />
 
+      {/* Remaining Balance Modal */}
+      <RemainingBalanceModal
+        isOpen={showBalanceModal}
+        onClose={() => {
+          setShowBalanceModal(false);
+          setBalanceAmount("");
+        }}
+        selectedBooking={selectedBooking}
+        balanceAmount={balanceAmount}
+        onBalanceAmountChange={setBalanceAmount}
+        onSubmit={handleBalanceSubmit}
+      />
+
+      {/* Remove Item Modal */}
+      <RemoveItemModal
+        isOpen={showRemoveItemModal}
+        onClose={() => {
+          setShowRemoveItemModal(false);
+          setItemToRemove(null);
+        }}
+        itemToRemove={itemToRemove}
+        onConfirm={handleConfirmRemoveItem}
+        isRemoving={savingNewItem}
+      />
+
+      {/* Cancellation Modal */}
+      <CancellationModal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancellationReason("");
+          setError(null);
+        }}
+        selectedBooking={selectedBooking}
+        cancellationReason={cancellationReason}
+        onCancellationReasonChange={setCancellationReason}
+        onConfirm={async () => {
+          if (!cancellationReason.trim()) {
+            setError("Please provide a reason for cancellation");
+            return;
+          }
+          await updateBookingStatus(
+            selectedBooking._id,
+            "cancelled",
+            {},
+            cancellationReason.trim()
+          );
+          setShowCancelModal(false);
+          setShowDetailsModal(false);
+          setCancellationReason("");
+        }}
+        isCancelling={updatingStatus === selectedBooking?._id}
+        error={error}
+      />
+
+      {/* Refund Processing Modal */}
+      <RefundProcessingModal
+        isOpen={showRefundModal}
+        onClose={() => {
+          setShowRefundModal(false);
+          setRefundProof("");
+          setRefundProofPreview(null);
+          setError(null);
+        }}
+        selectedBooking={selectedBooking}
+        refundProof={refundProof}
+        refundProofPreview={refundProofPreview}
+        onRefundProofChange={handleRefundProofChange}
+        onProcess={handleProcessRefund}
+        isProcessing={processingRefund}
+        error={error}
+      />
+
+      {/* Extension Charge Modal */}
+      <ExtensionChargeModal
+        isOpen={showExtensionModal}
+        onClose={closeExtensionModal}
+        extensionForm={extensionForm}
+        onFieldChange={handleExtensionFieldChange}
+        onSubmit={submitExtensionCharge}
+        isSaving={savingExtension}
+      />
+
+      {/* Extension Payment Modal */}
+      <ExtensionPaymentModal
+        isOpen={showExtensionPaymentModal}
+        onClose={closeExtensionPaymentModal}
+        selectedExtension={selectedExtensionForPayment}
+        extensionPaymentProof={extensionPaymentProof}
+        onProofChange={handleExtensionProofChange}
+        onConfirm={confirmExtensionPayment}
+        isProcessing={processingExtensionPayment}
+        error={error}
+      />
+
+      {/* Add Item Modal */}
+      <AddItemModal
+        isOpen={showAddItemModal}
+        onClose={closeAddItemModal}
+        selectedBooking={selectedBooking}
+        addItemTab={addItemTab}
+        onTabChange={(tab) => {
+          setAddItemTab(tab);
+          if (tab === "inventory" && inventoryOptions.length === 0)
+            fetchAddItemOptions("inventory");
+          if (tab === "package" && packageOptions.length === 0)
+            fetchAddItemOptions("package");
+          if (tab === "bandArtist" && artistOptions.length === 0)
+            fetchAddItemOptions("bandArtist");
+        }}
+        inventoryOptions={inventoryOptions}
+        packageOptions={packageOptions}
+        artistOptions={artistOptions}
+        loadingAddOptions={loadingAddOptions}
+        onAddItem={quickAddItemToBooking}
+        isSaving={savingNewItem}
+      />
+
+      {/* Completion Modal */}
       <CompletionModal
         isOpen={showCompleteModal}
         onClose={() => setShowCompleteModal(false)}
@@ -1945,115 +1256,6 @@ const Booking = () => {
         setSelectedItems={setSelectedItems}
       />
 
-      {/* Remaining Balance Modal */}
-      {showBalanceModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Collect Remaining Balance
-            </h2>
-            <div className="mb-6">
-              <div className="bg-orange-900/20 border border-orange-700 rounded-lg p-4 mb-4">
-                <p className="text-orange-300 text-sm mb-2">
-                  This booking has a remaining balance that must be collected
-                  before marking as completed.
-                </p>
-                <p className="text-white font-bold text-lg">
-                  Remaining Balance: ₱
-                  {Number(selectedBooking.remainingBalance).toLocaleString()}
-                </p>
-              </div>
-
-              <label className="block text-gray-300 mb-2">
-                Enter Collected Amount <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="number"
-                value={balanceAmount}
-                onChange={(e) => setBalanceAmount(e.target.value)}
-                placeholder="Enter exact amount collected"
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-gray-400 text-sm mt-2">
-                Please enter the exact remaining balance amount to confirm
-                collection.
-              </p>
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowBalanceModal(false);
-                  setBalanceAmount("");
-                }}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBalanceSubmit}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
-              >
-                Confirm Collection
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Remove Item Confirmation Modal */}
-      {showRemoveItemModal && selectedBooking && itemToRemove && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Remove Item from Booking
-            </h2>
-            <p className="text-gray-300 mb-4">
-              Are you sure you want to remove{" "}
-              <span className="font-semibold text-white">
-                {itemToRemove.name}
-              </span>{" "}
-              from this booking?
-            </p>
-            <div className="bg-gray-900/40 border border-gray-700 rounded-lg p-3 mb-4 text-sm text-gray-300">
-              <p>
-                <span className="font-semibold">Quantity:</span>{" "}
-                {itemToRemove.quantity}
-              </p>
-              <p>
-                <span className="font-semibold">Subtotal:</span> ₱
-                {Number(
-                  (itemToRemove.price || 0) * (itemToRemove.quantity || 0)
-                ).toLocaleString()}
-              </p>
-            </div>
-            <p className="text-yellow-300 text-xs mb-6">
-              This will update the booking total and remaining balance
-              accordingly and restore inventory/package availability for this
-              item.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowRemoveItemModal(false);
-                  setItemToRemove(null);
-                }}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmRemoveItem}
-                disabled={savingNewItem}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition-colors"
-              >
-                {savingNewItem ? "Removing..." : "Remove Item"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Admin Signature Modal */}
       <AdminSignatureModal
         isOpen={showAdminSignModal}
@@ -2064,484 +1266,6 @@ const Booking = () => {
         booking={signingBooking}
         onSign={handleAdminSign}
       />
-
-      {/* Cancellation Reason Modal */}
-      {showCancelModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Cancel Booking
-            </h2>
-            <p className="text-gray-300 mb-4">
-              Please provide a reason for cancelling this booking.
-            </p>
-            {selectedBooking.paymentMethod === "gcash" && (
-              <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
-                <p className="text-blue-300 text-sm">
-                  <strong>Note:</strong> A refund of ₱
-                  {Number(
-                    selectedBooking.downpaymentAmount ||
-                      selectedBooking.totalAmount ||
-                      0
-                  ).toLocaleString()}{" "}
-                  will be processed for this cancellation.
-                </p>
-              </div>
-            )}
-            <div className="mb-4">
-              <label className="block text-gray-300 mb-2">
-                Cancellation Reason <span className="text-red-400">*</span>
-              </label>
-              <textarea
-                value={cancellationReason}
-                onChange={(e) => setCancellationReason(e.target.value)}
-                placeholder="Please provide a reason for cancelling this booking..."
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-                rows="4"
-              />
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowCancelModal(false);
-                  setCancellationReason("");
-                  setError(null);
-                }}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  if (!cancellationReason.trim()) {
-                    setError("Please provide a reason for cancellation");
-                    return;
-                  }
-                  await updateBookingStatus(
-                    selectedBooking._id,
-                    "cancelled",
-                    {},
-                    cancellationReason.trim()
-                  );
-                  setShowCancelModal(false);
-                  setShowDetailsModal(false);
-                  setCancellationReason("");
-                }}
-                disabled={updatingStatus === selectedBooking._id}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition-colors"
-              >
-                {updatingStatus === selectedBooking._id
-                  ? "Cancelling..."
-                  : "Confirm Cancellation"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Refund Processing Modal */}
-      {showRefundModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Process Refund
-            </h2>
-            <p className="text-gray-300 mb-4">
-              {selectedBooking.paymentMethod === "gcash"
-                ? "Please upload proof of refund for GCash payment."
-                : "Mark this refund as processed for cash payment."}
-            </p>
-            {selectedBooking.paymentMethod === "gcash" && (
-              <div className="mb-4">
-                <label className="block text-gray-300 mb-2">
-                  Refund Proof <span className="text-red-400">*</span>
-                </label>
-                {refundProofPreview && (
-                  <div className="mb-3">
-                    <img
-                      src={refundProofPreview}
-                      alt="Refund proof preview"
-                      className="w-full h-48 object-contain rounded-lg border border-gray-600"
-                    />
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleRefundProofChange}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                />
-                <p className="text-gray-400 text-xs mt-2">
-                  Upload a screenshot or image of the refund transaction
-                </p>
-              </div>
-            )}
-            <div className="mb-4 p-3 bg-green-900/20 border border-green-700 rounded-lg">
-              <p className="text-green-300 text-sm">
-                <strong>Refund Amount:</strong> ₱
-                {Number(selectedBooking.refundAmount).toLocaleString()}
-              </p>
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowRefundModal(false);
-                  setRefundProof("");
-                  setRefundProofPreview(null);
-                  setError(null);
-                }}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleProcessRefund}
-                disabled={processingRefund}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded transition-colors"
-              >
-                {processingRefund
-                  ? "Processing..."
-                  : selectedBooking.paymentMethod === "gcash"
-                  ? "Upload & Process"
-                  : "Mark as Refunded"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Extension Charge Modal */}
-      {showExtensionModal && extensionTargetBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-lg w-full p-6 border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">
-                Add Extension Charge
-              </h2>
-              <button
-                onClick={closeExtensionModal}
-                className="text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            <p className="text-gray-400 text-sm mb-4">
-              Record additional hours rendered and charge the appropriate
-              amount. Leave the amount blank to automatically compute from hours
-              × rate.
-            </p>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-300 text-sm mb-1">
-                    Additional Hours
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={extensionForm.hours}
-                    onChange={(e) =>
-                      handleExtensionFieldChange("hours", e.target.value)
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 text-sm mb-1">
-                    Rate per Hour (₱)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={extensionForm.rate}
-                    onChange={(e) =>
-                      handleExtensionFieldChange("rate", e.target.value)
-                    }
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm mb-1">
-                  Total Amount (₱)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={extensionForm.amount}
-                  onChange={(e) =>
-                    handleExtensionFieldChange("amount", e.target.value)
-                  }
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                  placeholder="Auto-compute if left blank"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm mb-1">
-                  Payment Method
-                </label>
-                <select
-                  value={extensionForm.paymentMethod}
-                  onChange={(e) =>
-                    handleExtensionFieldChange("paymentMethod", e.target.value)
-                  }
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                >
-                  <option value="cash">Cash</option>
-                  <option value="gcash">GCash</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-300 text-sm mb-1">
-                  Notes
-                </label>
-                <textarea
-                  rows="3"
-                  value={extensionForm.description}
-                  onChange={(e) =>
-                    handleExtensionFieldChange("description", e.target.value)
-                  }
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                  placeholder="Add optional details about the extension..."
-                ></textarea>
-              </div>
-              {extensionForm.hours && extensionForm.rate && (
-                <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg text-blue-200 text-sm">
-                  Estimated amount based on hours × rate: ₱
-                  {(
-                    Number(extensionForm.hours || 0) *
-                    Number(extensionForm.rate || 0)
-                  ).toLocaleString()}
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={closeExtensionModal}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitExtensionCharge}
-                disabled={savingExtension}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded transition-colors"
-              >
-                {savingExtension ? "Saving..." : "Add Charge"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Extension Payment Modal */}
-      {showExtensionPaymentModal && selectedExtensionForPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">
-                Mark Extension as Paid
-              </h2>
-              <button
-                onClick={closeExtensionPaymentModal}
-                className="text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            <div className="bg-gray-700 rounded-lg p-4 mb-4">
-              <p className="text-white font-semibold text-lg">
-                ₱
-                {Number(
-                  selectedExtensionForPayment.extension.amount || 0
-                ).toLocaleString()}
-              </p>
-              <p className="text-gray-300 text-sm">
-                {selectedExtensionForPayment.extension.description ||
-                  "Extension charge"}
-              </p>
-              <p className="text-gray-400 text-xs mt-2">
-                Payment Method:{" "}
-                <span className="capitalize">
-                  {selectedExtensionForPayment.extension.paymentMethod ||
-                    "cash"}
-                </span>
-              </p>
-            </div>
-            {selectedExtensionForPayment.extension.paymentMethod ===
-              "gcash" && (
-              <div className="mb-4">
-                <label className="block text-gray-300 text-sm mb-2">
-                  Upload Payment Proof <span className="text-red-400">*</span>
-                </label>
-                {extensionPaymentProof && (
-                  <div className="mb-2">
-                    <img
-                      src={extensionPaymentProof}
-                      alt="Payment proof"
-                      className="w-full h-48 object-contain rounded border border-gray-600"
-                    />
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleExtensionProofChange}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                />
-                <p className="text-gray-400 text-xs mt-1">
-                  Required for GCash payments.
-                </p>
-              </div>
-            )}
-            {selectedExtensionForPayment.extension.paymentMethod === "cash" && (
-              <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-700 rounded-lg text-yellow-200 text-sm">
-                Confirm that cash has been collected for this extension charge.
-                You may optionally upload proof if needed.
-              </div>
-            )}
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={closeExtensionPaymentModal}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmExtensionPayment}
-                disabled={processingExtensionPayment}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded transition-colors"
-              >
-                {processingExtensionPayment
-                  ? "Processing..."
-                  : "Confirm Payment"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Item to Booking Modal */}
-      {showAddItemModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg max-w-4xl w-full p-6 border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">
-                Add Item to Booking
-              </h2>
-              <button
-                onClick={closeAddItemModal}
-                className="text-gray-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            <p className="text-gray-300 text-sm mb-4">
-              Add additional inventory, package, or band/artist to this booking
-              based on the customer&apos;s request. You can quickly pick from
-              existing items below.
-            </p>
-            <div className="grid grid-cols-1 gap-6">
-              {/* Browse existing items using the same cards as customer view */}
-              <div>
-                <div className="flex gap-2 mb-3">
-                  {["inventory", "package", "bandArtist"].map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => {
-                        setAddItemTab(tab);
-                        if (
-                          tab === "inventory" &&
-                          inventoryOptions.length === 0
-                        )
-                          fetchAddItemOptions("inventory");
-                        if (tab === "package" && packageOptions.length === 0)
-                          fetchAddItemOptions("package");
-                        if (tab === "bandArtist" && artistOptions.length === 0)
-                          fetchAddItemOptions("bandArtist");
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                        addItemTab === tab
-                          ? "bg-blue-600 border-blue-500 text-white"
-                          : "bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500"
-                      }`}
-                    >
-                      {tab === "inventory"
-                        ? "Inventory"
-                        : tab === "package"
-                        ? "Packages"
-                        : "Band / Artists"}
-                    </button>
-                  ))}
-                </div>
-                <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 max-h-96 overflow-y-auto space-y-3">
-                  {loadingAddOptions ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-                    </div>
-                  ) : addItemTab === "inventory" ? (
-                    inventoryOptions.length === 0 ? (
-                      <p className="text-gray-400 text-sm">
-                        No inventory items found. Adjust filters in the
-                        inventory section if needed.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {inventoryOptions.map((item) => (
-                          <InventoryCard
-                            key={item._id}
-                            item={item}
-                            onAdd={(inv) =>
-                              quickAddItemToBooking(inv, "inventory")
-                            }
-                          />
-                        ))}
-                      </div>
-                    )
-                  ) : addItemTab === "package" ? (
-                    packageOptions.length === 0 ? (
-                      <p className="text-gray-400 text-sm">
-                        No packages found. Create packages in the packages
-                        section first.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {packageOptions.map((pkg) => (
-                          <PackagesCard
-                            key={pkg._id}
-                            pkg={pkg}
-                            onAdd={(p) => quickAddItemToBooking(p, "package")}
-                          />
-                        ))}
-                      </div>
-                    )
-                  ) : artistOptions.length === 0 ? (
-                    <p className="text-gray-400 text-sm">
-                      No artists found. Make sure artists are registered and
-                      active.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {artistOptions.map((artist) => (
-                        <ArtistCard
-                          key={artist._id}
-                          artist={artist}
-                          bookingDate={formatDate(selectedBooking.bookingDate)}
-                          artistAvailability={{}}
-                          checkingAvailability={false}
-                          onAdd={(a) => quickAddItemToBooking(a, "bandArtist")}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </Layout>
   );
 };
