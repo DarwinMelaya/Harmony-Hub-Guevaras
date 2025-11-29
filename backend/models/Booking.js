@@ -106,6 +106,7 @@ const BookingSchema = new mongoose.Schema({
   downpaymentAmount: {
     type: Number,
     min: 0,
+    default: 0,
   },
   remainingBalance: {
     type: Number,

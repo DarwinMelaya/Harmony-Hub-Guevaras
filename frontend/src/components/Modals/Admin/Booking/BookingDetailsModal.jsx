@@ -104,6 +104,15 @@ const BookingDetailsModal = ({
 }) => {
   if (!isOpen || !selectedBooking) return null;
 
+  const displayRemainingBalance =
+    selectedBooking.paymentMethod === "cash"
+      ? Math.max(
+          Number(selectedBooking.totalAmount || 0) -
+            Number(selectedBooking.downpaymentAmount || 0),
+          0
+        )
+      : Number(selectedBooking.remainingBalance || 0);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col">
@@ -394,61 +403,76 @@ const BookingDetailsModal = ({
                     )}
                   </div>
 
-                  {selectedBooking.paymentMethod === "gcash" && (
-                    <div className="mt-4 pt-4 border-t border-gray-600">
-                      <h4 className="text-white font-medium mb-3">
-                        Payment Breakdown
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-gray-400 text-sm">Payment Type</p>
-                          <p className="text-white capitalize">
-                            {selectedBooking.downpaymentType === "full"
-                              ? "Full Payment"
-                              : `Downpayment (${
-                                  selectedBooking.downpaymentPercentage || 50
-                                }%)`}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-400 text-sm">Amount Paid</p>
-                          <p className="text-green-400 font-bold">
-                            ₱
-                            {Number(
-                              selectedBooking.downpaymentAmount ||
-                                selectedBooking.totalAmount
-                            ).toLocaleString()}
-                          </p>
-                        </div>
-                        {selectedBooking.downpaymentType === "percentage" &&
-                          selectedBooking.remainingBalance > 0 && (
-                            <div>
-                              <p className="text-gray-400 text-sm">
-                                Remaining Balance
-                              </p>
-                              <p className="text-orange-400 font-bold">
-                                ₱
-                                {Number(
-                                  selectedBooking.remainingBalance || 0
-                                ).toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                      </div>
-                      {selectedBooking.downpaymentType === "percentage" &&
-                        selectedBooking.remainingBalance > 0 && (
-                          <div className="mt-3 p-3 bg-orange-900/20 border border-orange-700/50 rounded-lg">
-                            <p className="text-orange-300 text-sm">
-                              ⚠️ Remaining balance of ₱
-                              {Number(
-                                selectedBooking.remainingBalance || 0
-                              ).toLocaleString()}{" "}
-                              to be collected on service day
-                            </p>
-                          </div>
-                        )}
+              {selectedBooking.downpaymentType && (
+                <div className="mt-4 pt-4 border-t border-gray-600">
+                  <h4 className="text-white font-medium mb-3">
+                    {selectedBooking.paymentMethod === "cash"
+                      ? "Downpayment Plan"
+                      : "Payment Breakdown"}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Payment Option</p>
+                      <p className="text-white capitalize">
+                        {selectedBooking.downpaymentType === "full"
+                          ? "Full Payment"
+                          : `Downpayment (${
+                              selectedBooking.downpaymentPercentage || 50
+                            }%)`}
+                      </p>
                     </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">
+                        {selectedBooking.paymentMethod === "cash"
+                          ? "Downpayment Amount"
+                          : "Amount Paid"}
+                      </p>
+                      <p
+                        className={`font-bold ${
+                          selectedBooking.paymentMethod === "cash"
+                            ? "text-yellow-300"
+                            : "text-green-400"
+                        }`}
+                      >
+                        ₱
+                        {Number(
+                          selectedBooking.downpaymentAmount ||
+                            selectedBooking.totalAmount
+                        ).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-sm">Remaining Balance</p>
+                      <p className="text-blue-300 font-bold">
+                        ₱{displayRemainingBalance.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedBooking.paymentMethod === "cash" ? (
+                    <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
+                      <p className="text-yellow-200 text-sm">
+                        Collect ₱
+                        {Number(
+                          selectedBooking.downpaymentAmount || 0
+                        ).toLocaleString()}{" "}
+                        in cash as agreed. The remaining balance above reflects
+                        the amount due after this planned downpayment.
+                      </p>
+                    </div>
+                  ) : (
+                    selectedBooking.downpaymentType === "percentage" &&
+                    displayRemainingBalance > 0 && (
+                      <div className="mt-3 p-3 bg-orange-900/20 border border-orange-700/50 rounded-lg">
+                        <p className="text-orange-300 text-sm">
+                          ⚠️ Remaining balance of ₱
+                          {displayRemainingBalance.toLocaleString()} to be
+                          collected on service day
+                        </p>
+                      </div>
+                    )
                   )}
+                </div>
+              )}
 
                   {selectedBooking.paymentImage && (
                     <div className="mt-4">

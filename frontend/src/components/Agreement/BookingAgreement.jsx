@@ -18,6 +18,7 @@ const BookingAgreement = ({
   const [showError, setShowError] = useState(false);
   const sigCanvas = useRef(null);
 
+  const totalAmountNumber = Number(totalAmount || bookingData?.totalAmount || 0);
   const paymentInfoAvailable = Boolean(bookingData?.paymentMethod);
   const paymentMethodLabel = paymentInfoAvailable
     ? (bookingData.paymentMethod || "").toUpperCase()
@@ -25,6 +26,35 @@ const BookingAgreement = ({
   const paymentOptionLabel = paymentInfoAvailable
     ? "Details to follow"
     : "Pending payment selection";
+  const rawRemainingBalance = Number(
+    bookingData?.remainingBalance ?? totalAmountNumber
+  );
+  const recordedDownpaymentAmount = Number(
+    bookingData?.downpaymentAmount ?? 0
+  );
+  const isFullPaymentSelection =
+    bookingData?.downpaymentType === "full" ||
+    rawRemainingBalance <= 0 ||
+    recordedDownpaymentAmount >= totalAmountNumber;
+  const computedDownpaymentAmount = isFullPaymentSelection
+    ? totalAmountNumber
+    : recordedDownpaymentAmount > 0
+    ? recordedDownpaymentAmount
+    : Math.max(0, totalAmountNumber - rawRemainingBalance);
+  const computedRemainingBalance = isFullPaymentSelection
+    ? 0
+    : Math.max(0, rawRemainingBalance);
+  const computedDownpaymentPercentage = isFullPaymentSelection
+    ? 100
+    : bookingData?.downpaymentPercentage ||
+      (totalAmountNumber > 0
+        ? Math.round((computedDownpaymentAmount / totalAmountNumber) * 100)
+        : 0);
+  const showDownpaymentBreakdown =
+    paymentInfoAvailable &&
+    (bookingData?.paymentMethod === "gcash" ||
+      recordedDownpaymentAmount > 0 ||
+      isFullPaymentSelection);
 
   const clearSignature = () => {
     sigCanvas.current.clear();
@@ -329,6 +359,56 @@ const BookingAgreement = ({
                       your booking. You can then submit your preferred method (Cash or
                       GCash) inside the My Bookings page.
                     </p>
+                  )}
+                  {showDownpaymentBreakdown && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-gray-400 text-sm">
+                          {bookingData?.paymentMethod === "gcash"
+                            ? "Downpayment Paid"
+                            : "Agreed Downpayment"}
+                        </p>
+                        <p className="text-white font-semibold text-lg">
+                          ₱
+                          {Number(
+                            computedDownpaymentAmount || 0
+                          ).toLocaleString()}
+                        </p>
+                        {!isFullPaymentSelection && (
+                          <p className="text-xs text-gray-400">
+                            {computedDownpaymentPercentage}% of total amount
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-sm">
+                          {computedRemainingBalance > 0
+                            ? bookingData?.paymentMethod === "gcash"
+                              ? "Remaining Balance"
+                              : "Balance Due"
+                            : "Payment Status"}
+                        </p>
+                        <p
+                          className={`text-lg font-semibold ${
+                            computedRemainingBalance > 0
+                              ? "text-orange-300"
+                              : "text-green-400"
+                          }`}
+                        >
+                          {computedRemainingBalance > 0
+                            ? `₱${Number(
+                                computedRemainingBalance
+                              ).toLocaleString()}`
+                            : "Fully Paid"}
+                        </p>
+                        {bookingData?.paymentMethod === "cash" &&
+                          computedDownpaymentAmount > 0 && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              To be settled in cash on the event day.
+                            </p>
+                          )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

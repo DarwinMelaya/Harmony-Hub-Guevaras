@@ -799,6 +799,8 @@ const submitPaymentDetails = async (req, res) => {
       paymentImage,
       downpaymentType = "percentage",
       downpaymentPercentage = 50,
+      downpaymentAmount,
+      remainingBalance,
       agreement,
     } = req.body;
 
@@ -850,10 +852,75 @@ const submitPaymentDetails = async (req, res) => {
       });
     }
 
-    let computedDownpaymentType = null;
-    let computedDownpaymentPercentage = null;
-    let computedDownpaymentAmount = 0;
-    let computedRemainingBalance = booking.totalAmount;
+    const totalAmount = Number(booking.totalAmount) || 0;
+    const normalizedDownpaymentType =
+      downpaymentType === "full" ? "full" : "percentage";
+
+    let sanitizedPercentage =
+      normalizedDownpaymentType === "full"
+        ? 100
+        : Number(downpaymentPercentage);
+
+    if (!Number.isFinite(sanitizedPercentage)) {
+      sanitizedPercentage = 50;
+    }
+
+    if (
+      normalizedDownpaymentType === "percentage" &&
+      (sanitizedPercentage <= 0 || sanitizedPercentage > 100)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Downpayment percentage must be between 1 and 100",
+      });
+    }
+
+    // Normalize percentage to a whole number for storage/reporting consistency
+    if (normalizedDownpaymentType === "percentage") {
+      sanitizedPercentage = Math.round(sanitizedPercentage);
+    } else {
+      sanitizedPercentage = 100;
+    }
+
+    const computedAmountFromTotal =
+      normalizedDownpaymentType === "full"
+        ? totalAmount
+        : Math.round((totalAmount * sanitizedPercentage) / 100);
+
+    const providedDownpaymentAmount =
+      typeof downpaymentAmount === "number"
+        ? downpaymentAmount
+        : Number(downpaymentAmount);
+
+    const safeDownpaymentAmount = Math.min(
+      Math.max(
+        Number.isFinite(providedDownpaymentAmount)
+          ? providedDownpaymentAmount
+          : computedAmountFromTotal,
+        0
+      ),
+      totalAmount
+    );
+
+    const providedRemainingBalance =
+      typeof remainingBalance === "number"
+        ? remainingBalance
+        : Number(remainingBalance);
+
+    const computedRemainingBalance = Math.max(
+      totalAmount - safeDownpaymentAmount,
+      0
+    );
+
+    const safeRemainingBalance = Math.min(
+      Math.max(
+        Number.isFinite(providedRemainingBalance)
+          ? providedRemainingBalance
+          : computedRemainingBalance,
+        0
+      ),
+      totalAmount
+    );
 
     if (paymentMethod === "gcash") {
       if (!paymentReference || !paymentImage) {
@@ -862,34 +929,6 @@ const submitPaymentDetails = async (req, res) => {
           message: "Payment reference and screenshot are required for GCash",
         });
       }
-
-      computedDownpaymentType =
-        downpaymentType === "full" ? "full" : "percentage";
-
-      if (computedDownpaymentType === "percentage") {
-        const sanitizedPercentage = Number(downpaymentPercentage) || 50;
-        if (sanitizedPercentage <= 0 || sanitizedPercentage > 100) {
-          return res.status(400).json({
-            success: false,
-            message: "Downpayment percentage must be between 1 and 100",
-          });
-        }
-        computedDownpaymentPercentage = sanitizedPercentage;
-        computedDownpaymentAmount =
-          (booking.totalAmount * sanitizedPercentage) / 100;
-      } else {
-        computedDownpaymentPercentage = 100;
-        computedDownpaymentAmount = booking.totalAmount;
-      }
-
-      computedRemainingBalance =
-        booking.totalAmount - computedDownpaymentAmount;
-    } else {
-      // Cash payments are collected on event day
-      computedDownpaymentType = null;
-      computedDownpaymentPercentage = null;
-      computedDownpaymentAmount = 0;
-      computedRemainingBalance = booking.totalAmount;
     }
 
     // Update agreement with latest client signature/info
@@ -904,10 +943,12 @@ const submitPaymentDetails = async (req, res) => {
     booking.paymentReference =
       paymentMethod === "gcash" ? paymentReference : null;
     booking.paymentImage = paymentMethod === "gcash" ? paymentImage : null;
-    booking.downpaymentType = computedDownpaymentType;
-    booking.downpaymentPercentage = computedDownpaymentPercentage;
-    booking.downpaymentAmount = computedDownpaymentAmount;
-    booking.remainingBalance = computedRemainingBalance;
+
+    booking.downpaymentType = normalizedDownpaymentType;
+    booking.downpaymentPercentage = sanitizedPercentage;
+    booking.downpaymentAmount = safeDownpaymentAmount;
+    booking.remainingBalance =
+      paymentMethod === "gcash" ? safeRemainingBalance : totalAmount;
     booking.paymentStatus = "submitted";
     booking.paymentSelectionAt = booking.paymentSelectionAt || new Date();
     booking.paymentSubmittedAt = new Date();

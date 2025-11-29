@@ -441,22 +441,32 @@ const generateBookingAgreementPDF = (booking, res) => {
     );
     currentY += priceRowHeight;
 
+    const totalAmountNumber = Number(booking.totalAmount || 0);
     const downpaymentPct = booking.downpaymentPercentage || 0;
     const isFullPayment = booking.downpaymentType === "full";
+    const recordedDownpayment = Number(booking.downpaymentAmount ?? 0);
+    const recordedRemainingBalance = Number(booking.remainingBalance ?? 0);
+    const inferredDownpayment = Math.max(
+      0,
+      totalAmountNumber - recordedRemainingBalance
+    );
     const calculatedDownpayment = isFullPayment
-      ? booking.totalAmount
-      : booking.downpaymentAmount ||
-        (booking.totalAmount * downpaymentPct) / 100;
+      ? totalAmountNumber
+      : recordedDownpayment > 0
+      ? recordedDownpayment
+      : inferredDownpayment;
     const remainingBalance = isFullPayment
       ? 0
-      : booking.remainingBalance || booking.totalAmount - calculatedDownpayment;
+      : Math.max(0, recordedRemainingBalance);
     const paymentMethodLabel = (booking.paymentMethod || "N/A").toUpperCase();
+    const effectiveDownpaymentPercentage =
+      isFullPayment || totalAmountNumber === 0
+        ? 100
+        : downpaymentPct ||
+          Math.round((calculatedDownpayment / totalAmountNumber) * 100);
     const paymentOptionLabel = isFullPayment
       ? "Full Payment"
-      : `${
-          downpaymentPct ||
-          Math.round((calculatedDownpayment / booking.totalAmount) * 100)
-        }% Downpayment`;
+      : `${effectiveDownpaymentPercentage}% Downpayment`;
 
     const paymentInfoRowHeight = 18;
     drawCell(
@@ -483,9 +493,11 @@ const generateBookingAgreementPDF = (booking, res) => {
       tableWidth / 2,
       paymentInfoRowHeight,
       `${isFullPayment ? "Total Paid" : "Downpayment Paid"}: Php ${Number(
-        calculatedDownpayment
+        calculatedDownpayment || 0
       ).toLocaleString()}`,
-      { fontSize: 9 }
+      {
+        fontSize: 9,
+      }
     );
     drawCell(
       tableX + tableWidth / 2,
@@ -501,16 +513,21 @@ const generateBookingAgreementPDF = (booking, res) => {
     currentY += paymentInfoRowHeight;
 
     // Down payment section (if applicable)
-    if (booking.paymentMethod === "gcash" && booking.remainingBalance > 0) {
-      const downpayment = booking.totalAmount - booking.remainingBalance;
+    if (booking.paymentMethod === "gcash") {
+      const paymentTimestamp = booking.paymentSubmittedAt || booking.createdAt;
+      const remainingBalanceLabel =
+        remainingBalance > 0
+          ? `BALANCE ₱${Number(remainingBalance).toLocaleString()}`
+          : "BALANCE ₱0 (PAID)";
 
-      // Down payment row
       drawCell(
         tableX,
         currentY,
         130,
         cellHeight,
-        "Down payment: " + downpayment.toLocaleString(),
+        `Downpayment Paid: ₱${Number(
+          calculatedDownpayment || 0
+        ).toLocaleString()}`,
         {
           fontSize: 9,
         }
@@ -527,7 +544,7 @@ const generateBookingAgreementPDF = (booking, res) => {
         currentY,
         85,
         cellHeight,
-        new Date(booking.createdAt).toLocaleDateString("en-US", {
+        new Date(paymentTimestamp).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
           year: "numeric",
@@ -536,17 +553,10 @@ const generateBookingAgreementPDF = (booking, res) => {
           fontSize: 9,
         }
       );
-      drawCell(
-        tableX + 430,
-        currentY,
-        85,
-        cellHeight,
-        "BALANCE " + booking.remainingBalance.toLocaleString(),
-        {
-          fontSize: 9,
-          bold: true,
-        }
-      );
+      drawCell(tableX + 430, currentY, 85, cellHeight, remainingBalanceLabel, {
+        fontSize: 9,
+        bold: true,
+      });
       currentY += cellHeight;
     }
 

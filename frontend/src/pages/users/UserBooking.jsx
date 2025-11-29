@@ -78,6 +78,34 @@ const UserBooking = () => {
     totalAmountForSelection - downpaymentAmount,
     0
   );
+  const bookingAgreementData = selectedBookingForPayment
+    ? {
+        bookingDate: selectedBookingForPayment.bookingDate,
+        bookingTime: selectedBookingForPayment.bookingTime,
+        contactInfo: selectedBookingForPayment.contactInfo || {},
+        paymentMethod:
+          pendingPaymentPayload?.paymentMethod ||
+          selectedBookingForPayment.paymentMethod ||
+          null,
+        downpaymentType:
+          pendingPaymentPayload?.downpaymentType ||
+          selectedBookingForPayment.downpaymentType ||
+          null,
+        downpaymentPercentage:
+          pendingPaymentPayload?.downpaymentPercentage ??
+          selectedBookingForPayment.downpaymentPercentage ??
+          null,
+        downpaymentAmount:
+          pendingPaymentPayload?.downpaymentAmount ??
+          selectedBookingForPayment.downpaymentAmount ??
+          0,
+        remainingBalance:
+          pendingPaymentPayload?.remainingBalance ??
+          selectedBookingForPayment.remainingBalance ??
+          selectedBookingForPayment.totalAmount ??
+          0,
+      }
+    : null;
 
   const renderDownpaymentControls = () => {
     if (!selectedBookingForPayment) return null;
@@ -379,6 +407,8 @@ const UserBooking = () => {
       paymentMethod: paymentForm.paymentMethod,
       downpaymentType: normalizedDownpaymentType,
       downpaymentPercentage: normalizedDownpaymentPercentage,
+      downpaymentAmount,
+      remainingBalance,
     };
 
     if (paymentForm.paymentMethod === "gcash") {
@@ -878,12 +908,7 @@ const UserBooking = () => {
             agreement: agreementInfo,
           });
         }}
-        bookingData={{
-          bookingDate: selectedBookingForPayment?.bookingDate,
-          bookingTime: selectedBookingForPayment?.bookingTime,
-          contactInfo: selectedBookingForPayment?.contactInfo || {},
-          paymentMethod: pendingPaymentPayload?.paymentMethod,
-        }}
+        bookingData={bookingAgreementData || {}}
         cart={
           selectedBookingForPayment
             ? (selectedBookingForPayment.items || []).map((it) => ({
