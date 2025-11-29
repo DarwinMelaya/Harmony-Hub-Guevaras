@@ -31,6 +31,8 @@ const paymentStatusMeta = {
   },
 };
 
+const DOWNPAYMENT_PRESETS = [20, 30, 50, 100];
+
 const UserBooking = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,10 +40,12 @@ const UserBooking = () => {
   const [cancelling, setCancelling] = useState(null);
   const [downloadingAgreement, setDownloadingAgreement] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedBookingForCancel, setSelectedBookingForCancel] = useState(null);
+  const [selectedBookingForCancel, setSelectedBookingForCancel] =
+    useState(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedBookingForPayment, setSelectedBookingForPayment] = useState(null);
+  const [selectedBookingForPayment, setSelectedBookingForPayment] =
+    useState(null);
   const [paymentForm, setPaymentForm] = useState({
     paymentMethod: "cash",
     downpaymentType: "percentage",
@@ -54,6 +58,138 @@ const UserBooking = () => {
   const [userData, setUserData] = useState(null);
   const [showAgreement, setShowAgreement] = useState(false);
   const [pendingPaymentPayload, setPendingPaymentPayload] = useState(null);
+
+  const totalAmountForSelection = Number(
+    selectedBookingForPayment?.totalAmount || 0
+  );
+  const downpaymentPercentageValueRaw =
+    paymentForm.downpaymentType === "full"
+      ? 100
+      : Number(paymentForm.downpaymentPercentage);
+  const downpaymentPercentageValue =
+    Number.isFinite(downpaymentPercentageValueRaw) &&
+    downpaymentPercentageValueRaw > 0
+      ? Math.min(downpaymentPercentageValueRaw, 100)
+      : 50;
+  const downpaymentAmount = Math.round(
+    (totalAmountForSelection * downpaymentPercentageValue) / 100
+  );
+  const remainingBalance = Math.max(
+    totalAmountForSelection - downpaymentAmount,
+    0
+  );
+
+  const renderDownpaymentControls = () => {
+    if (!selectedBookingForPayment) return null;
+    return (
+      <>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Payment Option
+          </label>
+          <div className="grid grid-cols-1 gap-3">
+            <label
+              className={`flex items-center p-3 rounded-lg border cursor-pointer ${
+                paymentForm.downpaymentType === "percentage"
+                  ? "border-green-500 bg-green-500/10"
+                  : "border-gray-600 bg-gray-700/50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="downpaymentType"
+                value="percentage"
+                checked={paymentForm.downpaymentType === "percentage"}
+                onChange={(e) =>
+                  handlePaymentFormChange("downpaymentType", e.target.value)
+                }
+                className="mr-3"
+              />
+              <div>
+                <p className="text-white font-medium">Downpayment</p>
+                <p className="text-gray-400 text-xs">
+                  Pay a portion now, balance on event day
+                </p>
+              </div>
+            </label>
+            <label
+              className={`flex items-center p-3 rounded-lg border cursor-pointer ${
+                paymentForm.downpaymentType === "full"
+                  ? "border-green-500 bg-green-500/10"
+                  : "border-gray-600 bg-gray-700/50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="downpaymentType"
+                value="full"
+                checked={paymentForm.downpaymentType === "full"}
+                onChange={(e) =>
+                  handlePaymentFormChange("downpaymentType", e.target.value)
+                }
+                className="mr-3"
+              />
+              <div>
+                <p className="text-white font-medium">Full Payment</p>
+                <p className="text-gray-400 text-xs">
+                  Settle the entire amount now
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {paymentForm.downpaymentType === "percentage" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Downpayment Percentage
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {DOWNPAYMENT_PRESETS.map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() =>
+                    handlePaymentFormChange("downpaymentPercentage", pct)
+                  }
+                  className={`py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    Number(paymentForm.downpaymentPercentage) === pct
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  {pct}%
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-800/60 border border-gray-700 rounded-lg p-3 text-sm">
+          <div>
+            <p className="text-xs text-gray-400">Selected Option</p>
+            <p className="text-white font-semibold">
+              {paymentForm.downpaymentType === "full"
+                ? "Full Payment"
+                : `${downpaymentPercentageValue}% Downpayment`}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Downpayment Amount</p>
+            <p className="text-green-400 font-semibold">
+              ₱{downpaymentAmount.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400">Remaining Balance</p>
+            <p className="text-blue-300 font-semibold">
+              ₱{remainingBalance.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  };
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -232,19 +368,22 @@ const UserBooking = () => {
       return;
     }
 
+    const normalizedDownpaymentType =
+      paymentForm.downpaymentType === "full" ? "full" : "percentage";
+    const normalizedDownpaymentPercentage =
+      normalizedDownpaymentType === "full"
+        ? 100
+        : downpaymentPercentageValue || 50;
+
     const payload = {
       paymentMethod: paymentForm.paymentMethod,
+      downpaymentType: normalizedDownpaymentType,
+      downpaymentPercentage: normalizedDownpaymentPercentage,
     };
 
     if (paymentForm.paymentMethod === "gcash") {
       payload.paymentReference = paymentForm.paymentReference.trim();
       payload.paymentImage = paymentForm.paymentImage;
-      payload.downpaymentType =
-        paymentForm.downpaymentType === "full" ? "full" : "percentage";
-      payload.downpaymentPercentage =
-        paymentForm.downpaymentType === "full"
-          ? 100
-          : Number(paymentForm.downpaymentPercentage) || 50;
     }
 
     setPendingPaymentPayload(payload);
@@ -317,246 +456,281 @@ const UserBooking = () => {
                     key={b._id}
                     className="bg-gray-800 rounded-lg border border-gray-700 p-5"
                   >
-                  <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`px-2.5 py-1 rounded text-xs font-medium ${
-                          statusClasses[b.status] || statusClasses.pending
-                        }`}
-                      >
-                        {b.status}
-                      </span>
-                      <span className="text-gray-400 text-sm">
-                        {new Date(b.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="text-green-400 font-semibold">
-                        ₱{Number(b.totalAmount || 0).toLocaleString()}
-                      </div>
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs font-medium ${paymentMeta.className}`}
-                      >
-                        {paymentMeta.label}
-                      </span>
-                      {b.agreement && b.agreement.signature && (
-                        <>
-                          {b.agreement.adminSignature ? (
-                            <button
-                              onClick={() => handleDownloadAgreement(b._id)}
-                              disabled={downloadingAgreement === b._id}
-                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors flex items-center gap-1"
-                              title="Download Agreement"
-                            >
-                              {downloadingAgreement === b._id ? (
-                                "Downloading..."
-                              ) : (
-                                <>
-                                  <FileText className="w-3 h-3" />
-                                  Agreement
-                                </>
-                              )}
-                            </button>
-                          ) : (
-                            <div
-                              className="px-3 py-1 bg-gray-600 text-gray-300 text-xs rounded flex items-center gap-1 cursor-not-allowed"
-                              title="Waiting for admin signature"
-                            >
-                              <FileText className="w-3 h-3" />
-                              Pending Admin Signature
-                            </div>
-                          )}
-                        </>
-                      )}
-                      {(b.status === "pending" || b.status === "confirmed") && (
-                        <button
-                          onClick={() => handleCancelBooking(b)}
-                          disabled={cancelling === b._id}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors"
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`px-2.5 py-1 rounded text-xs font-medium ${
+                            statusClasses[b.status] || statusClasses.pending
+                          }`}
                         >
-                          {cancelling === b._id ? "Cancelling..." : "Cancel"}
-                        </button>
-                      )}
-                      {(b.status === "cancelled" || b.status === "refunded") && b.cancellationReason && (
-                        <div className="text-xs text-gray-400 mt-2">
-                          <p className="font-medium text-gray-300">Cancellation Reason:</p>
-                          <p className="italic">{b.cancellationReason}</p>
-                          {b.refundAmount > 0 && (
-                            <div className="mt-2">
-                              {b.refundStatus === "pending" && (
-                                <p className="text-yellow-400">
-                                  Refund pending: ₱{Number(b.refundAmount).toLocaleString()}
-                                </p>
-                              )}
-                              {b.refundStatus === "processed" && (
-                                <>
-                                  <p className="text-green-400 mb-2">
-                                    Refund processed: ₱{Number(b.refundAmount).toLocaleString()}
-                                  </p>
-                                  {b.refundedAt && (
-                                    <p className="text-gray-400 text-xs">
-                                      Processed on: {new Date(b.refundedAt).toLocaleDateString()}
-                                    </p>
-                                  )}
-                                  {b.refundProof && (
-                                    <div className="mt-2">
-                                      <p className="text-gray-300 text-xs mb-1">Refund Proof:</p>
-                                      <img
-                                        src={b.refundProof}
-                                        alt="Refund proof"
-                                        className="w-32 h-32 object-cover rounded-lg border border-gray-600 cursor-pointer"
-                                        onClick={() => window.open(b.refundProof, '_blank')}
-                                        title="Click to view full size"
-                                      />
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="text-gray-300 text-sm">
-                    <div className="mb-2">
-                      <span className="text-gray-400">Booking Date:</span>{" "}
-                      {b.bookingDate
-                        ? new Date(b.bookingDate).toLocaleDateString()
-                        : "-"}
-                      {b.bookingTime ? ` • ${b.bookingTime}` : ""}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-gray-400">Items:</div>
-                      {(b.items || []).map((it, idx) => (
-                        <div key={idx} className="flex justify-between">
-                          <span>
-                            {it.name}{" "}
-                            {it.type === "inventory" ? `(x${it.quantity})` : ""}
-                          </span>
-                          <span className="text-gray-400">
-                            ₱{Number(it.price).toLocaleString()}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  {(b.extensions?.length || b.extensionBalance) && (
-                    <div className="mt-4 pt-4 border-t border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-300 font-medium">
-                          Extension Charges
+                          {b.status}
                         </span>
-                        <span className="text-sm text-gray-400">
-                          Outstanding: ₱
-                          {Number(b.extensionBalance || 0).toLocaleString()}
+                        <span className="text-gray-400 text-sm">
+                          {new Date(b.createdAt).toLocaleString()}
                         </span>
                       </div>
-                      {b.extensions && b.extensions.length > 0 ? (
-                        <div className="mt-2 space-y-2">
-                          {b.extensions.map((ext) => (
-                            <div
-                              key={ext._id || ext.createdAt}
-                              className="bg-gray-700 rounded px-3 py-2 text-sm border border-gray-600"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-white font-medium">
-                                  ₱{Number(ext.amount || 0).toLocaleString()}
-                                </span>
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded-full border ${
-                                    ext.status === "paid"
-                                      ? "text-green-300 border-green-500/50"
-                                      : "text-yellow-300 border-yellow-500/50"
-                                  }`}
-                                >
-                                  {ext.status === "paid" ? "Paid" : "Pending"}
-                                </span>
-                              </div>
-                              <p className="text-gray-300 mt-1">
-                                {ext.description || "Extension charge"}
-                              </p>
-                              <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-3">
-                                {ext.hours !== null && ext.hours !== undefined && (
-                                  <span>{ext.hours} hr(s)</span>
-                                )}
-                                {ext.rate !== null && ext.rate !== undefined && (
-                                  <span>
-                                    @ ₱{Number(ext.rate || 0).toLocaleString()}/hr
-                                  </span>
-                                )}
-                                <span className="capitalize">
-                                  Method: {ext.paymentMethod || "cash"}
-                                </span>
-                                {ext.paidAt && (
-                                  <span>
-                                    Paid: {new Date(ext.paidAt).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                              {ext.paymentProof && (
-                                <button
-                                  onClick={() => window.open(ext.paymentProof, "_blank")}
-                                  className="text-xs text-blue-300 underline mt-2"
-                                >
-                                  View Proof
-                                </button>
-                              )}
-                            </div>
-                          ))}
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="text-green-400 font-semibold">
+                          ₱{Number(b.totalAmount || 0).toLocaleString()}
                         </div>
-                      ) : (
-                        <p className="text-gray-500 text-sm mt-2">
-                          No extension charges recorded.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  </div>
-
-                  {/* Payment Call-to-action */}
-                  <div className="mt-4 p-4 bg-gray-700 rounded-lg border border-gray-600">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <p className="text-white font-medium text-sm">
-                          Payment Status
-                        </p>
-                        <p className="text-gray-300 text-xs">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${paymentMeta.className}`}
+                        >
                           {paymentMeta.label}
-                        </p>
-                      </div>
-                      {b.status === "confirmed" &&
-                        (b.paymentStatus === "awaiting_selection" ||
-                          !b.paymentStatus) && (
+                        </span>
+                        {b.agreement && b.agreement.signature && (
+                          <>
+                            {b.agreement.adminSignature ? (
+                              <button
+                                onClick={() => handleDownloadAgreement(b._id)}
+                                disabled={downloadingAgreement === b._id}
+                                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors flex items-center gap-1"
+                                title="Download Agreement"
+                              >
+                                {downloadingAgreement === b._id ? (
+                                  "Downloading..."
+                                ) : (
+                                  <>
+                                    <FileText className="w-3 h-3" />
+                                    Agreement
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <div
+                                className="px-3 py-1 bg-gray-600 text-gray-300 text-xs rounded flex items-center gap-1 cursor-not-allowed"
+                                title="Waiting for admin signature"
+                              >
+                                <FileText className="w-3 h-3" />
+                                Pending Admin Signature
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {(b.status === "pending" ||
+                          b.status === "confirmed") && (
                           <button
-                            onClick={() => openPaymentModal(b)}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                            onClick={() => handleCancelBooking(b)}
+                            disabled={cancelling === b._id}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white text-xs rounded transition-colors"
                           >
-                            Choose Payment Method
+                            {cancelling === b._id ? "Cancelling..." : "Cancel"}
                           </button>
                         )}
+                        {(b.status === "cancelled" ||
+                          b.status === "refunded") &&
+                          b.cancellationReason && (
+                            <div className="text-xs text-gray-400 mt-2">
+                              <p className="font-medium text-gray-300">
+                                Cancellation Reason:
+                              </p>
+                              <p className="italic">{b.cancellationReason}</p>
+                              {b.refundAmount > 0 && (
+                                <div className="mt-2">
+                                  {b.refundStatus === "pending" && (
+                                    <p className="text-yellow-400">
+                                      Refund pending: ₱
+                                      {Number(b.refundAmount).toLocaleString()}
+                                    </p>
+                                  )}
+                                  {b.refundStatus === "processed" && (
+                                    <>
+                                      <p className="text-green-400 mb-2">
+                                        Refund processed: ₱
+                                        {Number(
+                                          b.refundAmount
+                                        ).toLocaleString()}
+                                      </p>
+                                      {b.refundedAt && (
+                                        <p className="text-gray-400 text-xs">
+                                          Processed on:{" "}
+                                          {new Date(
+                                            b.refundedAt
+                                          ).toLocaleDateString()}
+                                        </p>
+                                      )}
+                                      {b.refundProof && (
+                                        <div className="mt-2">
+                                          <p className="text-gray-300 text-xs mb-1">
+                                            Refund Proof:
+                                          </p>
+                                          <img
+                                            src={b.refundProof}
+                                            alt="Refund proof"
+                                            className="w-32 h-32 object-cover rounded-lg border border-gray-600 cursor-pointer"
+                                            onClick={() =>
+                                              window.open(
+                                                b.refundProof,
+                                                "_blank"
+                                              )
+                                            }
+                                            title="Click to view full size"
+                                          />
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                      </div>
                     </div>
-                    {b.paymentStatus === "submitted" && (
-                      <p className="text-xs text-blue-200 mt-3">
-                        Thanks! Your payment details were sent. Please wait for
-                        admin verification and signature.
-                      </p>
-                    )}
-                    {b.paymentStatus === "verified" && (
-                      <p className="text-xs text-green-200 mt-3">
-                        Payment verified. A signed copy of the contract is now
-                        available for download.
-                      </p>
-                    )}
-                    {(!b.paymentStatus ||
-                      b.paymentStatus === "awaiting_confirmation") && (
-                      <p className="text-xs text-gray-300 mt-3">
-                        Once an admin confirms your schedule, you can submit
-                        your preferred payment method here.
-                      </p>
-                    )}
+
+                    <div className="text-gray-300 text-sm">
+                      <div className="mb-2">
+                        <span className="text-gray-400">Booking Date:</span>{" "}
+                        {b.bookingDate
+                          ? new Date(b.bookingDate).toLocaleDateString()
+                          : "-"}
+                        {b.bookingTime ? ` • ${b.bookingTime}` : ""}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-gray-400">Items:</div>
+                        {(b.items || []).map((it, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span>
+                              {it.name}{" "}
+                              {it.type === "inventory"
+                                ? `(x${it.quantity})`
+                                : ""}
+                            </span>
+                            <span className="text-gray-400">
+                              ₱{Number(it.price).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {(b.extensions?.length || b.extensionBalance) && (
+                        <div className="mt-4 pt-4 border-t border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-300 font-medium">
+                              Extension Charges
+                            </span>
+                            <span className="text-sm text-gray-400">
+                              Outstanding: ₱
+                              {Number(b.extensionBalance || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          {b.extensions && b.extensions.length > 0 ? (
+                            <div className="mt-2 space-y-2">
+                              {b.extensions.map((ext) => (
+                                <div
+                                  key={ext._id || ext.createdAt}
+                                  className="bg-gray-700 rounded px-3 py-2 text-sm border border-gray-600"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-white font-medium">
+                                      ₱
+                                      {Number(ext.amount || 0).toLocaleString()}
+                                    </span>
+                                    <span
+                                      className={`text-xs px-2 py-0.5 rounded-full border ${
+                                        ext.status === "paid"
+                                          ? "text-green-300 border-green-500/50"
+                                          : "text-yellow-300 border-yellow-500/50"
+                                      }`}
+                                    >
+                                      {ext.status === "paid"
+                                        ? "Paid"
+                                        : "Pending"}
+                                    </span>
+                                  </div>
+                                  <p className="text-gray-300 mt-1">
+                                    {ext.description || "Extension charge"}
+                                  </p>
+                                  <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-3">
+                                    {ext.hours !== null &&
+                                      ext.hours !== undefined && (
+                                        <span>{ext.hours} hr(s)</span>
+                                      )}
+                                    {ext.rate !== null &&
+                                      ext.rate !== undefined && (
+                                        <span>
+                                          @ ₱
+                                          {Number(
+                                            ext.rate || 0
+                                          ).toLocaleString()}
+                                          /hr
+                                        </span>
+                                      )}
+                                    <span className="capitalize">
+                                      Method: {ext.paymentMethod || "cash"}
+                                    </span>
+                                    {ext.paidAt && (
+                                      <span>
+                                        Paid:{" "}
+                                        {new Date(
+                                          ext.paidAt
+                                        ).toLocaleDateString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {ext.paymentProof && (
+                                    <button
+                                      onClick={() =>
+                                        window.open(ext.paymentProof, "_blank")
+                                      }
+                                      className="text-xs text-blue-300 underline mt-2"
+                                    >
+                                      View Proof
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm mt-2">
+                              No extension charges recorded.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Call-to-action */}
+                    <div className="mt-4 p-4 bg-gray-700 rounded-lg border border-gray-600">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <p className="text-white font-medium text-sm">
+                            Payment Status
+                          </p>
+                          <p className="text-gray-300 text-xs">
+                            {paymentMeta.label}
+                          </p>
+                        </div>
+                        {b.status === "confirmed" &&
+                          (b.paymentStatus === "awaiting_selection" ||
+                            !b.paymentStatus) && (
+                            <button
+                              onClick={() => openPaymentModal(b)}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                            >
+                              Choose Payment Method
+                            </button>
+                          )}
+                      </div>
+                      {b.paymentStatus === "submitted" && (
+                        <p className="text-xs text-blue-200 mt-3">
+                          Thanks! Your payment details were sent. Please wait
+                          for admin verification and signature.
+                        </p>
+                      )}
+                      {b.paymentStatus === "verified" && (
+                        <p className="text-xs text-green-200 mt-3">
+                          Payment verified. A signed copy of the contract is now
+                          available for download.
+                        </p>
+                      )}
+                      {(!b.paymentStatus ||
+                        b.paymentStatus === "awaiting_confirmation") && (
+                        <p className="text-xs text-gray-300 mt-3">
+                          Once an admin confirms your schedule, you can submit
+                          your preferred payment method here.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -602,7 +776,9 @@ const UserBooking = () => {
                     <button
                       key={method}
                       type="button"
-                      onClick={() => handlePaymentFormChange("paymentMethod", method)}
+                      onClick={() =>
+                        handlePaymentFormChange("paymentMethod", method)
+                      }
                       className={`py-2 px-3 rounded-lg text-sm font-semibold border transition-colors ${
                         paymentForm.paymentMethod === method
                           ? "bg-blue-600 text-white border-blue-500"
@@ -617,87 +793,7 @@ const UserBooking = () => {
 
               {paymentForm.paymentMethod === "gcash" && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Payment Option
-                    </label>
-                    <div className="grid grid-cols-1 gap-3">
-                      <label
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer ${
-                          paymentForm.downpaymentType === "percentage"
-                            ? "border-green-500 bg-green-500/10"
-                            : "border-gray-600 bg-gray-700/50"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="downpaymentType"
-                          value="percentage"
-                          checked={paymentForm.downpaymentType === "percentage"}
-                          onChange={(e) =>
-                            handlePaymentFormChange("downpaymentType", e.target.value)
-                          }
-                          className="mr-3"
-                        />
-                        <div>
-                          <p className="text-white font-medium">Downpayment</p>
-                          <p className="text-gray-400 text-xs">
-                            Pay a portion now, balance on event day
-                          </p>
-                        </div>
-                      </label>
-                      <label
-                        className={`flex items-center p-3 rounded-lg border cursor-pointer ${
-                          paymentForm.downpaymentType === "full"
-                            ? "border-green-500 bg-green-500/10"
-                            : "border-gray-600 bg-gray-700/50"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="downpaymentType"
-                          value="full"
-                          checked={paymentForm.downpaymentType === "full"}
-                          onChange={(e) =>
-                            handlePaymentFormChange("downpaymentType", e.target.value)
-                          }
-                          className="mr-3"
-                        />
-                        <div>
-                          <p className="text-white font-medium">Full Payment</p>
-                          <p className="text-gray-400 text-xs">
-                            Pay the total amount now
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {paymentForm.downpaymentType === "percentage" && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Downpayment Percentage
-                      </label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[20, 30, 50, 100].map((pct) => (
-                          <button
-                            key={pct}
-                            type="button"
-                            onClick={() =>
-                              handlePaymentFormChange("downpaymentPercentage", pct)
-                            }
-                            className={`py-2 rounded-lg text-sm font-semibold transition-colors ${
-                              paymentForm.downpaymentPercentage === pct
-                                ? "bg-green-600 text-white"
-                                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                            }`}
-                          >
-                            {pct}%
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {renderDownpaymentControls()}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -707,7 +803,10 @@ const UserBooking = () => {
                       type="text"
                       value={paymentForm.paymentReference}
                       onChange={(e) =>
-                        handlePaymentFormChange("paymentReference", e.target.value)
+                        handlePaymentFormChange(
+                          "paymentReference",
+                          e.target.value
+                        )
                       }
                       className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter 13-digit reference number"
@@ -739,10 +838,13 @@ const UserBooking = () => {
               )}
 
               {paymentForm.paymentMethod === "cash" && (
-                <div className="p-3 bg-yellow-900/20 border border-yellow-700/60 rounded text-xs text-yellow-200">
-                  Cash payments are collected on the event day. Selecting this
-                  option lets the admin know you will settle on-site.
-                </div>
+                <>
+                  <div className="p-3 bg-yellow-900/20 border border-yellow-700/60 rounded text-xs text-yellow-200">
+                    Cash payments are collected on the event day. Selecting this
+                    option lets the admin know you will settle on-site.
+                  </div>
+                  {renderDownpaymentControls()}
+                </>
               )}
             </div>
 
@@ -806,7 +908,8 @@ const UserBooking = () => {
               Cancel Booking
             </h2>
             <p className="text-gray-300 mb-4">
-              Are you sure you want to cancel this booking? Please provide a reason for cancellation.
+              Are you sure you want to cancel this booking? Please provide a
+              reason for cancellation.
             </p>
             {selectedBookingForCancel.paymentMethod === "gcash" && (
               <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700 rounded-lg">

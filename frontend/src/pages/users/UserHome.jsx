@@ -256,18 +256,16 @@ const UserHome = () => {
     setSortBy("newest");
   };
 
-  // Cart functions
-  const adjustInventoryQuantity = (itemId, delta) => {
-    // delta > 0 means reserve (decrease displayed inventory)
-    // delta < 0 means release (increase displayed inventory)
-    setInventory((prev) =>
-      prev.map((inv) =>
-        inv._id === itemId
-          ? { ...inv, quantity: Math.max(0, (inv.quantity ?? 0) - delta) }
-          : inv
-      )
-    );
-  };
+  // Cart helper: get current reserved quantity for an inventory item
+  const getReservedQuantity = useCallback(
+    (itemId) => {
+      const cartItem = cart.find(
+        (ci) => ci.id === itemId && ci.type === "inventory"
+      );
+      return cartItem?.quantity ?? 0;
+    },
+    [cart]
+  );
 
   const addToCart = async (item, type) => {
     const cartItem = {
@@ -285,23 +283,23 @@ const UserHome = () => {
 
     if (type === "inventory") {
       const inv = inventory.find((invItem) => invItem._id === item._id);
-      if (!inv || (inv.quantity ?? 0) <= 0) return; // no stock to reserve
+      const available = inv?.quantity ?? 0;
+      const reserved = getReservedQuantity(item._id);
+      if (!inv || available <= reserved) {
+        setError("No more stock available for this item.");
+        return;
+      }
 
-      // Reserve one unit visually first
-      setInventory((prev) =>
-        prev.map((invItem) =>
-          invItem._id === item._id
-            ? { ...invItem, quantity: Math.max(0, (invItem.quantity ?? 0) - 1) }
-            : invItem
-        )
-      );
-
-      // Then update cart
       setCart((prevCart) => {
         const existingItem = prevCart.find(
           (ci) => ci.id === item._id && ci.type === type
         );
         if (existingItem) {
+          // ensure we don't exceed available stock
+          if (existingItem.quantity >= available) {
+            setError("Reached maximum quantity for this item.");
+            return prevCart;
+          }
           return prevCart.map((c) =>
             c.id === item._id && c.type === type
               ? { ...c, quantity: c.quantity + 1 }
@@ -410,14 +408,9 @@ const UserHome = () => {
   };
 
   const removeFromCart = (itemId, type) => {
-    setCart((prevCart) => {
-      const item = prevCart.find((i) => i.id === itemId && i.type === type);
-      if (item && type === "inventory") {
-        // Release reserved quantity back to inventory
-        adjustInventoryQuantity(itemId, -item.quantity);
-      }
-      return prevCart.filter((i) => !(i.id === itemId && i.type === type));
-    });
+    setCart((prevCart) =>
+      prevCart.filter((i) => !(i.id === itemId && i.type === type))
+    );
   };
 
   const updateCartQuantity = (itemId, type, newQuantity) => {
@@ -437,18 +430,14 @@ const UserHome = () => {
           const diff = newQuantity - currentQty;
           if (diff === 0) return item;
           if (diff > 0) {
-            // Need to reserve more units if available
             const inv = inventory.find((invItem) => invItem._id === itemId);
             const available = inv?.quantity ?? 0;
-            const canReserve = Math.min(diff, available);
-            if (canReserve > 0) {
-              adjustInventoryQuantity(itemId, +canReserve);
-              return { ...item, quantity: currentQty + canReserve };
+            if (newQuantity > available) {
+              setError("Cannot exceed available stock.");
+              return item;
             }
-            return item; // no change if not enough stock
+            return { ...item, quantity: newQuantity };
           } else {
-            // Reduce reserved units
-            adjustInventoryQuantity(itemId, diff); // diff is negative, releases stock
             return { ...item, quantity: newQuantity };
           }
         }
@@ -463,14 +452,7 @@ const UserHome = () => {
 
   const clearCart = () => {
     // Release all reserved inventory
-    setCart((prev) => {
-      prev.forEach((item) => {
-        if (item.type === "inventory") {
-          adjustInventoryQuantity(item.id, -item.quantity);
-        }
-      });
-      return [];
-    });
+    setCart([]);
   };
 
   const switchBookingMode = (mode) => {
@@ -478,14 +460,7 @@ const UserHome = () => {
     // On mode switch, keep only compatible items
     if (mode === "packages") {
       // Release inventory reservations and remove inventory; keep packages and artists
-      setCart((prev) => {
-        prev.forEach((item) => {
-          if (item.type === "inventory") {
-            adjustInventoryQuantity(item.id, -item.quantity);
-          }
-        });
-        return prev.filter((i) => i.type !== "inventory");
-      });
+      setCart((prev) => prev.filter((i) => i.type !== "inventory"));
     } else {
       // standard: remove packages only, keep inventory and artists
       setCart((prev) => prev.filter((i) => i.type !== "package"));
