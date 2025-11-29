@@ -1,7 +1,13 @@
 import Layout from "../../components/Layout/Layout";
 import CartModal from "../../components/Modals/Users/CartModal";
 import BookingModal from "../../components/Modals/Users/BookingModal";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   User,
   ChevronDown,
@@ -172,19 +178,54 @@ const UserHome = () => {
     }
   }, [bookingSuccess, fetchData]);
 
-  // Poll inventory data every 30 seconds to reflect real-time changes from admin
+  // Poll inventory data frequently while the tab is active
   useEffect(() => {
-    // Set up interval to poll inventory data silently in the background
-    const pollInterval = setInterval(() => {
-      // Silently fetch data in the background (don't show loading state)
-      fetchData(true);
-    }, 30000); // Poll every 30 seconds
+    let pollInterval = null;
 
-    // Cleanup interval on unmount
-    return () => {
-      clearInterval(pollInterval);
+    const startPolling = () => {
+      // Immediately fetch once when starting
+      fetchData(true);
+      pollInterval = setInterval(() => {
+        fetchData(true);
+      }, 10000); // 10-second refresh while active
     };
-  }, [fetchData]); // Depend on fetchData which is memoized with useCallback
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        stopPolling();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      stopPolling();
+      startPolling();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
+
+    // Kick off polling immediately when component mounts
+    startPolling();
+
+    return () => {
+      stopPolling();
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [fetchData]);
 
   // Check artist availability for a specific date
   const checkArtistAvailability = async (artistId, bookingDate) => {
