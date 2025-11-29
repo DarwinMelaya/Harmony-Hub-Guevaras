@@ -640,10 +640,16 @@ const updateBookingStatus = async (req, res) => {
     // When confirmed, inventory should remain reduced (no change needed)
     // Inventory is only restored when booking is cancelled (see below)
 
-    // Re-enable availability for packages when completed
+    // Restore inventory/package availability when completed
     if (previousStatus !== "completed" && status === "completed") {
       for (const item of booking.items) {
-        if (item.type === "package") {
+        if (item.type === "inventory") {
+          await Inventory.findByIdAndUpdate(
+            item.itemId,
+            { $inc: { quantity: item.quantity } },
+            { new: true }
+          );
+        } else if (item.type === "package") {
           await Packages.findByIdAndUpdate(
             item.itemId,
             { $set: { isAvailable: true } },
@@ -947,8 +953,7 @@ const submitPaymentDetails = async (req, res) => {
     booking.downpaymentType = normalizedDownpaymentType;
     booking.downpaymentPercentage = sanitizedPercentage;
     booking.downpaymentAmount = safeDownpaymentAmount;
-    booking.remainingBalance =
-      paymentMethod === "gcash" ? safeRemainingBalance : totalAmount;
+    booking.remainingBalance = safeRemainingBalance;
     booking.paymentStatus = "submitted";
     booking.paymentSelectionAt = booking.paymentSelectionAt || new Date();
     booking.paymentSubmittedAt = new Date();
