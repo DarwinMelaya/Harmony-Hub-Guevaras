@@ -3,11 +3,6 @@ import Layout from "../../components/Layout/Layout";
 import {
   Users,
   Search,
-  Filter,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Eye,
   UserCheck,
   UserX,
   Mail,
@@ -114,7 +109,9 @@ const OwnerUser = () => {
         <div className="bg-[#30343c] h-screen w-full text-white flex items-center justify-center overflow-hidden px-4">
           <div className="text-center max-w-md">
             <div className="text-red-400 text-lg sm:text-xl mb-2">Error</div>
-            <div className="text-sm sm:text-base text-gray-300 mb-4">{error}</div>
+            <div className="text-sm sm:text-base text-gray-300 mb-4">
+              {error}
+            </div>
             <button
               onClick={fetchUsers}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base transition-colors"
@@ -143,7 +140,7 @@ const OwnerUser = () => {
                   Manage all users in the system ({users.length} total users)
                 </p>
               </div>
-              <button 
+              <button
                 type="button"
                 className="w-full sm:w-auto px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 flex items-center justify-center gap-2 transition-colors cursor-pointer relative z-10"
                 onClick={() => {
@@ -222,16 +219,13 @@ const OwnerUser = () => {
                     <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden xl:table-cell">
                       Joined
                     </th>
-                    <th className="px-2 lg:px-3 xl:px-4 py-2.5 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Actions
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-gray-800 divide-y divide-gray-700">
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="6"
+                        colSpan="5"
                         className="px-6 py-12 text-center text-gray-400"
                       >
                         <Users className="w-12 h-12 mx-auto mb-4 text-gray-600" />
@@ -280,18 +274,24 @@ const OwnerUser = () => {
                           <div className="min-w-0">
                             <div className="flex items-center text-xs lg:text-sm text-white">
                               <Mail className="w-3 h-3 lg:w-3.5 lg:h-3.5 mr-1.5 text-gray-400 shrink-0" />
-                              <span className="truncate max-w-[150px] lg:max-w-[200px] xl:max-w-none">{user.email}</span>
+                              <span className="truncate max-w-[150px] lg:max-w-[200px] xl:max-w-none">
+                                {user.email}
+                              </span>
                             </div>
                             {user.phoneNumber && (
                               <div className="flex items-center text-xs text-gray-400 mt-0.5">
                                 <Phone className="w-3 h-3 mr-1.5 text-gray-500 shrink-0" />
-                                <span className="truncate max-w-[120px] lg:max-w-[150px]">{user.phoneNumber}</span>
+                                <span className="truncate max-w-[120px] lg:max-w-[150px]">
+                                  {user.phoneNumber}
+                                </span>
                               </div>
                             )}
                             {user.location && (
                               <div className="flex items-center text-xs text-gray-400 mt-0.5 hidden xl:flex">
                                 <MapPin className="w-3 h-3 mr-1.5 text-gray-500 shrink-0" />
-                                <span className="truncate max-w-[150px]">{user.location}</span>
+                                <span className="truncate max-w-[150px]">
+                                  {user.location}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -303,8 +303,12 @@ const OwnerUser = () => {
                             )}`}
                           >
                             <Shield className="w-3 h-3 mr-1" />
-                            <span className="hidden lg:inline">{user.role}</span>
-                            <span className="lg:hidden">{user.role.charAt(0).toUpperCase()}</span>
+                            <span className="hidden lg:inline">
+                              {user.role}
+                            </span>
+                            <span className="lg:hidden">
+                              {user.role.charAt(0).toUpperCase()}
+                            </span>
                           </span>
                         </td>
                         <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap">
@@ -324,7 +328,9 @@ const OwnerUser = () => {
                             ) : (
                               <>
                                 <UserX className="w-3 h-3 mr-1" />
-                                <span className="hidden lg:inline">Inactive</span>
+                                <span className="hidden lg:inline">
+                                  Inactive
+                                </span>
                                 <span className="lg:hidden">I</span>
                               </>
                             )}
@@ -334,19 +340,6 @@ const OwnerUser = () => {
                           <div className="flex items-center">
                             <Calendar className="w-3 h-3 lg:w-3.5 lg:h-3.5 mr-1.5 text-gray-500 shrink-0" />
                             {formatDate(user.createdAt)}
-                          </div>
-                        </td>
-                        <td className="px-2 lg:px-3 xl:px-4 py-3 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center space-x-1 lg:space-x-1.5">
-                            <button className="text-blue-400 hover:text-blue-300 p-1 transition-colors" aria-label="View">
-                              <Eye className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                            </button>
-                            <button className="text-green-400 hover:text-green-300 p-1 transition-colors" aria-label="Edit">
-                              <Edit className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                            </button>
-                            <button className="text-red-400 hover:text-red-300 p-1 transition-colors" aria-label="Delete">
-                              <Trash2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -400,17 +393,6 @@ const OwnerUser = () => {
                           @{user.username}
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                      <button className="text-blue-400 hover:text-blue-300 p-1.5 transition-colors" aria-label="View">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="text-green-400 hover:text-green-300 p-1.5 transition-colors" aria-label="Edit">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="text-red-400 hover:text-red-300 p-1.5 transition-colors" aria-label="Delete">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
 
