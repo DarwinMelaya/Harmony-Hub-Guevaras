@@ -218,6 +218,10 @@ const generateBookingAgreementPDF = (booking, res) => {
       (item) => item.type === "bandArtist"
     );
     const packages = booking.items.filter((item) => item.type === "package");
+    const additionalItems = booking.items.filter((item) => item.isAdditional);
+    const extensionCharges = Array.isArray(booking.extensions)
+      ? booking.extensions
+      : [];
 
     // AUDIO Section
     if (audioItems.length > 0) {
@@ -340,6 +344,69 @@ const generateBookingAgreementPDF = (booking, res) => {
           fontSize: 9,
           align: "center",
         });
+        currentY += itemRowHeight;
+      });
+    }
+
+    // Additional Items Section
+    if (additionalItems.length > 0) {
+      drawCell(
+        tableX,
+        currentY,
+        tableWidth,
+        itemRowHeight,
+        "ADDITIONAL ITEMS ADDED BY ADMIN",
+        {
+          bold: true,
+          fontSize: 10,
+          align: "center",
+          fillColor: "#bfdbfe",
+        }
+      );
+      currentY += itemRowHeight;
+
+      additionalItems.forEach((item) => {
+        drawCell(tableX, currentY, 240, itemRowHeight, item.name, {
+          fontSize: 9,
+        });
+        drawCell(
+          tableX + 240,
+          currentY,
+          70,
+          itemRowHeight,
+          `x${item.quantity}`,
+          {
+            fontSize: 9,
+            align: "center",
+          }
+        );
+        drawCell(
+          tableX + 310,
+          currentY,
+          120,
+          itemRowHeight,
+          `₱${Number(item.price || 0).toLocaleString()}`,
+          {
+            fontSize: 9,
+            align: "center",
+          }
+        );
+        drawCell(
+          tableX + 430,
+          currentY,
+          85,
+          itemRowHeight,
+          new Date(item.addedAt || booking.updatedAt || booking.createdAt)
+            .toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
+          {
+            fontSize: 8,
+            align: "center",
+          }
+        );
         currentY += itemRowHeight;
       });
     }
@@ -731,6 +798,88 @@ const generateBookingAgreementPDF = (booking, res) => {
       );
 
     currentY += signatureHeight + 5;
+
+    // Extension Charges Section
+    if (extensionCharges.length > 0) {
+      drawCell(
+        tableX,
+        currentY,
+        tableWidth,
+        itemRowHeight,
+        "EXTENSION CHARGES",
+        {
+          bold: true,
+          fontSize: 10,
+          align: "center",
+          fillColor: "#fde68a",
+        }
+      );
+      currentY += itemRowHeight;
+
+      extensionCharges.forEach((extension) => {
+        drawCell(
+          tableX,
+          currentY,
+          220,
+          itemRowHeight,
+          extension.description || "Extension Charge",
+          {
+            fontSize: 9,
+          }
+        );
+        drawCell(
+          tableX + 220,
+          currentY,
+          80,
+          itemRowHeight,
+          extension.hours ? `${extension.hours} hr(s)` : "-",
+          {
+            fontSize: 9,
+            align: "center",
+          }
+        );
+        drawCell(
+          tableX + 300,
+          currentY,
+          80,
+          itemRowHeight,
+          extension.paymentMethod
+            ? extension.paymentMethod.toUpperCase()
+            : "CASH",
+          {
+            fontSize: 9,
+            align: "center",
+          }
+        );
+        drawCell(
+          tableX + 380,
+          currentY,
+          80,
+          itemRowHeight,
+          extension.status
+            ? extension.status.toUpperCase()
+            : "PENDING",
+          {
+            fontSize: 9,
+            align: "center",
+          }
+        );
+        drawCell(
+          tableX + 460,
+          currentY,
+          55,
+          itemRowHeight,
+          `₱${Number(extension.amount || 0).toLocaleString()}`,
+          {
+            fontSize: 9,
+            align: "right",
+          }
+        );
+        currentY += itemRowHeight;
+      });
+
+      currentY += 5;
+    }
 
     // Client label under signature
     doc
