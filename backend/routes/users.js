@@ -16,6 +16,7 @@ const {
   updateUserProfile,
   changePassword,
   deleteUser,
+  deleteUserById,
   getAllUsers,
   getUsersByRole,
   updateUserRole,
@@ -67,8 +68,8 @@ router.put(
   updateArtistAvailabilityById
 );
 
-// Owner/Admin routes
-router.get("/all", authenticateToken, authorizeOwnerOrAdmin, getAllUsers);
+// Owner/Admin routes (also allows clients to view users for deletion)
+router.get("/all", authenticateToken, getAllUsers);
 router.get("/stats", authenticateToken, authorizeOwnerOrAdmin, getUserStats);
 router.get(
   "/by-role/:role",
@@ -87,6 +88,11 @@ router.put(
   authenticateToken,
   authorizeOwnerOrAdmin,
   toggleUserStatus
+);
+router.delete(
+  "/:userId",
+  authenticateToken,
+  deleteUserById
 );
 
 module.exports = router;

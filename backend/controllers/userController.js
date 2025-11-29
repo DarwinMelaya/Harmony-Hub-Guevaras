@@ -443,6 +443,46 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// Delete user by ID (allows clients to delete users)
+const deleteUserById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUser = req.user;
+
+    // Find the target user
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Prevent users from deleting themselves
+    if (targetUser._id.toString() === currentUser._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account. Please use the account deletion feature.",
+      });
+    }
+
+    // Delete the user
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete user by ID error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 // Get all users (admin only)
 const getAllUsers = async (req, res) => {
   try {
@@ -1244,6 +1284,7 @@ module.exports = {
   updateUserProfile,
   changePassword,
   deleteUser,
+  deleteUserById,
   getAllUsers,
   getUsersByRole,
   updateUserRole,

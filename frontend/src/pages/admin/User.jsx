@@ -28,6 +28,10 @@ const User = () => {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [newRole, setNewRole] = useState("");
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch users from backend
   const fetchUsers = async () => {
@@ -127,6 +131,56 @@ const User = () => {
   const handleRoleChange = () => {
     if (selectedUser && newRole && newRole !== selectedUser.role) {
       changeUserRole(selectedUser._id, newRole);
+    }
+  };
+
+  // Open view modal
+  const openViewModal = (user) => {
+    setSelectedUser(user);
+    setShowViewModal(true);
+  };
+
+  // Open delete confirmation modal
+  const openDeleteModal = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  // Delete user
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/users/${userToDelete._id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete user");
+      }
+
+      // Remove user from local state
+      setUsers(users.filter((user) => user._id !== userToDelete._id));
+
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error deleting user:", err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -424,6 +478,7 @@ const User = () => {
                               </button>
                             )}
                             <button
+                              onClick={() => openViewModal(user)}
                               className="text-blue-400 hover:text-blue-300 p-1 transition-colors"
                               title="View Details"
                             >
@@ -436,6 +491,7 @@ const User = () => {
                               <Edit className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </button>
                             <button
+                              onClick={() => openDeleteModal(user)}
                               className="text-red-400 hover:text-red-300 p-1 transition-colors"
                               title="Delete User"
                             >
@@ -506,6 +562,7 @@ const User = () => {
                         </button>
                       )}
                       <button
+                        onClick={() => openViewModal(user)}
                         className="text-blue-400 hover:text-blue-300 p-1.5 transition-colors"
                         title="View Details"
                       >
@@ -518,6 +575,7 @@ const User = () => {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => openDeleteModal(user)}
                         className="text-red-400 hover:text-red-300 p-1.5 transition-colors"
                         title="Delete User"
                       >
@@ -676,6 +734,253 @@ const User = () => {
                   className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
                 >
                   Update Role
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View User Details Modal */}
+        {showViewModal && selectedUser && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">
+                  User Details
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors p-1"
+                  aria-label="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Profile Photo and Basic Info */}
+                <div className="flex items-start gap-4 pb-4 border-b border-gray-700">
+                  <div className="flex-shrink-0">
+                    {selectedUser.profilePhoto ? (
+                      <img
+                        src={selectedUser.profilePhoto}
+                        alt={selectedUser.fullName}
+                        className="h-20 w-20 rounded-full object-cover border-2 border-gray-600"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 rounded-full bg-gray-600 flex items-center justify-center border-2 border-gray-600">
+                        <span className="text-2xl font-medium text-gray-300">
+                          {selectedUser.fullName?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-xl font-bold text-white mb-1">
+                      {selectedUser.fullName}
+                    </h4>
+                    <p className="text-gray-400 mb-2">@{selectedUser.username}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(
+                          selectedUser.role
+                        )}`}
+                      >
+                        <Shield className="w-3 h-3 mr-1" />
+                        {selectedUser.role}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          selectedUser.isActive
+                            ? "bg-green-900/50 text-green-300 border border-green-700"
+                            : "bg-red-900/50 text-red-300 border border-red-700"
+                        }`}
+                      >
+                        {selectedUser.isActive ? (
+                          <>
+                            <UserCheck className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <UserX className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div className="space-y-3">
+                  <h5 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+                    Contact Information
+                  </h5>
+                  <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center text-white">
+                      <Mail className="w-4 h-4 mr-3 text-gray-400 shrink-0" />
+                      <span className="break-all">{selectedUser.email}</span>
+                    </div>
+                    {selectedUser.phoneNumber && (
+                      <div className="flex items-center text-white">
+                        <Phone className="w-4 h-4 mr-3 text-gray-400 shrink-0" />
+                        <span>{selectedUser.phoneNumber}</span>
+                      </div>
+                    )}
+                    {selectedUser.location && (
+                      <div className="flex items-center text-white">
+                        <MapPin className="w-4 h-4 mr-3 text-gray-400 shrink-0" />
+                        <span>{selectedUser.location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Account Information */}
+                <div className="space-y-3">
+                  <h5 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+                    Account Information
+                  </h5>
+                  <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Account Status</span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          selectedUser.isActive
+                            ? "bg-green-900/50 text-green-300 border border-green-700"
+                            : "bg-red-900/50 text-red-300 border border-red-700"
+                        }`}
+                      >
+                        {selectedUser.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Email Verified</span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          selectedUser.isVerified
+                            ? "bg-green-900/50 text-green-300 border border-green-700"
+                            : "bg-yellow-900/50 text-yellow-300 border border-yellow-700"
+                        }`}
+                      >
+                        {selectedUser.isVerified ? "Verified" : "Not Verified"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Joined Date</span>
+                      <span className="text-white">
+                        {formatDate(selectedUser.createdAt)}
+                      </span>
+                    </div>
+                    {selectedUser.updatedAt && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Last Updated</span>
+                        <span className="text-white">
+                          {formatDate(selectedUser.updatedAt)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Artist-specific fields */}
+                {selectedUser.role === "artist" && (
+                  <div className="space-y-3">
+                    <h5 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+                      Artist Information
+                    </h5>
+                    <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
+                      {selectedUser.genre && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Genre</span>
+                          <span className="text-white">{selectedUser.genre}</span>
+                        </div>
+                      )}
+                      {selectedUser.booking_fee !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Booking Fee</span>
+                          <span className="text-green-400 font-semibold">
+                            ₱{Number(selectedUser.booking_fee).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Availability</span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            selectedUser.isAvailable
+                              ? "bg-green-900/50 text-green-300 border border-green-700"
+                              : "bg-red-900/50 text-red-300 border border-red-700"
+                          }`}
+                        >
+                          {selectedUser.isAvailable ? "Available" : "Unavailable"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && userToDelete && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 sm:p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">
+                  Delete User
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setUserToDelete(null);
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors p-1"
+                  aria-label="Close modal"
+                  disabled={isDeleting}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-gray-300 mb-4">
+                  Are you sure you want to delete{" "}
+                  <span className="font-medium text-white">
+                    {userToDelete.fullName}
+                  </span>
+                  ? This action cannot be undone.
+                </p>
+                <div className="bg-red-900/20 border border-red-700 rounded-lg p-3">
+                  <p className="text-sm text-red-300">
+                    <strong>Warning:</strong> This will permanently delete the user account and all associated data.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setUserToDelete(null);
+                  }}
+                  disabled={isDeleting}
+                  className="w-full sm:w-auto px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  disabled={isDeleting}
+                  className="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  {isDeleting ? "Deleting..." : "Delete User"}
                 </button>
               </div>
             </div>

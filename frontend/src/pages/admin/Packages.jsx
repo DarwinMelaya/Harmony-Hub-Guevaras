@@ -383,45 +383,49 @@ const Packages = () => {
 
         {/* Items Modal */}
         <Dialog open={showItemsModal} onOpenChange={setShowItemsModal}>
-          <DialogContent className="max-w-2xl bg-gray-900 text-white border border-gray-700">
+          <DialogContent className="max-w-2xl bg-gray-900 text-white border border-gray-700 max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>
                 {selectedPackage?.name} – Items
               </DialogTitle>
             </DialogHeader>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {selectedPackage?.items?.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 bg-gray-800 p-3 rounded-lg border border-gray-700"
-                >
-                  {item.inventoryItem?.image ? (
-                    <img
-                      src={item.inventoryItem.image}
-                      alt={item.inventoryItem.name}
-                      className="h-12 w-12 object-cover rounded border border-gray-600"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 flex items-center justify-center bg-gray-700 text-gray-400 rounded">
-                      No Img
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <div className="font-medium text-white">
-                      {item.inventoryItem?.name || "Unknown Item"}
-                    </div>
-                    <div className="text-sm text-gray-400">
-                      ₱
-                      {item.inventoryItem?.price?.toLocaleString() || 0}
-                    </div>
-                  </div>
-                  <span className="text-gray-300">
-                    x{item.quantity}
-                  </span>
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+              {selectedPackage?.items?.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-400">No items in this package.</p>
                 </div>
-              ))}
-              {selectedPackage?.items?.length === 0 && (
-                <p className="text-gray-400">No items in this package.</p>
+              ) : (
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                  {selectedPackage?.items?.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 sm:gap-4 bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
+                    >
+                      {item.inventoryItem?.image ? (
+                        <img
+                          src={item.inventoryItem.image}
+                          alt={item.inventoryItem.name}
+                          className="h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 object-cover rounded border border-gray-600"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 flex items-center justify-center bg-gray-700 text-gray-400 rounded text-xs">
+                          No Img
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white text-sm sm:text-base truncate">
+                          {item.inventoryItem?.name || "Unknown Item"}
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-400">
+                          ₱{item.inventoryItem?.price?.toLocaleString() || 0}
+                        </div>
+                      </div>
+                      <span className="text-gray-300 text-sm sm:text-base font-medium flex-shrink-0">
+                        x{item.quantity}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </DialogContent>
