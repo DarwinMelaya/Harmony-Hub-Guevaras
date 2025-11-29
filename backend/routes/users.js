@@ -28,6 +28,8 @@ const {
   updateArtistBookingFee,
   verifyEmail,
   resendVerificationCode,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/userController");
 
 // Public routes
@@ -35,6 +37,8 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/verify-email", verifyEmail);
 router.post("/resend-verification", resendVerificationCode);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 // Protected routes (require authentication)
 router.get("/profile", authenticateToken, getUserProfile);

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import Layout from "../../components/Layout/Layout";
 import { API_BASE_URL } from "../../config/api";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const MAX_FILE_SIZE_MB = 5;
 
@@ -15,6 +16,18 @@ const UserProfile = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -179,6 +192,74 @@ const UserProfile = () => {
     }
   };
 
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All password fields are required.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordError("New password must be different from current password.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setPasswordError("You need to be logged in to change your password.");
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      const response = await axios.put(
+        `${API_BASE_URL}/users/change-password`,
+        {
+          currentPassword,
+          newPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data?.success) {
+        setPasswordSuccess("Password changed successfully.");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          setShowPasswordChange(false);
+          setPasswordSuccess("");
+        }, 3000);
+      }
+    } catch (err) {
+      console.error("Failed to change password:", err);
+      const message =
+        err.response?.data?.message ||
+        "Failed to change password. Please try again later.";
+      setPasswordError(message);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="bg-[#30343c] min-h-screen text-white px-4 py-8 md:px-8 md:py-10">
@@ -307,6 +388,162 @@ const UserProfile = () => {
                     </span>
                   </div> */}
                 </div>
+              </section>
+
+              {/* Password Change Section */}
+              <section className="space-y-5 border-t border-gray-700 pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">
+                      Change Password
+                    </h2>
+                    <p className="text-sm text-gray-300 mt-1">
+                      Update your password to keep your account secure.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordChange(!showPasswordChange);
+                      setPasswordError("");
+                      setPasswordSuccess("");
+                      setCurrentPassword("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                    }}
+                    className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    {showPasswordChange ? "Cancel" : "Change Password"}
+                  </button>
+                </div>
+
+                {showPasswordChange && (
+                  <form onSubmit={handlePasswordChange} className="space-y-4">
+                    {passwordError && (
+                      <div className="rounded-lg border border-red-600/60 bg-red-900/70 px-4 py-3 text-red-100 text-sm">
+                        {passwordError}
+                      </div>
+                    )}
+
+                    {passwordSuccess && (
+                      <div className="rounded-lg border border-emerald-600/60 bg-emerald-900/70 px-4 py-3 text-emerald-100 text-sm">
+                        {passwordSuccess}
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                      <label
+                        htmlFor="currentPassword"
+                        className="block text-sm font-semibold text-gray-200"
+                      >
+                        Current Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="currentPassword"
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 pr-12 text-white placeholder-gray-500 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Enter your current password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowCurrentPassword(!showCurrentPassword)
+                          }
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                        >
+                          {showCurrentPassword ? (
+                            <FaEyeSlash className="w-5 h-5" />
+                          ) : (
+                            <FaEye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label
+                        htmlFor="newPassword"
+                        className="block text-sm font-semibold text-gray-200"
+                      >
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="newPassword"
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 pr-12 text-white placeholder-gray-500 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Enter your new password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                        >
+                          {showNewPassword ? (
+                            <FaEyeSlash className="w-5 h-5" />
+                          ) : (
+                            <FaEye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        Password must be at least 6 characters long.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label
+                        htmlFor="confirmPassword"
+                        className="block text-sm font-semibold text-gray-200"
+                      >
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full rounded-lg border border-gray-600 bg-gray-900 px-4 py-3 pr-12 text-white placeholder-gray-500 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Confirm your new password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                        >
+                          {showConfirmPassword ? (
+                            <FaEyeSlash className="w-5 h-5" />
+                          ) : (
+                            <FaEye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={changingPassword}
+                        className="inline-flex items-center justify-center rounded-lg bg-blue-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60 shadow"
+                      >
+                        {changingPassword
+                          ? "Changing password..."
+                          : "Update Password"}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </section>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">

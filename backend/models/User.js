@@ -37,6 +37,10 @@ const UserSchema = new mongoose.Schema({
   verificationCode: { type: String },
   verificationCodeExpires: { type: Date },
 
+  // Password reset fields
+  resetCode: { type: String },
+  resetCodeExpires: { type: Date },
+
   // Artist-specific fields
   genre: {
     type: String,

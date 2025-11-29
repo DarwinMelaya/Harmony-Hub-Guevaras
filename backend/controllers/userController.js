@@ -4,6 +4,7 @@ const sendEmail = require("../utils/sendEmail");
 const {
   getVerificationEmailTemplate,
   getWelcomeEmailTemplate,
+  getPasswordResetEmailTemplate,
 } = require("../utils/sendEmail");
 const {
   uploadImageToSupabase,
@@ -1094,6 +1095,148 @@ const resendVerificationCode = async (req, res) => {
   }
 };
 
+// Forgot password - send reset code
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Don't reveal if user exists for security
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account with that email exists, a password reset code has been sent.",
+      });
+    }
+
+    // Check if user has a password (not Google OAuth only)
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This account uses Google authentication. Please sign in with Google.",
+      });
+    }
+
+    // Generate reset code
+    const resetCode = generateVerificationCode();
+    const resetCodeExpires = new Date();
+    resetCodeExpires.setMinutes(resetCodeExpires.getMinutes() + 10); // 10 minutes expiry
+
+    // Update user with reset code
+    user.resetCode = resetCode;
+    user.resetCodeExpires = resetCodeExpires;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    // Send password reset email
+    try {
+      const emailHtml = getPasswordResetEmailTemplate(user.fullName, resetCode);
+      const emailText = `Hi ${user.fullName}, your password reset code is: ${resetCode}. This code will expire in 10 minutes.`;
+
+      await sendEmail(
+        user.email,
+        "Password Reset Request - Harmony Hub",
+        emailText,
+        emailHtml
+      );
+    } catch (emailError) {
+      console.error("Failed to send password reset email:", emailError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send password reset email. Please try again later.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset code sent successfully. Please check your email.",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+// Reset password with reset code
+const resetPassword = async (req, res) => {
+  try {
+    const { email, resetCode, newPassword } = req.body;
+
+    if (!email || !resetCode || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, reset code, and new password are required",
+      });
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check if reset code matches
+    if (user.resetCode !== resetCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reset code",
+      });
+    }
+
+    // Check if reset code has expired
+    if (!user.resetCodeExpires || new Date() > user.resetCodeExpires) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset code has expired. Please request a new one.",
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.resetCode = undefined;
+    user.resetCodeExpires = undefined;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully. You can now login with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -1113,4 +1256,6 @@ module.exports = {
   updateArtistBookingFee,
   verifyEmail,
   resendVerificationCode,
+  forgotPassword,
+  resetPassword,
 };
