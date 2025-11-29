@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Booking = require("../models/Booking");
 const Inventory = require("../models/Inventory");
 const Packages = require("../models/Packages");
@@ -102,9 +103,19 @@ const validateAndPrepareItems = async (items, bookingDate) => {
       throw err;
     }
 
+    // Ensure itemId is a valid ObjectId
+    let itemObjectId = itemId;
+    if (mongoose.Types.ObjectId.isValid(itemId)) {
+      itemObjectId = new mongoose.Types.ObjectId(itemId);
+    } else {
+      console.warn(
+        `Warning: itemId "${itemId}" for ${type} item "${name}" is not a valid ObjectId`
+      );
+    }
+
     validatedItems.push({
       type,
-      itemId,
+      itemId: itemObjectId,
       quantity: normalizedQuantity,
       price,
       name,
@@ -132,7 +143,7 @@ const createBooking = async (req, res) => {
     } = req.body;
 
     const userId = req.user.id;
-    
+
     // Get user details for agreement
     const user = await User.findById(userId);
     if (!user) {
@@ -318,17 +329,74 @@ const createBooking = async (req, res) => {
     // - Decrease inventory quantities for inventory items
     // - Mark packages as unavailable
     for (const bookingItem of validatedItems) {
-      if (bookingItem.type === "inventory") {
-        await Inventory.findByIdAndUpdate(
-          bookingItem.itemId,
-          { $inc: { quantity: -bookingItem.quantity } },
-          { new: true }
+      try {
+        if (bookingItem.type === "inventory") {
+          // Convert itemId to ObjectId to ensure proper format
+          const itemObjectId = mongoose.Types.ObjectId.isValid(
+            bookingItem.itemId
+          )
+            ? new mongoose.Types.ObjectId(bookingItem.itemId)
+            : bookingItem.itemId;
+
+          // Verify item exists before updating
+          const inventoryItem = await Inventory.findById(itemObjectId);
+          if (!inventoryItem) {
+            console.error(
+              `[BOOKING CREATE] Inventory item not found: ${bookingItem.itemId} (ObjectId: ${itemObjectId}) for booking ${booking._id}`
+            );
+            throw new Error(
+              `Inventory item ${bookingItem.name} (ID: ${bookingItem.itemId}) not found during booking creation`
+            );
+          }
+
+          console.log(
+            `[BOOKING CREATE] Reducing inventory: ${bookingItem.name} (ID: ${itemObjectId}), current quantity: ${inventoryItem.quantity}, reducing by: ${bookingItem.quantity}`
+          );
+
+          // Update inventory quantity
+          const updatedInventory = await Inventory.findByIdAndUpdate(
+            itemObjectId,
+            { $inc: { quantity: -bookingItem.quantity } },
+            { new: true }
+          );
+
+          if (!updatedInventory) {
+            console.error(
+              `[BOOKING CREATE] Failed to update inventory: ${itemObjectId} for booking ${booking._id}`
+            );
+            throw new Error(
+              `Failed to update inventory for ${bookingItem.name}`
+            );
+          }
+
+          console.log(
+            `[BOOKING CREATE] ✓ Inventory reduced successfully: ${bookingItem.name} by ${bookingItem.quantity} (old: ${inventoryItem.quantity}, new: ${updatedInventory.quantity})`
+          );
+        } else if (bookingItem.type === "package") {
+          const updatedPackage = await Packages.findByIdAndUpdate(
+            bookingItem.itemId,
+            { $set: { isAvailable: false } },
+            { new: true }
+          );
+
+          if (!updatedPackage) {
+            console.error(
+              `Failed to update package: ${bookingItem.itemId} for booking ${booking._id}`
+            );
+            throw new Error(`Failed to update package ${bookingItem.name}`);
+          }
+
+          console.log(`Package marked unavailable: ${bookingItem.name}`);
+        }
+      } catch (itemError) {
+        console.error(
+          `Error updating item ${bookingItem.name} (${bookingItem.type}):`,
+          itemError
         );
-      } else if (bookingItem.type === "package") {
-        await Packages.findByIdAndUpdate(
-          bookingItem.itemId,
-          { $set: { isAvailable: false } },
-          { new: true }
+        // If inventory update fails, we should rollback the booking
+        // For now, log the error but continue - in production, consider using transactions
+        throw new Error(
+          `Failed to update ${bookingItem.type} item: ${itemError.message}`
         );
       }
     }
@@ -554,7 +622,8 @@ const updateBookingStatus = async (req, res) => {
       // Calculate refund amount based on payment method
       if (booking.paymentMethod === "gcash") {
         // For GCash payments, refund the amount that was paid
-        const paidAmount = booking.downpaymentAmount || booking.totalAmount || 0;
+        const paidAmount =
+          booking.downpaymentAmount || booking.totalAmount || 0;
         booking.refundAmount = paidAmount;
         booking.refundStatus = "pending"; // Admin needs to process the refund
       } else {
@@ -567,18 +636,9 @@ const updateBookingStatus = async (req, res) => {
     await booking.save();
 
     // Handle side effects based on status transitions
-    // Return inventory quantities when booking gets confirmed
-    if (previousStatus !== "confirmed" && status === "confirmed") {
-      for (const item of booking.items) {
-        if (item.type === "inventory") {
-          await Inventory.findByIdAndUpdate(
-            item.itemId,
-            { $inc: { quantity: item.quantity } },
-            { new: true }
-          );
-        }
-      }
-    }
+    // Note: Inventory is already reduced when booking is created (pending status)
+    // When confirmed, inventory should remain reduced (no change needed)
+    // Inventory is only restored when booking is cancelled (see below)
 
     // Re-enable availability for packages when completed
     if (previousStatus !== "completed" && status === "completed") {
@@ -761,7 +821,8 @@ const submitPaymentDetails = async (req, res) => {
     if (booking.status !== "confirmed") {
       return res.status(400).json({
         success: false,
-        message: "Booking must be confirmed by admin before selecting payment method",
+        message:
+          "Booking must be confirmed by admin before selecting payment method",
       });
     }
 
@@ -840,7 +901,8 @@ const submitPaymentDetails = async (req, res) => {
     };
 
     booking.paymentMethod = paymentMethod;
-    booking.paymentReference = paymentMethod === "gcash" ? paymentReference : null;
+    booking.paymentReference =
+      paymentMethod === "gcash" ? paymentReference : null;
     booking.paymentImage = paymentMethod === "gcash" ? paymentImage : null;
     booking.downpaymentType = computedDownpaymentType;
     booking.downpaymentPercentage = computedDownpaymentPercentage;
@@ -1103,7 +1165,8 @@ const downloadBookingAgreement = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Agreement is pending admin signature. Please wait for the admin to sign the contract.",
+        message:
+          "Agreement is pending admin signature. Please wait for the admin to sign the contract.",
       });
     }
 
@@ -1261,10 +1324,7 @@ const processRefund = async (req, res) => {
       }
 
       // Upload refund proof to Supabase
-      const uploadResult = await uploadImageToSupabase(
-        refundProof,
-        "refunds"
-      );
+      const uploadResult = await uploadImageToSupabase(refundProof, "refunds");
       if (uploadResult.success) {
         booking.refundProof = uploadResult.url;
       } else {
@@ -1387,17 +1447,74 @@ const addBookingItems = async (req, res) => {
 
     // Side effects: update inventory quantities / package availability
     for (const bookingItem of preparedItems) {
-      if (bookingItem.type === "inventory") {
-        await Inventory.findByIdAndUpdate(
-          bookingItem.itemId,
-          { $inc: { quantity: -bookingItem.quantity } },
-          { new: true }
+      try {
+        if (bookingItem.type === "inventory") {
+          // Convert itemId to ObjectId to ensure proper format
+          const itemObjectId = mongoose.Types.ObjectId.isValid(
+            bookingItem.itemId
+          )
+            ? new mongoose.Types.ObjectId(bookingItem.itemId)
+            : bookingItem.itemId;
+
+          // Verify item exists before updating
+          const inventoryItem = await Inventory.findById(itemObjectId);
+          if (!inventoryItem) {
+            console.error(
+              `[ADD ITEMS] Inventory item not found: ${bookingItem.itemId} (ObjectId: ${itemObjectId}) when adding to booking ${booking._id}`
+            );
+            throw new Error(
+              `Inventory item ${bookingItem.name} (ID: ${bookingItem.itemId}) not found when adding to booking`
+            );
+          }
+
+          console.log(
+            `[ADD ITEMS] Reducing inventory: ${bookingItem.name} (ID: ${itemObjectId}), current quantity: ${inventoryItem.quantity}, reducing by: ${bookingItem.quantity}`
+          );
+
+          // Update inventory quantity
+          const updatedInventory = await Inventory.findByIdAndUpdate(
+            itemObjectId,
+            { $inc: { quantity: -bookingItem.quantity } },
+            { new: true }
+          );
+
+          if (!updatedInventory) {
+            console.error(
+              `[ADD ITEMS] Failed to update inventory: ${itemObjectId} when adding to booking ${booking._id}`
+            );
+            throw new Error(
+              `Failed to update inventory for ${bookingItem.name}`
+            );
+          }
+
+          console.log(
+            `[ADD ITEMS] ✓ Inventory reduced successfully: ${bookingItem.name} by ${bookingItem.quantity} (old: ${inventoryItem.quantity}, new: ${updatedInventory.quantity})`
+          );
+        } else if (bookingItem.type === "package") {
+          const updatedPackage = await Packages.findByIdAndUpdate(
+            bookingItem.itemId,
+            { $set: { isAvailable: false } },
+            { new: true }
+          );
+
+          if (!updatedPackage) {
+            console.error(
+              `Failed to update package: ${bookingItem.itemId} when adding to booking ${booking._id}`
+            );
+            throw new Error(`Failed to update package ${bookingItem.name}`);
+          }
+
+          console.log(
+            `Package marked unavailable (added to booking): ${bookingItem.name}`
+          );
+        }
+      } catch (itemError) {
+        console.error(
+          `Error updating item ${bookingItem.name} (${bookingItem.type}) when adding to booking:`,
+          itemError
         );
-      } else if (bookingItem.type === "package") {
-        await Packages.findByIdAndUpdate(
-          bookingItem.itemId,
-          { $set: { isAvailable: false } },
-          { new: true }
+        throw new Error(
+          `Failed to update ${bookingItem.type} item: ${itemError.message}`
         );
       }
     }
@@ -1457,7 +1574,8 @@ const removeBookingItem = async (req, res) => {
       });
     }
 
-    const amountToSubtract = Number(item.price || 0) * Number(item.quantity || 0);
+    const amountToSubtract =
+      Number(item.price || 0) * Number(item.quantity || 0);
 
     // Adjust totals
     booking.totalAmount = Math.max(
@@ -1529,7 +1647,13 @@ const removeBookingItem = async (req, res) => {
 const addBookingExtension = async (req, res) => {
   try {
     const { id } = req.params;
-    const { hours, rate, amount, description, paymentMethod = "cash" } = req.body;
+    const {
+      hours,
+      rate,
+      amount,
+      description,
+      paymentMethod = "cash",
+    } = req.body;
 
     const booking = await Booking.findById(id);
     if (!booking) {
@@ -1541,14 +1665,21 @@ const addBookingExtension = async (req, res) => {
 
     const parsedHours = hours !== undefined ? Number(hours) : null;
     const parsedRate = rate !== undefined ? Number(rate) : null;
-    let computedAmount =
-      amount !== undefined ? Number(amount) : null;
+    let computedAmount = amount !== undefined ? Number(amount) : null;
 
-    if ((computedAmount === null || isNaN(computedAmount)) && parsedHours !== null && parsedRate !== null) {
+    if (
+      (computedAmount === null || isNaN(computedAmount)) &&
+      parsedHours !== null &&
+      parsedRate !== null
+    ) {
       computedAmount = parsedHours * parsedRate;
     }
 
-    if (computedAmount === null || isNaN(computedAmount) || computedAmount <= 0) {
+    if (
+      computedAmount === null ||
+      isNaN(computedAmount) ||
+      computedAmount <= 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "A valid amount or hour/rate combination is required.",
@@ -1627,7 +1758,10 @@ const markExtensionPaid = async (req, res) => {
     }
 
     if (extension.paymentMethod === "gcash" && paymentProof) {
-      const uploadResult = await uploadImageToSupabase(paymentProof, "extensions");
+      const uploadResult = await uploadImageToSupabase(
+        paymentProof,
+        "extensions"
+      );
       if (!uploadResult.success) {
         return res.status(400).json({
           success: false,
@@ -1640,7 +1774,8 @@ const markExtensionPaid = async (req, res) => {
     extension.status = "paid";
     extension.paidAt = new Date();
 
-    const newBalance = Number(booking.extensionBalance || 0) - Number(extension.amount || 0);
+    const newBalance =
+      Number(booking.extensionBalance || 0) - Number(extension.amount || 0);
     booking.extensionBalance = newBalance > 0 ? newBalance : 0;
 
     await booking.save();

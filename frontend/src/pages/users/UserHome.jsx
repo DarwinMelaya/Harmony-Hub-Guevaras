@@ -1,7 +1,7 @@
 import Layout from "../../components/Layout/Layout";
 import CartModal from "../../components/Modals/Users/CartModal";
 import BookingModal from "../../components/Modals/Users/BookingModal";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   User,
   ChevronDown,
@@ -69,6 +69,34 @@ const UserHome = () => {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [reservedDates, setReservedDates] = useState([]); // dates with confirmed bookings (YYYY-MM-DD)
 
+  // Define fetchData before useEffect hooks that use it
+  const fetchData = useCallback(async (silent = false) => {
+    try {
+      if (!silent) {
+        setLoading(true);
+      }
+      const [inventoryResponse, packagesResponse, artistsResponse] =
+        await Promise.all([
+          axios.get("http://localhost:5000/api/inventory/public"),
+          axios.get("http://localhost:5000/api/packages/public"),
+          axios.get("http://localhost:5000/api/users/artists/public"),
+        ]);
+
+      setInventory(inventoryResponse.data.inventory || []);
+      setPackages(packagesResponse.data.packages || []);
+      setBandArtists(artistsResponse.data.data || []);
+    } catch (err) {
+      // Only show error if not silent (to avoid spamming errors during polling)
+      if (!silent) {
+        setError(err.response?.data?.message || err.message);
+      }
+    } finally {
+      if (!silent) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     // Get user data from localStorage
     const user = localStorage.getItem("user");
@@ -106,34 +134,28 @@ const UserHome = () => {
     };
 
     fetchReservedDates();
-  }, []);
+  }, [fetchData]);
 
   // Refetch data after successful booking to reflect availability/quantities
   useEffect(() => {
     if (bookingSuccess) {
       fetchData();
     }
-  }, [bookingSuccess]);
+  }, [bookingSuccess, fetchData]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [inventoryResponse, packagesResponse, artistsResponse] =
-        await Promise.all([
-          axios.get("http://localhost:5000/api/inventory/public"),
-          axios.get("http://localhost:5000/api/packages/public"),
-          axios.get("http://localhost:5000/api/users/artists/public"),
-        ]);
+  // Poll inventory data every 30 seconds to reflect real-time changes from admin
+  useEffect(() => {
+    // Set up interval to poll inventory data silently in the background
+    const pollInterval = setInterval(() => {
+      // Silently fetch data in the background (don't show loading state)
+      fetchData(true);
+    }, 30000); // Poll every 30 seconds
 
-      setInventory(inventoryResponse.data.inventory || []);
-      setPackages(packagesResponse.data.packages || []);
-      setBandArtists(artistsResponse.data.data || []);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [fetchData]); // Depend on fetchData which is memoized with useCallback
 
   // Check artist availability for a specific date
   const checkArtistAvailability = async (artistId, bookingDate) => {
