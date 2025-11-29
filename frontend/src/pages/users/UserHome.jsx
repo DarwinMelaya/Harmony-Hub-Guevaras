@@ -1,7 +1,7 @@
 import Layout from "../../components/Layout/Layout";
 import CartModal from "../../components/Modals/Users/CartModal";
 import BookingModal from "../../components/Modals/Users/BookingModal";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   User,
   ChevronDown,
@@ -68,6 +68,35 @@ const UserHome = () => {
   const [artistAvailability, setArtistAvailability] = useState({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [reservedDates, setReservedDates] = useState([]); // dates with confirmed bookings (YYYY-MM-DD)
+
+  // Compute available quantities per inventory item based on cart reservations
+  const { inventoryWithAvailability, availableQuantityMap } = useMemo(() => {
+    const reservedTotals = cart.reduce((acc, cartItem) => {
+      if (cartItem.type === "inventory") {
+        acc[cartItem.id] = cartItem.quantity;
+      }
+      return acc;
+    }, {});
+
+    const list = inventory.map((item) => {
+      const reserved = reservedTotals[item._id] ?? 0;
+      const available = Math.max(0, (item.quantity ?? 0) - reserved);
+      return {
+        ...item,
+        availableQuantity: available,
+      };
+    });
+
+    const map = new Map(list.map((item) => [item._id, item.availableQuantity]));
+
+    return {
+      inventoryWithAvailability: list,
+      availableQuantityMap: map,
+    };
+  }, [inventory, cart]);
+
+  const getAvailableById = (itemId) =>
+    availableQuantityMap.get(itemId) ?? 0;
 
   // Define fetchData before useEffect hooks that use it
   const fetchData = useCallback(async (silent = false) => {
@@ -205,12 +234,12 @@ const UserHome = () => {
     // Category filter
     if (selectedCategory !== "all") {
       if (type === "inventory") {
-        // For inventory, we could add categories later
-        // For now, just filter by availability
+        const quantityAccessor = (item) =>
+          item.availableQuantity ?? item.quantity ?? 0;
         if (selectedCategory === "available") {
-          filtered = filtered.filter((item) => item.quantity > 0);
+          filtered = filtered.filter((item) => quantityAccessor(item) > 0);
         } else if (selectedCategory === "out_of_stock") {
-          filtered = filtered.filter((item) => item.quantity === 0);
+          filtered = filtered.filter((item) => quantityAccessor(item) === 0);
         }
       } else if (type === "packages") {
         // For packages, filter by price range
@@ -246,7 +275,10 @@ const UserHome = () => {
     return filtered;
   };
 
-  const filteredInventory = filterItems(inventory, "inventory");
+  const filteredInventory = filterItems(
+    inventoryWithAvailability,
+    "inventory"
+  );
   const filteredPackages = filterItems(packages, "packages");
   const filteredBandArtists = filterItems(bandArtists, "bandArtists");
 
@@ -255,17 +287,6 @@ const UserHome = () => {
     setSelectedCategory("all");
     setSortBy("newest");
   };
-
-  // Cart helper: get current reserved quantity for an inventory item
-  const getReservedQuantity = useCallback(
-    (itemId) => {
-      const cartItem = cart.find(
-        (ci) => ci.id === itemId && ci.type === "inventory"
-      );
-      return cartItem?.quantity ?? 0;
-    },
-    [cart]
-  );
 
   const addToCart = async (item, type) => {
     const cartItem = {
@@ -282,10 +303,8 @@ const UserHome = () => {
     };
 
     if (type === "inventory") {
-      const inv = inventory.find((invItem) => invItem._id === item._id);
-      const available = inv?.quantity ?? 0;
-      const reserved = getReservedQuantity(item._id);
-      if (!inv || available <= reserved) {
+      const available = getAvailableById(item._id);
+      if (available <= 0) {
         setError("No more stock available for this item.");
         return;
       }
@@ -296,10 +315,6 @@ const UserHome = () => {
         );
         if (existingItem) {
           // ensure we don't exceed available stock
-          if (existingItem.quantity >= available) {
-            setError("Reached maximum quantity for this item.");
-            return prevCart;
-          }
           return prevCart.map((c) =>
             c.id === item._id && c.type === type
               ? { ...c, quantity: c.quantity + 1 }
@@ -430,9 +445,8 @@ const UserHome = () => {
           const diff = newQuantity - currentQty;
           if (diff === 0) return item;
           if (diff > 0) {
-            const inv = inventory.find((invItem) => invItem._id === itemId);
-            const available = inv?.quantity ?? 0;
-            if (newQuantity > available) {
+            const available = getAvailableById(itemId);
+            if (diff > available) {
               setError("Cannot exceed available stock.");
               return item;
             }
@@ -868,6 +882,7 @@ const UserHome = () => {
                     <InventoryCard
                       key={item._id}
                       item={item}
+                      availableQuantity={item.availableQuantity}
                       onAdd={(it, sourceId) =>
                         handleAddToCartClick(it, "inventory", sourceId)
                       }

@@ -7,7 +7,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const InventoryCard = ({ item, onAdd }) => {
+const InventoryCard = ({ item, onAdd, availableQuantity }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageSources =
     item.images?.length > 0
@@ -17,6 +17,11 @@ const InventoryCard = ({ item, onAdd }) => {
       : [];
   const activeImage =
     imageSources.length > 0 ? imageSources[currentImageIndex] : null;
+  const displayQuantity =
+    availableQuantity !== undefined
+      ? availableQuantity
+      : item.quantity ?? 0;
+  const isOutOfStock = displayQuantity <= 0;
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -75,7 +80,7 @@ const InventoryCard = ({ item, onAdd }) => {
             <Heart className="w-4 h-4 text-white" />
           </button>
         </div>
-        {item.quantity === 0 && (
+        {isOutOfStock && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="bg-red-600 text-white px-2 py-1 rounded text-sm font-medium">
               Out of Stock
@@ -99,16 +104,16 @@ const InventoryCard = ({ item, onAdd }) => {
             ₱{Number(item.price).toLocaleString()}
           </span>
           <span className="text-gray-400 text-sm">
-            {item.quantity} {item.unit ? item.unit.symbol : "left"}
+            {displayQuantity} {item.unit ? item.unit.symbol : "left"}
           </span>
         </div>
         <div className="flex gap-2 mt-auto">
           <button
             onClick={() => onAdd(item, `${item._id}-img-inv`)}
-            disabled={item.quantity === 0}
+            disabled={isOutOfStock}
             className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
           >
-            {item.quantity === 0 ? "Out of Stock" : "Add to Selection"}
+            {isOutOfStock ? "Out of Stock" : "Add to Selection"}
           </button>
           <button className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded transition-colors">
             <Eye className="w-4 h-4" />
