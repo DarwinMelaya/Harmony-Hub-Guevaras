@@ -1,5 +1,5 @@
 import Layout from "../../components/Layout/Layout";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { FileText, Download } from "lucide-react";
 import BookingAgreement from "../../components/Agreement/BookingAgreement";
@@ -58,6 +58,9 @@ const UserBooking = () => {
   const [userData, setUserData] = useState(null);
   const [showAgreement, setShowAgreement] = useState(false);
   const [pendingPaymentPayload, setPendingPaymentPayload] = useState(null);
+  const [paymentInfos, setPaymentInfos] = useState([]);
+  const [paymentInfoError, setPaymentInfoError] = useState(null);
+  const [copiedPaymentId, setCopiedPaymentId] = useState(null);
 
   const totalAmountForSelection = Number(
     selectedBookingForPayment?.totalAmount || 0
@@ -78,6 +81,23 @@ const UserBooking = () => {
     totalAmountForSelection - downpaymentAmount,
     0
   );
+  const fetchPaymentInfos = useCallback(async () => {
+    try {
+      setPaymentInfoError(null);
+      const response = await axios.get(
+        "http://localhost:5000/api/payment-info/public"
+      );
+      setPaymentInfos(response.data?.data || []);
+    } catch (err) {
+      console.error("Failed to load payment info:", err);
+      setPaymentInfoError("Unable to load official GCash details right now.");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPaymentInfos();
+  }, [fetchPaymentInfos]);
+
   const bookingAgreementData = selectedBookingForPayment
     ? {
         bookingDate: selectedBookingForPayment.bookingDate,
@@ -330,6 +350,26 @@ const UserBooking = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleCopyMobileNumber = async (paymentId, mobileNumber) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(mobileNumber);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = mobileNumber;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopiedPaymentId(paymentId);
+      setTimeout(() => setCopiedPaymentId(null), 2000);
+    } catch (copyError) {
+      console.error("Clipboard error:", copyError);
+      setPaymentInfoError("Copy not supported. Please copy the number manually.");
+    }
   };
 
   const handlePaymentProofChange = async (e) => {
@@ -863,6 +903,79 @@ const UserBooking = () => {
                     <p className="text-xs text-gray-400 mt-2">
                       Accepted formats: JPG/PNG, max 5MB
                     </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-300">
+                        Official GCash Accounts
+                      </p>
+                      <button
+                        type="button"
+                        onClick={fetchPaymentInfos}
+                        className="text-xs px-3 py-1 rounded border border-gray-600 text-gray-200 hover:bg-gray-700 transition-colors"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                    {paymentInfoError && (
+                      <div className="bg-red-900/30 border border-red-700 text-red-200 text-xs px-3 py-2 rounded">
+                        {paymentInfoError}
+                      </div>
+                    )}
+                    {paymentInfos.length === 0 && !paymentInfoError ? (
+                      <div className="text-xs text-gray-400 bg-gray-800/60 border border-gray-700 rounded-lg p-3">
+                        No GCash details are available at the moment. Please
+                        contact the admin for assistance.
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                        {paymentInfos.map((info) => (
+                          <div
+                            key={info._id}
+                            className="bg-gray-700/60 border border-gray-600 rounded-lg p-3 space-y-3"
+                          >
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                              <div>
+                                <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                                  {info.label || "GCash"}
+                                </p>
+                                <p className="text-white font-semibold text-lg">
+                                  {info.mobileNumber}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleCopyMobileNumber(
+                                    info._id,
+                                    info.mobileNumber
+                                  )
+                                }
+                                className="px-3 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-200 transition-colors"
+                              >
+                                {copiedPaymentId === info._id
+                                  ? "Copied!"
+                                  : "Copy Number"}
+                              </button>
+                            </div>
+                            {info.qrImage && (
+                              <div className="bg-gray-800/80 border border-gray-700 rounded-lg p-3 flex items-center justify-center">
+                                <img
+                                  src={info.qrImage}
+                                  alt={`${info.label || "GCash"} QR`}
+                                  className="max-h-48 object-contain"
+                                />
+                              </div>
+                            )}
+                            <p className="text-xs text-gray-400">
+                              Scan this QR or send to the number above before
+                              uploading your proof.
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}

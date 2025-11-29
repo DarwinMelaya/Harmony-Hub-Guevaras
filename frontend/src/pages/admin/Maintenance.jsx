@@ -2,6 +2,7 @@ import { useState } from "react";
 import Layout from "../../components/Layout/Layout";
 import UnitsTab from "../../components/Admin/Maintenance/UnitsTab";
 import CategoryTab from "../../components/Admin/Maintenance/CategoryTab";
+import PaymentInfo from "../../components/Admin/Maintenance/PaymentInfo";
 import { Wrench } from "lucide-react";
 
 const Maintenance = () => {
@@ -53,12 +54,26 @@ const Maintenance = () => {
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"></div>
                 )}
               </button>
+              <button
+                onClick={() => setActiveTab("payment")}
+                className={`px-6 py-4 font-medium transition-all relative ${
+                  activeTab === "payment"
+                    ? "text-blue-400 bg-gray-700/50"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/30"
+                }`}
+              >
+                Payment Info
+                {activeTab === "payment" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"></div>
+                )}
+              </button>
             </div>
 
             {/* Tab Content */}
             <div className="p-6">
               {activeTab === "units" && <UnitsTab />}
               {activeTab === "category" && <CategoryTab />}
+              {activeTab === "payment" && <PaymentInfo />}
             </div>
           </div>
         </div>
