@@ -27,6 +27,7 @@ import ArtistCard from "../../components/User/Dashboard/ArtistCard";
 import PackagesCard from "../../components/User/Dashboard/PackagesCard";
 import UserCalendar from "../../components/User/Dashboard/UserCalendar";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const UserHome = () => {
   const [userData, setUserData] = useState(null);
@@ -342,29 +343,44 @@ const UserHome = () => {
       unit: item.unit,
       category: item.category,
     };
+    const itemLabel = cartItem.name || "Item";
 
     if (type === "inventory") {
       const available = getAvailableById(item._id);
       if (available <= 0) {
-        setError("No more stock available for this item.");
-        return;
+        const message = "No more stock available for this item.";
+        setError(message);
+        return { status: "error", message };
       }
 
+      let updated = false;
       setCart((prevCart) => {
         const existingItem = prevCart.find(
           (ci) => ci.id === item._id && ci.type === type
         );
         if (existingItem) {
-          // ensure we don't exceed available stock
+          updated = true;
           return prevCart.map((c) =>
             c.id === item._id && c.type === type
               ? { ...c, quantity: c.quantity + 1 }
               : c
           );
         }
+        updated = true;
         return [...prevCart, cartItem];
       });
-      return;
+
+      if (updated) {
+        return {
+          status: "success",
+          message: `${itemLabel} added to your selections.`,
+        };
+      }
+
+      return {
+        status: "info",
+        message: `${itemLabel} is already in your selections.`,
+      };
     }
 
     // For band artists, check availability if booking date is selected
@@ -374,23 +390,46 @@ const UserHome = () => {
         bookingData.bookingDate
       );
       if (!isAvailable) {
-        setError(
-          `${item.fullName || item.name} is not available on ${
-            bookingData.bookingDate
-          }`
-        );
-        return;
+        const message = `${
+          item.fullName || item.name || "Artist"
+        } is not available on ${bookingData.bookingDate}`;
+        setError(message);
+        return { status: "error", message };
       }
     }
 
-    // Non-inventory items: add once
+    let duplicate = false;
+    let added = false;
     setCart((prevCart) => {
       const existingItem = prevCart.find(
         (ci) => ci.id === item._id && ci.type === type
       );
-      if (existingItem) return prevCart;
+      if (existingItem) {
+        duplicate = true;
+        return prevCart;
+      }
+      added = true;
       return [...prevCart, cartItem];
     });
+
+    if (duplicate) {
+      return {
+        status: "info",
+        message: `${itemLabel} is already in your selections.`,
+      };
+    }
+
+    if (added) {
+      return {
+        status: "success",
+        message: `${itemLabel} added to your selections.`,
+      };
+    }
+
+    return {
+      status: "error",
+      message: "Unable to update selections at this time.",
+    };
   };
 
   // Trigger fly animation from a source element id
@@ -457,10 +496,24 @@ const UserHome = () => {
     }, 700);
   };
 
-  const handleAddToCartClick = (item, type, sourceElementId) => {
-    addToCart(item, type);
-    const img = item.image || null;
-    triggerFlyFrom(sourceElementId, img);
+  const handleAddToCartClick = async (item, type, sourceElementId) => {
+    const result = await addToCart(item, type);
+    if (!result) return;
+
+    const { status, message } = result;
+
+    if (status === "success") {
+      toast.success(message || "Added to selections.");
+      const img =
+        item.image || (Array.isArray(item.images) ? item.images[0] : null) || null;
+      triggerFlyFrom(sourceElementId, img);
+    } else if (status === "info") {
+      toast(message || "Already in selections.", {
+        icon: "ℹ️",
+      });
+    } else if (status === "error") {
+      toast.error(message || "Unable to add item.");
+    }
   };
 
   const removeFromCart = (itemId, type) => {

@@ -9,6 +9,7 @@ import {
 
 const InventoryCard = ({ item, onAdd, availableQuantity }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isAdding, setIsAdding] = useState(false);
   const imageSources =
     item.images?.length > 0
       ? item.images
@@ -37,6 +38,16 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
     setCurrentImageIndex((prev) =>
       prev === imageSources.length - 1 ? 0 : prev + 1
     );
+  };
+
+  const handleAddSelection = async () => {
+    if (isOutOfStock || isAdding) return;
+    setIsAdding(true);
+    try {
+      await onAdd(item, `${item._id}-img-inv`);
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   return (
@@ -109,11 +120,15 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
         </div>
         <div className="flex gap-2 mt-auto">
           <button
-            onClick={() => onAdd(item, `${item._id}-img-inv`)}
-            disabled={isOutOfStock}
+            onClick={handleAddSelection}
+            disabled={isOutOfStock || isAdding}
             className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
           >
-            {isOutOfStock ? "Out of Stock" : "Add to Selection"}
+            {isOutOfStock
+              ? "Out of Stock"
+              : isAdding
+              ? "Adding..."
+              : "Add to Selection"}
           </button>
           <button className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded transition-colors">
             <Eye className="w-4 h-4" />
