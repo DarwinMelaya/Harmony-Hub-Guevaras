@@ -5,6 +5,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Music,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { provinces, cities, barangays } from "select-philippines-address";
 import { useState, useEffect } from "react";
@@ -36,6 +38,11 @@ const BookingModal = ({
 
   const [showPolicyReminder, setShowPolicyReminder] = useState(false);
   const [setupDateError, setSetupDateError] = useState("");
+  
+  // Calendar navigation state
+  const today = new Date();
+  const [calendarMonth, setCalendarMonth] = useState(today.getMonth());
+  const [calendarYear, setCalendarYear] = useState(today.getFullYear());
 
   useEffect(() => {
     provinces("17").then((response) => {
@@ -118,12 +125,35 @@ const BookingModal = ({
     );
   };
 
-  // Simple inline calendar that highlights reserved dates (YYYY-MM-DD)
-  const InlineReservedCalendar = ({ reservedDates = [] }) => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
+  // Calendar navigation functions
+  const handlePreviousMonth = () => {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear(calendarYear - 1);
+    } else {
+      setCalendarMonth(calendarMonth - 1);
+    }
+  };
 
+  const handleNextMonth = () => {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear(calendarYear + 1);
+    } else {
+      setCalendarMonth(calendarMonth + 1);
+    }
+  };
+
+  const handlePreviousYear = () => {
+    setCalendarYear(calendarYear - 1);
+  };
+
+  const handleNextYear = () => {
+    setCalendarYear(calendarYear + 1);
+  };
+
+  // Simple inline calendar that highlights reserved dates (YYYY-MM-DD)
+  const InlineReservedCalendar = ({ reservedDates = [], month, year }) => {
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -149,10 +179,15 @@ const BookingModal = ({
       weeks.push(week);
     }
 
+    const monthName = new Date(year, month, 1).toLocaleString("default", {
+      month: "long",
+      year: "numeric",
+    });
+
     return (
       <div className="space-y-1 text-[11px]">
-        <div className="text-gray-200 font-semibold text-xs">
-          {today.toLocaleString("default", { month: "long", year: "numeric" })}
+        <div className="text-gray-200 font-semibold text-xs text-center">
+          {monthName}
         </div>
         {weeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7 gap-1">
@@ -332,13 +367,59 @@ const BookingModal = ({
                     <span className="text-red-300 font-semibold">Reserved</span>{" "}
                     already have a confirmed booking.
                   </p>
+                  
+                  {/* Calendar Navigation */}
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={handlePreviousYear}
+                      className="p-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors flex items-center border border-gray-500"
+                      title="Previous Year"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-white" />
+                      <ChevronLeft className="w-4 h-4 text-white -ml-1" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePreviousMonth}
+                      className="p-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors border border-gray-500"
+                      title="Previous Month"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-white" />
+                    </button>
+                    <div className="flex-1 min-w-[140px]">
+                      {/* Month display will be centered in the calendar component */}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleNextMonth}
+                      className="p-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors border border-gray-500"
+                      title="Next Month"
+                    >
+                      <ChevronRight className="w-5 h-5 text-white" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextYear}
+                      className="p-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors flex items-center border border-gray-500"
+                      title="Next Year"
+                    >
+                      <ChevronRight className="w-4 h-4 text-white" />
+                      <ChevronRight className="w-4 h-4 text-white -ml-1" />
+                    </button>
+                  </div>
+                  
                   <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-gray-300 mb-1">
                     {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
                       <span key={d}>{d}</span>
                     ))}
                   </div>
-                  {/* Simple current-month view based on today's month/year */}
-                  <InlineReservedCalendar reservedDates={reservedDates} />
+                  {/* Calendar with navigation */}
+                  <InlineReservedCalendar 
+                    reservedDates={reservedDates} 
+                    month={calendarMonth}
+                    year={calendarYear}
+                  />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
