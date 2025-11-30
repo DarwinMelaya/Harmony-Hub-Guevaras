@@ -77,10 +77,12 @@ const AdminDashboard = () => {
 
         // Approx revenue: sum completed bookings on first page (limit 100)
         const completedList = completedRes.data?.data || [];
-        const completedRevenue = completedList.reduce(
-          (sum, b) => sum + (Number(b.totalAmount) || 0),
-          0
-        );
+        const completedRevenue = completedList
+          .filter((b) => b.status === "completed")
+          .reduce(
+            (sum, b) => sum + (Number(b.totalAmount) || 0),
+            0
+          );
 
         setStats({
           totalUsers,
