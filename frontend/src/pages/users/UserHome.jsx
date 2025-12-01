@@ -162,19 +162,33 @@ const UserHome = () => {
         );
         const bookings = response.data?.data || [];
 
-        // Keep only confirmed bookings and map to YYYY-MM-DD strings
-        const confirmedDates = bookings
+        // For each confirmed booking, mark ALL dates from setupDate up to
+        // bookingDate (inclusive) as reserved. This ensures that if a booking
+        // has setupDate=Dec 1 and bookingDate=Dec 5, then Dec 1–5 cannot be
+        // used as setup or booking dates for another reservation.
+        const reservedSet = new Set();
+
+        bookings
           .filter((b) => b.status === "confirmed")
-          .map((b) => {
-            const d = new Date(b.bookingDate);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, "0");
-            const day = String(d.getDate()).padStart(2, "0");
-            return `${year}-${month}-${day}`;
+          .forEach((b) => {
+            const start = b.setupDate ? new Date(b.setupDate) : new Date(b.bookingDate);
+            const end = new Date(b.bookingDate);
+
+            // Normalize time to midnight to avoid timezone issues
+            start.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+
+            const current = new Date(start);
+            while (current <= end) {
+              const year = current.getFullYear();
+              const month = String(current.getMonth() + 1).padStart(2, "0");
+              const day = String(current.getDate()).padStart(2, "0");
+              reservedSet.add(`${year}-${month}-${day}`);
+              current.setDate(current.getDate() + 1);
+            }
           });
 
-        // Unique date strings
-        setReservedDates(Array.from(new Set(confirmedDates)));
+        setReservedDates(Array.from(reservedSet));
       } catch (err) {
         console.error("Error fetching reserved dates:", err);
       }
@@ -700,10 +714,12 @@ const UserHome = () => {
         },
       }));
     } else {
-      // Block selecting a date that is already reserved (confirmed booking)
-      if (field === "bookingDate" && value) {
+      // Block selecting a date that is already reserved (confirmed booking range)
+      if ((field === "bookingDate" || field === "setupDate") && value) {
         if (reservedDates.includes(value)) {
-          setError("Selected date is already reserved.");
+          setError(
+            "Selected date is already reserved as part of another event's setup or booking."
+          );
           return;
         }
       }

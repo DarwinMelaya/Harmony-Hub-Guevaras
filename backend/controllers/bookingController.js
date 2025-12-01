@@ -215,41 +215,24 @@ const createBooking = async (req, res) => {
       }
     }
 
-    // Check if there is already a confirmed booking on this date
-    const [reservedYear, reservedMonth, reservedDay] = bookingDate
-      .split("-")
-      .map(Number);
-    const reservedStartOfDay = new Date(
-      reservedYear,
-      reservedMonth - 1,
-      reservedDay,
-      0,
-      0,
-      0,
-      0
-    );
-    const reservedEndOfDay = new Date(
-      reservedYear,
-      reservedMonth - 1,
-      reservedDay,
-      23,
-      59,
-      59,
-      999
-    );
-
-    const existingConfirmed = await Booking.findOne({
-      bookingDate: {
-        $gte: reservedStartOfDay,
-        $lte: reservedEndOfDay,
-      },
+    // Check if there is already a confirmed booking whose reserved range
+    // (from setupDate up to bookingDate) overlaps with the requested range.
+    // Example: if existing booking has setupDate=Dec 1 and bookingDate=Dec 5,
+    // then ALL dates Dec 1–5 are considered reserved and cannot be booked
+    // as setupDate or bookingDate for another booking.
+    const conflictingBooking = await Booking.findOne({
       status: "confirmed",
+      // existing.setupDate <= newBookingEnd
+      setupDate: { $lte: bookingDateObj },
+      // existing.bookingDate >= newBookingStart
+      bookingDate: { $gte: setupDateObj },
     });
 
-    if (existingConfirmed) {
+    if (conflictingBooking) {
       return res.status(400).json({
         success: false,
-        message: "Selected date is already reserved.",
+        message:
+          "Selected setup and event date range is already reserved. Please choose a different date range.",
       });
     }
 
@@ -1124,7 +1107,7 @@ const getPublicCalendarBookings = async (req, res) => {
     // Fetch bookings with limited information for privacy
     const bookings = await Booking.find(query)
       .select(
-        "bookingDate bookingTime duration status totalAmount items.type items.name items.itemId"
+        "bookingDate setupDate bookingTime setupTime duration status totalAmount items.type items.name items.itemId"
       )
       .sort({ bookingDate: 1 });
 
@@ -1132,7 +1115,9 @@ const getPublicCalendarBookings = async (req, res) => {
     const publicBookings = bookings.map((booking) => ({
       _id: booking._id,
       bookingDate: booking.bookingDate,
+      setupDate: booking.setupDate,
       bookingTime: booking.bookingTime,
+      setupTime: booking.setupTime,
       duration: booking.duration,
       status: booking.status,
       totalAmount: booking.totalAmount,
