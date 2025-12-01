@@ -37,21 +37,28 @@ const Gallery = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white py-16 px-4">
+    <section className="bg-gradient-to-b from-black via-gray-900 to-black py-20 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Main Heading */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            GALLERY
+        <div className="text-center mb-12">
+          <p className="text-xs tracking-[0.3em] text-orange-400 uppercase mb-3">
+            Event Moments
+          </p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            A Glimpse Of Our Setups
           </h1>
+          <p className="text-sm md:text-base text-gray-400 max-w-2xl mx-auto">
+            From intimate gatherings to large‑scale productions, here&apos;s how
+            Harmony Hub transforms venues into unforgettable experiences.
+          </p>
         </div>
 
         {/* Gallery Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {galleryImages.map((item) => (
-            <div
+            <article
               key={item.id}
-              className="relative h-80 rounded-lg overflow-hidden group cursor-pointer transform transition-transform duration-300 hover:scale-105 shadow-lg"
+              className="relative h-80 rounded-2xl overflow-hidden group cursor-pointer border border-gray-800 bg-gray-900/70 shadow-lg shadow-black/40 hover:border-orange-500/70 hover:shadow-orange-500/20 hover:-translate-y-1 transition-all duration-200"
             >
               {/* Image */}
               <img
@@ -61,19 +68,19 @@ const Gallery = () => {
               />
 
               {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4">
-                <p className="text-white text-center text-sm md:text-base leading-relaxed">
+              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
+                <p className="text-white text-sm md:text-base leading-relaxed">
                   {item.description}
                 </p>
               </div>
 
-              {/* Optional: Add a subtle border on hover */}
-              <div className="absolute inset-0 border-2 border-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-            </div>
+              {/* Subtle border accent */}
+              <div className="absolute inset-0 border border-orange-500/0 group-hover:border-orange-500/70 transition-colors duration-300 rounded-2xl" />
+            </article>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

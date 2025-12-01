@@ -5,6 +5,7 @@ import Service from "../../components/Home/Service";
 import Gallery from "../../components/Home/Gallery";
 import CalendarHome from "../../components/Home/CalendarHome";
 import Contact from "../../components/Home/Contact";
+import Feedback from "../../components/Home/Feedback";
 
 const HomePage = () => {
   return (
@@ -20,6 +21,9 @@ const HomePage = () => {
         <div className="max-w-6xl mx-auto">
           <CalendarHome />
         </div>
+      </div>
+      <div id="feedback">
+        <Feedback />
       </div>
       <div id="about">
         <About />

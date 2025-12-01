@@ -44,22 +44,28 @@ const Service = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-white py-16 px-4">
+    <section className="bg-gradient-to-b from-black via-gray-900 to-black py-20 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Main Heading */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4">
-            SERVICES
+        <div className="text-center mb-12">
+          <p className="text-xs tracking-[0.3em] text-orange-400 uppercase mb-3">
+            Our Services
+          </p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
+            Everything Your Event Needs
           </h1>
-          <div className="w-24 h-1 bg-blue-800 mx-auto"></div>
+          <p className="text-sm md:text-base text-gray-400 max-w-2xl mx-auto">
+            From concert‑grade sound systems to full band setups, Harmony Hub brings
+            professional equipment and talent together in one place.
+          </p>
         </div>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
           {services.map((service) => (
-            <div
+            <article
               key={service.id}
-              className="relative h-80 rounded-lg overflow-hidden group cursor-pointer transform transition-transform duration-300 hover:scale-105"
+              className="relative h-80 rounded-2xl overflow-hidden group cursor-pointer border border-gray-800 bg-gray-900/70 shadow-lg shadow-black/40 hover:border-orange-500/70 hover:shadow-orange-500/20 hover:-translate-y-1 transition-all duration-200"
             >
               {/* Background Image */}
               <div
@@ -69,27 +75,23 @@ const Service = () => {
                 }}
               >
                 {/* Dark Overlay */}
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-all duration-300"></div>
+                <div className="absolute inset-0 bg-black/60 group-hover:bg-black/40 transition-all duration-300" />
               </div>
 
               {/* Text Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center p-6">
-                <h3 className="text-white text-2xl md:text-3xl font-bold text-center uppercase leading-tight">
+              <div className="relative z-10 flex flex-col justify-end h-full p-6">
+                <h3 className="text-white text-2xl font-semibold uppercase leading-tight mb-2">
                   {service.title}
                 </h3>
-              </div>
-
-              {/* Hover Effect - Description */}
-              <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <p className="text-white text-lg text-center">
+                <p className="text-sm text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   {service.description}
                 </p>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

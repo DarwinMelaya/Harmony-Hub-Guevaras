@@ -453,6 +453,36 @@ const getFeedbackById = async (req, res) => {
   }
 };
 
+// Public: lightweight feedback list for homepage (no auth required)
+// Uses Feedback model directly, but only exposes recent/high-rated reviews
+const getPublicHomeFeedback = async (req, res) => {
+  try {
+    const { minRating = 3, limit = 9 } = req.query;
+
+    const filter = {
+      "overallSatisfaction.rating": { $gte: parseInt(minRating, 10) || 0 },
+    };
+
+    const feedbacks = await Feedback.find(filter)
+      .populate("user", "fullName")
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit, 10) || 9)
+      .select("overallSatisfaction.rating overallSatisfaction.comment createdAt user");
+
+    res.json({
+      success: true,
+      data: feedbacks,
+    });
+  } catch (error) {
+    console.error("Error fetching public home feedback:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch public feedback",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   submitFeedback,
   getMyFeedback,
@@ -461,5 +491,6 @@ module.exports = {
   updateFeedbackStatus,
   respondToFeedback,
   getFeedbackById,
+  getPublicHomeFeedback,
 };
 
