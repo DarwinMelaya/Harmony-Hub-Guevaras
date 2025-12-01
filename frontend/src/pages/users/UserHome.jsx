@@ -40,6 +40,8 @@ const UserHome = () => {
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedInventoryCategory, setSelectedInventoryCategory] =
+    useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -101,6 +103,15 @@ const UserHome = () => {
       availableQuantityMap: map,
     };
   }, [inventory, cart]);
+
+  const inventoryCategories = useMemo(() => {
+    const categories = new Set();
+    inventoryWithAvailability.forEach((item) => {
+      const name = item.category?.name;
+      if (name) categories.add(name);
+    });
+    return Array.from(categories).sort((a, b) => a.localeCompare(b));
+  }, [inventoryWithAvailability]);
 
   const getAvailableById = (itemId) =>
     availableQuantityMap.get(itemId) ?? 0;
@@ -254,7 +265,11 @@ const UserHome = () => {
   };
 
   // Filter and search functions
-  const filterItems = (items, type) => {
+  const filterItems = (
+    items,
+    type,
+    inventoryCategoryFilter = "all"
+  ) => {
     let filtered = items;
 
     // Search filter
@@ -293,6 +308,18 @@ const UserHome = () => {
       }
     }
 
+    // Inventory category (by item.category.name)
+    if (
+      type === "inventory" &&
+      inventoryCategoryFilter &&
+      inventoryCategoryFilter !== "all"
+    ) {
+      const needle = inventoryCategoryFilter.toLowerCase();
+      filtered = filtered.filter((item) =>
+        (item.category?.name || "").toLowerCase() === needle
+      );
+    }
+
     // Sort
     if (sortBy === "newest") {
       filtered = filtered.sort(
@@ -319,7 +346,8 @@ const UserHome = () => {
 
   const filteredInventory = filterItems(
     inventoryWithAvailability,
-    "inventory"
+    "inventory",
+    selectedInventoryCategory
   );
   const filteredPackages = filterItems(packages, "packages");
   const filteredBandArtists = filterItems(bandArtists, "bandArtists");
@@ -328,6 +356,7 @@ const UserHome = () => {
     setSearchTerm("");
     setSelectedCategory("all");
     setSortBy("newest");
+    setSelectedInventoryCategory("all");
   };
 
   const addToCart = async (item, type) => {
@@ -886,6 +915,17 @@ const UserHome = () => {
                         </button>
                       </span>
                     )}
+                    {selectedInventoryCategory !== "all" && (
+                      <span className="flex items-center gap-2">
+                        Inventory category: {selectedInventoryCategory}
+                        <button
+                          onClick={() => setSelectedInventoryCategory("all")}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -952,6 +992,37 @@ const UserHome = () => {
                   {filteredInventory.length} items available
                 </span>
               </div>
+
+              {/* Inventory Category Chips */}
+              {inventoryCategories.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedInventoryCategory("all")}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                      selectedInventoryCategory === "all"
+                        ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/40"
+                        : "bg-gray-800 border-gray-700 text-gray-200 hover:border-blue-400/70 hover:text-white"
+                    }`}
+                  >
+                    All Categories
+                  </button>
+                  {inventoryCategories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedInventoryCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                        selectedInventoryCategory === cat
+                          ? "bg-orange-500/90 border-orange-400 text-white shadow-md shadow-orange-500/40"
+                          : "bg-gray-800 border-gray-700 text-gray-200 hover:border-orange-400/70 hover:text-white"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {loading ? (
                 <div className="flex justify-center items-center py-12">

@@ -5,6 +5,7 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  Guitar,
 } from "lucide-react";
 import {
   Dialog,
@@ -13,11 +14,69 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+const getCategoryStyles = (categoryName) => {
+  const base = {
+    cardBg: "bg-gray-800",
+    border: "border-gray-700",
+    accentBar:
+      "from-blue-500/80 via-purple-500/80 to-pink-500/80",
+    pillBg: "bg-purple-600/20",
+    pillBorder: "border-purple-500/30",
+    pillText: "text-purple-200",
+    icon: null,
+  };
+
+  if (!categoryName) return base;
+
+  const name = categoryName.toLowerCase();
+
+  // Highlight guitars with a warm, music-shop style
+  if (name.includes("guitar")) {
+    return {
+      ...base,
+      accentBar:
+        "from-amber-500/90 via-orange-500/90 to-red-500/90",
+      pillBg: "bg-amber-500/15",
+      pillBorder: "border-amber-300/60",
+      pillText: "text-amber-100",
+      icon: Guitar,
+    };
+  }
+
+  // Subtle variations for other common music categories (extend as needed)
+  if (name.includes("drum")) {
+    return {
+      ...base,
+      accentBar:
+        "from-red-500/80 via-rose-500/80 to-orange-500/80",
+      pillBg: "bg-red-500/10",
+      pillBorder: "border-red-400/40",
+      pillText: "text-red-100",
+    };
+  }
+
+  if (name.includes("keyboard") || name.includes("piano")) {
+    return {
+      ...base,
+      accentBar:
+        "from-sky-500/80 via-cyan-500/80 to-emerald-500/80",
+      pillBg: "bg-sky-500/10",
+      pillBorder: "border-sky-400/40",
+      pillText: "text-sky-100",
+    };
+  }
+
+  return base;
+};
+
 const InventoryCard = ({ item, onAdd, availableQuantity }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [modalImageIndex, setModalImageIndex] = useState(0);
+  const categoryName = item.category?.name;
+  const categoryStyles = getCategoryStyles(categoryName);
+  const CategoryIcon = categoryStyles.icon;
   const imageSources =
     item.images?.length > 0
       ? item.images
@@ -77,7 +136,19 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-blue-500 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/20 group flex flex-col">
+    <div
+      className={`rounded-lg border overflow-hidden transition-all duration-200 group flex flex-col hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 ${categoryStyles.cardBg} ${categoryStyles.border}`}
+    >
+      {categoryName && (
+        <div className="bg-gradient-to-r text-white px-3 py-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase shadow-inner">
+          <div className={`flex items-center gap-2 bg-black/20 px-2 py-1 rounded-full`}>
+            {CategoryIcon && (
+              <CategoryIcon className="w-4 h-4 drop-shadow-sm" />
+            )}
+            <span className="drop-shadow-sm">{categoryName}</span>
+          </div>
+        </div>
+      )}
       <div className="relative">
         {activeImage ? (
           <img
@@ -131,8 +202,13 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
         </h3>
         {item.category && (
           <div className="mb-2">
-            <span className="inline-block px-2 py-0.5 bg-purple-600/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              {item.category.name}
+            <span
+              className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border ${categoryStyles.pillBg} ${categoryStyles.pillBorder} ${categoryStyles.pillText}`}
+            >
+              {CategoryIcon && (
+                <CategoryIcon className="w-3 h-3 opacity-90" />
+              )}
+              {categoryName}
             </span>
           </div>
         )}
@@ -236,8 +312,13 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
             {item.category && (
               <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                 <div className="text-sm text-gray-400 mb-2">Category</div>
-                <span className="inline-block px-3 py-1 bg-purple-600/20 text-purple-300 text-sm rounded-full border border-purple-500/30">
-                  {item.category.name}
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm rounded-full border ${categoryStyles.pillBg} ${categoryStyles.pillBorder} ${categoryStyles.pillText}`}
+                >
+                  {CategoryIcon && (
+                    <CategoryIcon className="w-4 h-4 opacity-90" />
+                  )}
+                  {categoryName}
                 </span>
               </div>
             )}
