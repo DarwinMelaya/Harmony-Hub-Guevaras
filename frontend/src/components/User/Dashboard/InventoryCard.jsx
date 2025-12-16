@@ -69,7 +69,12 @@ const getCategoryStyles = (categoryName) => {
   return base;
 };
 
-const InventoryCard = ({ item, onAdd, availableQuantity }) => {
+const InventoryCard = ({
+  item,
+  onAdd,
+  availableQuantity,
+  isBlockedByPackage = false,
+}) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -90,6 +95,7 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
       ? availableQuantity
       : item.quantity ?? 0;
   const isOutOfStock = displayQuantity <= 0;
+  const isDisabled = isOutOfStock || isAdding || isBlockedByPackage;
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -114,7 +120,7 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
   };
 
   const handleAddSelection = async () => {
-    if (isOutOfStock || isAdding) return;
+    if (isDisabled) return;
     setIsAdding(true);
     try {
       await onAdd(item, `${item._id}-img-inv`);
@@ -223,11 +229,13 @@ const InventoryCard = ({ item, onAdd, availableQuantity }) => {
         <div className="flex gap-2 mt-auto">
           <button
             onClick={handleAddSelection}
-            disabled={isOutOfStock || isAdding}
+            disabled={isDisabled}
             className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-2 px-3 rounded text-sm font-medium transition-colors"
           >
             {isOutOfStock
               ? "Out of Stock"
+              : isBlockedByPackage
+              ? "In Selected Package"
               : isAdding
               ? "Adding..."
               : "Add to Selection"}

@@ -9,6 +9,34 @@ const {
   deleteImageFromSupabase,
 } = require("../utils/supabaseImageUpload");
 
+// Helper: adjust inventory quantities for all inventory items included in a package
+// factor: -1 to reserve (reduce quantity), +1 to release (restore quantity)
+const adjustInventoryForPackageContents = async (packageId, factor) => {
+  if (!packageId || ![1, -1].includes(factor)) return;
+
+  try {
+    const pkg = await Packages.findById(packageId).select("items").lean();
+    if (!pkg || !Array.isArray(pkg.items)) return;
+
+    for (const pkgItem of pkg.items) {
+      const inventoryId = pkgItem.inventoryItem;
+      const qty = Number(pkgItem.quantity || 0);
+      if (!inventoryId || !qty) continue;
+
+      await Inventory.findByIdAndUpdate(
+        inventoryId,
+        { $inc: { quantity: factor * qty } },
+        { new: true }
+      );
+    }
+  } catch (err) {
+    console.error(
+      `Error adjusting inventory for package ${packageId} with factor ${factor}:`,
+      err
+    );
+  }
+};
+
 // Helper: validate and normalize booking items (shared between create and add-items)
 const validateAndPrepareItems = async (items, bookingDate) => {
   let totalAmount = 0;
@@ -310,6 +338,7 @@ const createBooking = async (req, res) => {
 
     // Apply side effects upon booking creation
     // - Decrease inventory quantities for inventory items
+    // - Reserve inventory used by selected packages
     // - Mark packages as unavailable
     for (const bookingItem of validatedItems) {
       try {
@@ -370,6 +399,9 @@ const createBooking = async (req, res) => {
           }
 
           console.log(`Package marked unavailable: ${bookingItem.name}`);
+
+          // Reserve all inventory items that are part of this package
+          await adjustInventoryForPackageContents(bookingItem.itemId, -1);
         }
       } catch (itemError) {
         console.error(
@@ -621,7 +653,7 @@ const updateBookingStatus = async (req, res) => {
     // Handle side effects based on status transitions
     // Note: Inventory is already reduced when booking is created (pending status)
     // When confirmed, inventory should remain reduced (no change needed)
-    // Inventory is only restored when booking is cancelled (see below)
+    // Inventory is restored when booking is completed or cancelled
 
     // Restore inventory/package availability when completed
     if (previousStatus !== "completed" && status === "completed") {
@@ -638,6 +670,9 @@ const updateBookingStatus = async (req, res) => {
             { $set: { isAvailable: true } },
             { new: true }
           );
+
+          // Release all inventory items that were reserved by this package
+          await adjustInventoryForPackageContents(item.itemId, 1);
         }
       }
     }
@@ -657,6 +692,9 @@ const updateBookingStatus = async (req, res) => {
             { $set: { isAvailable: true } },
             { new: true }
           );
+
+          // Release all inventory items that were reserved by this package
+          await adjustInventoryForPackageContents(item.itemId, 1);
         }
       }
     }
@@ -757,6 +795,9 @@ const cancelBooking = async (req, res) => {
           { $set: { isAvailable: true } },
           { new: true }
         );
+
+        // Release all inventory items that were reserved by this package
+        await adjustInventoryForPackageContents(item.itemId, 1);
       }
     }
 
@@ -1538,6 +1579,9 @@ const addBookingItems = async (req, res) => {
           console.log(
             `Package marked unavailable (added to booking): ${bookingItem.name}`
           );
+
+          // Reserve all inventory items that are part of this package
+          await adjustInventoryForPackageContents(bookingItem.itemId, -1);
         }
       } catch (itemError) {
         console.error(
@@ -1646,6 +1690,9 @@ const removeBookingItem = async (req, res) => {
         { $set: { isAvailable: true } },
         { new: true }
       );
+
+      // Release all inventory items that were reserved by this package
+      await adjustInventoryForPackageContents(itemRefId, 1);
     }
 
     await booking.populate("user", "fullName email username");

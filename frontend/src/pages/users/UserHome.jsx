@@ -360,6 +360,29 @@ const UserHome = () => {
     setSortBy("newest");
     setSelectedInventoryCategory("all");
   };
+
+  // When a package is selected in the cart, automatically treat its inventory
+  // items as blocked so they cannot be added separately for the same booking.
+  const blockedInventoryIds = useMemo(() => {
+    const blocked = new Set();
+
+    cart
+      .filter((ci) => ci.type === "package")
+      .forEach((cartPkg) => {
+        const fullPkg = packages.find((p) => p._id === cartPkg.id);
+        if (!fullPkg || !Array.isArray(fullPkg.items)) return;
+
+        fullPkg.items.forEach((pkgItem) => {
+          const inv = pkgItem.inventoryItem;
+          const invId = typeof inv === "object" ? inv?._id : inv;
+          if (invId) {
+            blocked.add(String(invId));
+          }
+        });
+      });
+
+    return blocked;
+  }, [cart, packages]);
   const addToCart = async (item, type) => {
     const cartItem = {
       id: item._id,
@@ -1044,6 +1067,7 @@ const UserHome = () => {
                       key={item._id}
                       item={item}
                       availableQuantity={item.availableQuantity}
+                      isBlockedByPackage={blockedInventoryIds.has(item._id)}
                       onAdd={(it, sourceId) =>
                         handleAddToCartClick(it, "inventory", sourceId)
                       }
