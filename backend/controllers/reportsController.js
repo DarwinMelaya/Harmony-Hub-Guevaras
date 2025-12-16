@@ -9,6 +9,7 @@ const {
   generatePackageReportPDF,
   generateRevenueReportPDF,
   generateEarningsReportPDF,
+  generateDamageReportPDF,
 } = require("../utils/reportsPdfGenerator");
 
 // Get summary/dashboard report
@@ -361,6 +362,89 @@ const getInventoryReport = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to generate inventory report",
+      error: error.message,
+    });
+  }
+};
+
+// Get damage items report (inventory items in poor/needs-repair condition or under maintenance)
+const getDamageReport = async (req, res) => {
+  try {
+    const { status, condition } = req.query;
+
+    // Base filter: items that are damaged or need repair/maintenance
+    const baseDamageFilter = {
+      $or: [
+        { condition: { $in: ["poor", "needs-repair"] } },
+        { status: { $in: ["under-maintenance", "needs-repair"] } },
+      ],
+    };
+
+    // Optional extra filters from query
+    if (status) {
+      baseDamageFilter.status = status;
+    }
+    if (condition) {
+      baseDamageFilter.condition = condition;
+    }
+
+    const damagedItems = await Inventory.find(baseDamageFilter)
+      .populate("category", "name")
+      .populate("unit", "name symbol")
+      .sort({ condition: 1, status: 1, name: 1 });
+
+    const damageStats = await Inventory.aggregate([
+      { $match: baseDamageFilter },
+      {
+        $group: {
+          _id: null,
+          totalItems: { $sum: 1 },
+          totalQuantity: { $sum: "$quantity" },
+          totalValue: { $sum: { $multiply: ["$quantity", "$price"] } },
+        },
+      },
+    ]);
+
+    const byCondition = await Inventory.aggregate([
+      { $match: baseDamageFilter },
+      {
+        $group: {
+          _id: "$condition",
+          count: { $sum: 1 },
+          totalQuantity: { $sum: "$quantity" },
+        },
+      },
+    ]);
+
+    // Also include damage reported at booking completion (customer returns)
+    const bookingDamageFilter = {
+      status: "completed",
+      issueType: { $in: ["lost", "damaged"] },
+    };
+
+    const damageFromBookings = await Booking.find(bookingDamageFilter)
+      .populate("user", "fullName email")
+      .sort({ bookingDate: -1 })
+      .select("bookingDate issueType affectedItems totalAmount createdAt");
+
+    res.json({
+      success: true,
+      data: {
+        damagedItems,
+        statistics: damageStats[0] || {
+          totalItems: 0,
+          totalQuantity: 0,
+          totalValue: 0,
+        },
+        byCondition,
+        damageFromBookings,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating damage items report:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate damage items report",
       error: error.message,
     });
   }
@@ -770,6 +854,84 @@ const downloadInventoryReportPDF = async (req, res) => {
   }
 };
 
+const downloadDamageReportPDF = async (req, res) => {
+  try {
+    const { status, condition } = req.query;
+
+    const baseDamageFilter = {
+      $or: [
+        { condition: { $in: ["poor", "needs-repair"] } },
+        { status: { $in: ["under-maintenance", "needs-repair"] } },
+      ],
+    };
+
+    if (status) {
+      baseDamageFilter.status = status;
+    }
+    if (condition) {
+      baseDamageFilter.condition = condition;
+    }
+
+    const damagedItems = await Inventory.find(baseDamageFilter)
+      .populate("category", "name")
+      .populate("unit", "name symbol")
+      .sort({ condition: 1, status: 1, name: 1 });
+
+    const damageStats = await Inventory.aggregate([
+      { $match: baseDamageFilter },
+      {
+        $group: {
+          _id: null,
+          totalItems: { $sum: 1 },
+          totalQuantity: { $sum: "$quantity" },
+          totalValue: { $sum: { $multiply: ["$quantity", "$price"] } },
+        },
+      },
+    ]);
+
+    const byCondition = await Inventory.aggregate([
+      { $match: baseDamageFilter },
+      {
+        $group: {
+          _id: "$condition",
+          count: { $sum: 1 },
+          totalQuantity: { $sum: "$quantity" },
+        },
+      },
+    ]);
+
+    const bookingDamageFilter = {
+      status: "completed",
+      issueType: { $in: ["lost", "damaged"] },
+    };
+
+    const damageFromBookings = await Booking.find(bookingDamageFilter)
+      .populate("user", "fullName email")
+      .sort({ bookingDate: -1 })
+      .select("bookingDate issueType affectedItems totalAmount createdAt");
+
+    const reportData = {
+      damagedItems,
+      statistics: damageStats[0] || {
+        totalItems: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+      },
+      byCondition,
+      damageFromBookings,
+    };
+
+    generateDamageReportPDF(reportData, { status, condition }, res);
+  } catch (error) {
+    console.error("Error generating damage items report PDF:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate damage items report PDF",
+      error: error.message,
+    });
+  }
+};
+
 const downloadPackageReportPDF = async (req, res) => {
   try {
     const { isAvailable } = req.query;
@@ -1151,11 +1313,13 @@ module.exports = {
   getPackageReport,
   getRevenueReport,
   getEarningsReport,
+  getDamageReport,
   downloadSummaryReportPDF,
   downloadBookingReportPDF,
   downloadInventoryReportPDF,
   downloadPackageReportPDF,
   downloadRevenueReportPDF,
   downloadEarningsReportPDF,
+  downloadDamageReportPDF,
 };
 

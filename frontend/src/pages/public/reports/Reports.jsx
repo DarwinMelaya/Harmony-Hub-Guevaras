@@ -19,6 +19,7 @@ import InventoryReport from "../../../components/Reports/InventoryReport";
 import PackagesReport from "../../../components/Reports/PackagesReport";
 import RevenueReport from "../../../components/Reports/RevenueReport";
 import EarningsReport from "../../../components/Reports/EarningsReport";
+import DamageReport from "../../../components/Reports/DamageReport";
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState("summary");
@@ -32,6 +33,7 @@ const Reports = () => {
   const [packageData, setPackageData] = useState(null);
   const [revenueData, setRevenueData] = useState(null);
   const [earningsData, setEarningsData] = useState(null);
+  const [damageData, setDamageData] = useState(null);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   // Filter states
@@ -97,6 +99,9 @@ const Reports = () => {
           case "earnings":
             setEarningsData(response.data.data);
             break;
+          case "damage":
+            setDamageData(response.data.data);
+            break;
         }
       }
     } catch (err) {
@@ -161,6 +166,7 @@ const Reports = () => {
     { id: "packages", label: "Packages", icon: Package },
     { id: "revenue", label: "Revenue", icon: DollarSign },
     { id: "earnings", label: "Earnings", icon: TrendingUp },
+    { id: "damage", label: "Damage Items", icon: AlertCircle },
   ];
 
   return (
@@ -382,6 +388,11 @@ const Reports = () => {
           {/* Earnings Report */}
           {!loading && activeTab === "earnings" && earningsData && (
             <EarningsReport data={earningsData} />
+          )}
+
+          {/* Damage Items Report */}
+          {!loading && activeTab === "damage" && damageData && (
+            <DamageReport data={damageData} />
           )}
         </div>
       </div>

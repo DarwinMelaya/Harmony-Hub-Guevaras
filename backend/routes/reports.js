@@ -7,12 +7,14 @@ const {
   getPackageReport,
   getRevenueReport,
   getEarningsReport,
+  getDamageReport,
   downloadSummaryReportPDF,
   downloadBookingReportPDF,
   downloadInventoryReportPDF,
   downloadPackageReportPDF,
   downloadRevenueReportPDF,
   downloadEarningsReportPDF,
+  downloadDamageReportPDF,
 } = require("../controllers/reportsController");
 const { authenticateToken } = require("../middleware/auth");
 const { requireRole } = require("../utils/roles");
@@ -41,6 +43,9 @@ router.get("/revenue", getRevenueReport);
 // Get earnings reports
 router.get("/earnings", getEarningsReport);
 
+// Get damage items reports
+router.get("/damage", getDamageReport);
+
 // PDF Download Routes
 router.get("/summary/pdf", downloadSummaryReportPDF);
 router.get("/bookings/pdf", downloadBookingReportPDF);
@@ -48,6 +53,7 @@ router.get("/inventory/pdf", downloadInventoryReportPDF);
 router.get("/packages/pdf", downloadPackageReportPDF);
 router.get("/revenue/pdf", downloadRevenueReportPDF);
 router.get("/earnings/pdf", downloadEarningsReportPDF);
+router.get("/damage/pdf", downloadDamageReportPDF);
 
 module.exports = router;
 
