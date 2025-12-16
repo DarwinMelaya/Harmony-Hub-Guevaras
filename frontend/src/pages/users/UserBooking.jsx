@@ -31,7 +31,8 @@ const paymentStatusMeta = {
   },
 };
 
-const DOWNPAYMENT_PRESETS = [20, 30, 50, 100];
+// Quick-select options for percentage downpayment (full payment is handled separately)
+const DOWNPAYMENT_PRESETS = [20, 30, 50, 60, 80];
 
 const UserBooking = () => {
   const [bookings, setBookings] = useState([]);
@@ -368,7 +369,9 @@ const UserBooking = () => {
       setTimeout(() => setCopiedPaymentId(null), 2000);
     } catch (copyError) {
       console.error("Clipboard error:", copyError);
-      setPaymentInfoError("Copy not supported. Please copy the number manually.");
+      setPaymentInfoError(
+        "Copy not supported. Please copy the number manually."
+      );
     }
   };
 
