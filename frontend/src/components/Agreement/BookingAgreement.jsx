@@ -56,6 +56,12 @@ const BookingAgreement = ({
       recordedDownpaymentAmount > 0 ||
       isFullPaymentSelection);
 
+  // Contract date should reflect the actual signing date when available.
+  // Fallback to "today" only when the agreement has not yet been signed.
+  const contractDate = bookingData?.agreedAt
+    ? new Date(bookingData.agreedAt)
+    : new Date();
+
   const clearSignature = () => {
     sigCanvas.current.clear();
     setSignature(null);
@@ -127,7 +133,7 @@ const BookingAgreement = ({
             <p className="text-gray-300 text-sm text-center">
               Date:{" "}
               <span className="text-white font-medium">
-                {new Date().toLocaleDateString("en-US", {
+                {contractDate.toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
