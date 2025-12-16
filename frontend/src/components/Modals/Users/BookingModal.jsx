@@ -410,8 +410,8 @@ const BookingModal = ({
                   </div>
                   
                   <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-gray-300 mb-1">
-                    {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
-                      <span key={d}>{d}</span>
+                    {["S", "M", "T", "W", "T", "F", "S"].map((d, index) => (
+                      <span key={`${d}-${index}`}>{d}</span>
                     ))}
                   </div>
                   {/* Calendar with navigation */}

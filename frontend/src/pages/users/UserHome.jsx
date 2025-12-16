@@ -1,13 +1,7 @@
 import Layout from "../../components/Layout/Layout";
 import CartModal from "../../components/Modals/Users/CartModal";
 import BookingModal from "../../components/Modals/Users/BookingModal";
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   User,
   ChevronDown,
@@ -113,8 +107,7 @@ const UserHome = () => {
     return Array.from(categories).sort((a, b) => a.localeCompare(b));
   }, [inventoryWithAvailability]);
 
-  const getAvailableById = (itemId) =>
-    availableQuantityMap.get(itemId) ?? 0;
+  const getAvailableById = (itemId) => availableQuantityMap.get(itemId) ?? 0;
 
   // Define fetchData before useEffect hooks that use it
   const fetchData = useCallback(async (silent = false) => {
@@ -171,7 +164,9 @@ const UserHome = () => {
         bookings
           .filter((b) => b.status === "confirmed")
           .forEach((b) => {
-            const start = b.setupDate ? new Date(b.setupDate) : new Date(b.bookingDate);
+            const start = b.setupDate
+              ? new Date(b.setupDate)
+              : new Date(b.bookingDate);
             const end = new Date(b.bookingDate);
 
             // Normalize time to midnight to avoid timezone issues
@@ -245,10 +240,7 @@ const UserHome = () => {
 
     return () => {
       stopPolling();
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange
-      );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleWindowFocus);
     };
   }, [fetchData]);
@@ -279,11 +271,7 @@ const UserHome = () => {
   };
 
   // Filter and search functions
-  const filterItems = (
-    items,
-    type,
-    inventoryCategoryFilter = "all"
-  ) => {
+  const filterItems = (items, type, inventoryCategoryFilter = "all") => {
     let filtered = items;
 
     // Search filter
@@ -329,8 +317,8 @@ const UserHome = () => {
       inventoryCategoryFilter !== "all"
     ) {
       const needle = inventoryCategoryFilter.toLowerCase();
-      filtered = filtered.filter((item) =>
-        (item.category?.name || "").toLowerCase() === needle
+      filtered = filtered.filter(
+        (item) => (item.category?.name || "").toLowerCase() === needle
       );
     }
 
@@ -372,12 +360,11 @@ const UserHome = () => {
     setSortBy("newest");
     setSelectedInventoryCategory("all");
   };
-
   const addToCart = async (item, type) => {
     const cartItem = {
       id: item._id,
       name: item.name || item.fullName,
-      type: type,
+      type,
       price: type === "bandArtist" ? item.booking_fee : item.price,
       quantity: 1,
       image: item.image,
@@ -388,6 +375,7 @@ const UserHome = () => {
     };
     const itemLabel = cartItem.name || "Item";
 
+    // INVENTORY ITEMS (can have quantity > 1)
     if (type === "inventory") {
       const available = getAvailableById(item._id);
       if (available <= 0) {
@@ -396,37 +384,42 @@ const UserHome = () => {
         return { status: "error", message };
       }
 
-      let updated = false;
-      setCart((prevCart) => {
-        const existingItem = prevCart.find(
-          (ci) => ci.id === item._id && ci.type === type
-        );
-        if (existingItem) {
-          updated = true;
-          return prevCart.map((c) =>
-            c.id === item._id && c.type === type
-              ? { ...c, quantity: c.quantity + 1 }
-              : c
-          );
-        }
-        updated = true;
-        return [...prevCart, cartItem];
-      });
+      const existingItem = cart.find(
+        (ci) => ci.id === item._id && ci.type === type
+      );
 
-      if (updated) {
+      if (existingItem) {
+        // Increase quantity, but do not exceed available stock
+        const newQuantity = existingItem.quantity + 1;
+        if (newQuantity > available) {
+          const message = "Cannot exceed available stock.";
+          setError(message);
+          return { status: "error", message };
+        }
+
+        setCart((prevCart) =>
+          prevCart.map((c) =>
+            c.id === item._id && c.type === type
+              ? { ...c, quantity: newQuantity }
+              : c
+          )
+        );
+
         return {
           status: "success",
-          message: `${itemLabel} added to your selections.`,
+          message: `${itemLabel} quantity updated in your selections.`,
         };
       }
 
+      // Item not yet in cart – add as new
+      setCart((prevCart) => [...prevCart, cartItem]);
       return {
-        status: "info",
-        message: `${itemLabel} is already in your selections.`,
+        status: "success",
+        message: `${itemLabel} added to your selections.`,
       };
     }
 
-    // For band artists, check availability if booking date is selected
+    // BAND ARTISTS – check date-specific availability if a booking date is chosen
     if (type === "bandArtist" && bookingData.bookingDate) {
       const isAvailable = await checkArtistAvailability(
         item._id,
@@ -441,37 +434,22 @@ const UserHome = () => {
       }
     }
 
-    let duplicate = false;
-    let added = false;
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(
-        (ci) => ci.id === item._id && ci.type === type
-      );
-      if (existingItem) {
-        duplicate = true;
-        return prevCart;
-      }
-      added = true;
-      return [...prevCart, cartItem];
-    });
+    // PACKAGES & BAND ARTISTS – only one of each allowed in cart
+    const existingNonInventory = cart.find(
+      (ci) => ci.id === item._id && ci.type === type
+    );
 
-    if (duplicate) {
+    if (existingNonInventory) {
       return {
         status: "info",
         message: `${itemLabel} is already in your selections.`,
       };
     }
 
-    if (added) {
-      return {
-        status: "success",
-        message: `${itemLabel} added to your selections.`,
-      };
-    }
-
+    setCart((prevCart) => [...prevCart, cartItem]);
     return {
-      status: "error",
-      message: "Unable to update selections at this time.",
+      status: "success",
+      message: `${itemLabel} added to your selections.`,
     };
   };
 
@@ -548,7 +526,9 @@ const UserHome = () => {
     if (status === "success") {
       toast.success(message || "Added to selections.");
       const img =
-        item.image || (Array.isArray(item.images) ? item.images[0] : null) || null;
+        item.image ||
+        (Array.isArray(item.images) ? item.images[0] : null) ||
+        null;
       triggerFlyFrom(sourceElementId, img);
     } else if (status === "info") {
       toast(message || "Already in selections.", {
