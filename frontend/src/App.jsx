@@ -1,10 +1,12 @@
 import { Routers } from "./Routers/Routers";
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   return (
-    <div>
+    <>
       <Routers />
-    </div>
+      <Toaster position="top-right" />
+    </>
   );
 };
 
